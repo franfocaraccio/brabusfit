@@ -1,19 +1,42 @@
-import Link from "next/link";
-import { Dumbbell, Plus } from "lucide-react";
+import { Dumbbell, Plus, Users } from "lucide-react";
 
-import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { LinkTile } from "@/components/app/link-tile";
 import { requireProfile } from "@/lib/auth";
 
 export default async function DashboardPage() {
   const { profile } = await requireProfile();
 
+  const tiles = [
+    {
+      href: "/rutinas/crear",
+      title: "Crear rutina",
+      subtitle: "Armá una rutina nueva",
+      icon: Plus,
+      accent: true,
+    },
+    {
+      href: "/rutinas",
+      title: "Mis rutinas",
+      subtitle: "Ver y entrenar tus rutinas",
+      icon: Dumbbell,
+    },
+    ...(profile.is_coach
+      ? [
+          {
+            href: "/alumnos",
+            title: "Alumnos",
+            subtitle: "Seguí el progreso de tus alumnos",
+            icon: Users,
+          },
+        ]
+      : []),
+  ];
+
   return (
     <div className="space-y-6">
-      <div>
+      <div className="animate-rise">
         <h1 className="text-2xl font-bold tracking-tight">
-          Hola, {profile.first_name} 👋
+          Hola, {profile.first_name}
         </h1>
         <p className="text-muted-foreground text-sm">
           {profile.is_coach
@@ -22,38 +45,10 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Dumbbell className="size-4" /> Mis rutinas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Link
-              href="/rutinas"
-              className={cn(buttonVariants({ variant: "secondary" }), "w-full")}
-            >
-              Ver rutinas
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Plus className="size-4" /> Crear rutina
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Link
-              href="/rutinas/crear"
-              className={cn(buttonVariants(), "w-full")}
-            >
-              Crear rutina
-            </Link>
-          </CardContent>
-        </Card>
+      <div className="stagger grid gap-3 sm:grid-cols-2">
+        {tiles.map((tile) => (
+          <LinkTile key={tile.href} {...tile} />
+        ))}
       </div>
     </div>
   );

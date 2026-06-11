@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ChevronRight, Dumbbell, Folder as FolderIcon, Plus, Share2 } from "lucide-react";
+import { Dumbbell, Folder as FolderIcon, Plus, Share2 } from "lucide-react";
 
+import { LinkTile } from "@/components/app/link-tile";
 import { NewFolderButton } from "@/components/routines/new-folder-button";
 import { FolderActions } from "@/components/routines/folder-actions";
 import { buttonVariants } from "@/components/ui/button";
@@ -18,19 +19,6 @@ type SharedRow = {
     owner: { first_name: string; last_name: string } | null;
   } | null;
 };
-
-function RoutineLink({ routine }: { routine: Pick<Routine, "id" | "name"> }) {
-  return (
-    <Link
-      href={`/rutinas/${routine.id}`}
-      className="hover:bg-muted/50 flex items-center gap-3 px-4 py-3 transition-colors"
-    >
-      <Dumbbell className="text-muted-foreground size-4 shrink-0" />
-      <span className="flex-1 truncate text-sm font-medium">{routine.name}</span>
-      <ChevronRight className="text-muted-foreground size-4" />
-    </Link>
-  );
-}
 
 export default async function RutinasPage() {
   const { userId } = await requireProfile();
@@ -74,38 +62,32 @@ export default async function RutinasPage() {
 
       {/* Compartidas conmigo */}
       {shared.length > 0 && (
-        <section className="space-y-2">
+        <section className="space-y-2.5">
           <h2 className="text-muted-foreground flex items-center gap-2 text-sm font-semibold">
             <Share2 className="size-4" /> Compartidas conmigo
           </h2>
-          <Card className="divide-y overflow-hidden py-0">
+          <div className="stagger space-y-2.5">
             {shared.map((s) =>
               s.routine ? (
-                <Link
+                <LinkTile
                   key={s.id}
                   href={`/rutinas/${s.routine.id}`}
-                  className="hover:bg-muted/50 flex items-center gap-3 px-4 py-3 transition-colors"
-                >
-                  <Dumbbell className="text-muted-foreground size-4 shrink-0" />
-                  <span className="flex-1 truncate">
-                    <span className="block text-sm font-medium">
-                      {s.routine.name}
-                    </span>
-                    <span className="text-muted-foreground text-xs">
-                      {s.routine.owner
-                        ? `Coach: ${s.routine.owner.first_name} ${s.routine.owner.last_name}`
-                        : "Compartida"}
-                    </span>
-                  </span>
-                  <ChevronRight className="text-muted-foreground size-4" />
-                </Link>
+                  title={s.routine.name}
+                  subtitle={
+                    s.routine.owner
+                      ? `Coach: ${s.routine.owner.first_name} ${s.routine.owner.last_name}`
+                      : "Compartida"
+                  }
+                  icon={Dumbbell}
+                  accent
+                />
               ) : null,
             )}
-          </Card>
+          </div>
         </section>
       )}
 
-      {/* Mis carpetas */}
+      {/* Mis rutinas */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-muted-foreground text-sm font-semibold">
@@ -114,42 +96,49 @@ export default async function RutinasPage() {
           <NewFolderButton />
         </div>
 
+        {/* Carpetas */}
         {folders.map((folder) => {
           const items = byFolder(folder.id);
           return (
-            <Card key={folder.id} className="overflow-hidden py-0">
-              <div className="bg-muted/40 flex items-center gap-2 px-4 py-2.5">
-                <FolderIcon className="size-4" />
-                <span className="flex-1 truncate text-sm font-semibold">
-                  {folder.name}
-                </span>
-                <span className="text-muted-foreground text-xs">
-                  {items.length}
-                </span>
+            <div key={folder.id} className="space-y-2.5">
+              <div className="text-muted-foreground flex items-center gap-2 px-1 text-xs font-semibold tracking-wide uppercase">
+                <FolderIcon className="size-3.5" />
+                <span className="flex-1 truncate">{folder.name}</span>
+                <span>{items.length}</span>
                 <FolderActions folderId={folder.id} folderName={folder.name} />
               </div>
               {items.length > 0 ? (
-                <div className="divide-y">
+                <div className="stagger space-y-2.5">
                   {items.map((r) => (
-                    <RoutineLink key={r.id} routine={r} />
+                    <LinkTile
+                      key={r.id}
+                      href={`/rutinas/${r.id}`}
+                      title={r.name}
+                      icon={Dumbbell}
+                    />
                   ))}
                 </div>
               ) : (
-                <p className="text-muted-foreground px-4 py-3 text-sm">
+                <p className="text-muted-foreground px-1 text-sm">
                   Carpeta vacía.
                 </p>
               )}
-            </Card>
+            </div>
           );
         })}
 
         {/* Rutinas en la raíz */}
         {rootRoutines.length > 0 && (
-          <Card className="divide-y overflow-hidden py-0">
+          <div className="stagger space-y-2.5">
             {rootRoutines.map((r) => (
-              <RoutineLink key={r.id} routine={r} />
+              <LinkTile
+                key={r.id}
+                href={`/rutinas/${r.id}`}
+                title={r.name}
+                icon={Dumbbell}
+              />
             ))}
-          </Card>
+          </div>
         )}
 
         {folders.length === 0 && rootRoutines.length === 0 && (

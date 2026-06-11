@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronRight, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 
+import { LinkTile } from "@/components/app/link-tile";
 import { DeleteRoutineButton } from "@/components/routines/delete-routine-button";
 import { ShareRoutine, type ShareRow } from "@/components/routines/share-routine";
 import { buttonVariants } from "@/components/ui/button";
@@ -89,32 +90,30 @@ export default async function RutinaDetailPage({
         </div>
       )}
 
-      <section className="space-y-2">
+      <section className="space-y-2.5">
         <h2 className="text-muted-foreground text-sm font-semibold">
           Elegí un día para entrenar
         </h2>
-        <Card className="divide-y overflow-hidden py-0">
-          {days.map((day) => (
-            <Link
-              key={day.id}
-              href={`/rutinas/${id}/dia/${day.id}`}
-              className="hover:bg-muted/50 flex items-center gap-3 px-4 py-3.5 transition-colors"
-            >
-              <span className="flex-1">
-                <span className="block text-sm font-medium">{day.name}</span>
-                <span className="text-muted-foreground text-xs">
-                  {day.exercises[0]?.count ?? 0} ejercicios
-                </span>
-              </span>
-              <ChevronRight className="text-muted-foreground size-4" />
-            </Link>
-          ))}
-          {days.length === 0 && (
-            <p className="text-muted-foreground px-4 py-3 text-sm">
+        {days.length > 0 ? (
+          <div className="stagger space-y-2.5">
+            {days.map((day, i) => (
+              <LinkTile
+                key={day.id}
+                href={`/rutinas/${id}/dia/${day.id}`}
+                title={day.name}
+                subtitle={`${day.exercises[0]?.count ?? 0} ejercicios`}
+                chip={i + 1}
+                accent
+              />
+            ))}
+          </div>
+        ) : (
+          <Card className="p-6 text-center">
+            <p className="text-muted-foreground text-sm">
               Esta rutina no tiene días.
             </p>
-          )}
-        </Card>
+          </Card>
+        )}
       </section>
     </div>
   );

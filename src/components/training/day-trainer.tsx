@@ -208,17 +208,19 @@ export function DayTrainer({
             >
               <button
                 onClick={() => setOpenId(isOpen ? null : ex.id)}
-                className="hover:bg-muted/40 flex w-full items-center gap-3 px-4 py-3.5 text-left"
+                className="hover:bg-muted/40 active:bg-muted/60 flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors"
               >
                 <span
                   className={cn(
-                    "flex size-6 shrink-0 items-center justify-center rounded-full border text-xs",
+                    "flex size-6 shrink-0 items-center justify-center rounded-full border text-xs transition-all duration-200",
                     isDone
-                      ? "border-emerald-600 bg-emerald-600 text-white"
+                      ? "border-success bg-success text-success-foreground"
                       : "text-muted-foreground",
                   )}
                 >
-                  {isDone ? <Check className="size-4" /> : null}
+                  {isDone ? (
+                    <Check className="size-4 animate-in zoom-in-50 duration-200" />
+                  ) : null}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold">

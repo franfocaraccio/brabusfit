@@ -1,4 +1,5 @@
 import { AppNav } from "@/components/app/app-nav";
+import { Logo } from "@/components/app/logo";
 import { LogoutButton } from "@/components/app/logout-button";
 import { requireProfile } from "@/lib/auth";
 
@@ -15,9 +16,7 @@ export default async function AppLayout({
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="bg-background/80 sticky top-0 z-30 flex h-14 items-center justify-between border-b px-4 backdrop-blur md:px-6">
-          <span className="text-sm font-medium md:hidden">
-            Brabus<span className="text-primary"> Fit</span>
-          </span>
+          <Logo className="text-lg md:hidden" />
           <div className="ml-auto flex items-center gap-2">
             <span className="text-muted-foreground hidden text-sm sm:inline">
               {profile.first_name} {profile.last_name}

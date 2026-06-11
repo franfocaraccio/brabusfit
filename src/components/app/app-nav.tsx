@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Dumbbell, Home, User, Users } from "lucide-react";
 
+import { Logo } from "@/components/app/logo";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -31,8 +32,8 @@ export function AppNav({ isCoach }: { isCoach: boolean }) {
     <>
       {/* Sidebar en desktop */}
       <aside className="bg-card hidden w-56 shrink-0 flex-col border-r p-4 md:flex">
-        <div className="mb-6 px-2 text-xl font-bold tracking-tight">
-          Brabus<span className="text-primary"> Fit</span>
+        <div className="mb-6 px-2">
+          <Logo className="text-2xl" />
         </div>
         <nav className="flex flex-col gap-1">
           {items.map(({ href, label, icon: Icon }) => (

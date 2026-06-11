@@ -1,13 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import { Barlow, Barlow_Condensed } from "next/font/google";
 
 import { Toaster } from "@/components/ui/sonner";
 
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const barlow = Barlow({
+  variable: "--font-sans",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+});
+
+const barlowCondensed = Barlow_Condensed({
+  variable: "--font-heading",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -19,7 +26,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#0a0a0a",
+  themeColor: "#0e1116",
 };
 
 export default function RootLayout({
@@ -28,8 +35,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${geistSans.variable} h-full antialiased`}>
-      <body className="bg-background text-foreground min-h-full">
+    <html
+      lang="es"
+      suppressHydrationWarning
+      className={`dark ${barlow.variable} ${barlowCondensed.variable} h-full antialiased`}
+    >
+      <body
+        suppressHydrationWarning
+        className="bg-background text-foreground min-h-full"
+      >
         {children}
         <Toaster richColors position="top-center" />
       </body>

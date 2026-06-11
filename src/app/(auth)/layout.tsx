@@ -1,3 +1,5 @@
+import { Logo } from "@/components/app/logo";
+
 export default function AuthLayout({
   children,
 }: {
@@ -7,10 +9,8 @@ export default function AuthLayout({
     <div className="flex min-h-dvh flex-col items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Brabus<span className="text-primary"> Fit</span>
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <Logo className="text-4xl" />
+          <p className="text-muted-foreground mt-2 text-sm">
             Tus rutinas, en un solo lugar.
           </p>
         </div>
