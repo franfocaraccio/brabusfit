@@ -10,6 +10,13 @@ export default async function LoginPage({
 }) {
   const { check_email, error } = await searchParams;
 
+  const errorMessage =
+    error === "confirm"
+      ? "El link de confirmación venció o ya se usó. Iniciá sesión o registrate de nuevo."
+      : error
+        ? "Hubo un problema al iniciar sesión. Probá de nuevo."
+        : null;
+
   return (
     <Card>
       <CardContent className="space-y-4 pt-6">
@@ -18,10 +25,8 @@ export default async function LoginPage({
             Te enviamos un email para confirmar tu cuenta. Revisá tu casilla.
           </p>
         ) : null}
-        {error ? (
-          <p className="text-destructive text-sm">
-            Hubo un problema al iniciar sesión. Probá de nuevo.
-          </p>
+        {errorMessage ? (
+          <p className="text-destructive text-sm">{errorMessage}</p>
         ) : null}
 
         <GoogleButton />
