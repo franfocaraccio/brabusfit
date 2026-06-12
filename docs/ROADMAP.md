@@ -76,3 +76,32 @@ menos que mantener. El SDK de Storage funciona igual en web y mobile.
 - **Entorno de staging:** hoy los Preview de Vercel comparten la **DB de prod**
   (variables en "Production and Preview"). Para aislar datos: 2º proyecto
   Supabase + variables de Preview apuntando ahí.
+
+---
+
+## 4. Monetización / SaaS
+
+Arquitectónicamente la app **ya es un SaaS multi-tenant** (cloud, navegador,
+aislamiento de datos por tenant vía RLS de Postgres). Falta la capa de negocio:
+**ingresos recurrentes (suscripciones)**.
+
+### Modelo sugerido
+- **El coach paga; el alumno usa gratis.** Encaja con la relación coach→alumnos
+  que ya existe.
+- Planes por ejemplo: **Free** (ej. 1-3 alumnos) / **Pro** (alumnos ilimitados,
+  features extra como fotos de progreso, estadísticas, etc.).
+
+### Qué haría falta
+- **Billing**: integrar **Stripe** (Stripe Checkout + Customer Portal + webhooks).
+  Tabla de suscripciones por coach (plan, estado, periodo) sincronizada por
+  webhook; RLS/queries que respeten los **límites del plan** (ej. cantidad de
+  alumnos / rutinas).
+- **Gating de features** según plan (server-side, no solo en UI).
+- **Wrapping de producto**: landing/marketing, prueba gratis, términos y
+  privacidad, soporte, página de precios.
+
+### Notas
+- Es un paso **acotado** sobre lo que ya hay: la base difícil (multi-tenancy +
+  RLS + roles coach/alumno) está hecha.
+- Stripe funciona bien con Next.js (server actions / route handlers para
+  checkout y webhooks) y con Vercel.
