@@ -30,6 +30,7 @@ export type Database = {
           height_cm: number | null;
           weight_kg: number | null;
           is_coach: boolean;
+          onboarded: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -41,6 +42,7 @@ export type Database = {
           height_cm?: number | null;
           weight_kg?: number | null;
           is_coach?: boolean;
+          onboarded?: boolean;
           created_at?: string;
           updated_at?: string;
         };
