@@ -20,7 +20,7 @@ export default async function EditarRutinaPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { userId } = await requireProfile();
+  const { userId, profile } = await requireProfile();
   const supabase = await createClient();
 
   const { data: routine } = await supabase
@@ -65,7 +65,11 @@ export default async function EditarRutinaPage({
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold tracking-tight">Editar rutina</h1>
-      <RoutineBuilder folders={folders ?? []} initial={initial} />
+      <RoutineBuilder
+        folders={folders ?? []}
+        isCoach={profile.is_coach}
+        initial={initial}
+      />
     </div>
   );
 }

@@ -22,7 +22,7 @@ import {
 type ExerciseDraft = { key: string; id?: string; name: string; sets_reps: string };
 type DayDraft = { key: string; id?: string; name: string; exercises: ExerciseDraft[] };
 
-const NO_FOLDER = "__root__";
+const NEW_FOLDER = "__new__";
 const newKey = () => crypto.randomUUID();
 
 function emptyExercise(): ExerciseDraft {
@@ -41,27 +41,30 @@ export type RoutineBuilderInitial = {
 
 export function RoutineBuilder({
   folders,
+  isCoach,
   initial,
 }: {
   folders: Folder[];
+  isCoach: boolean;
   initial?: RoutineBuilderInitial;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   const [name, setName] = useState(initial?.name ?? "");
-  const [folderId, setFolderId] = useState<string>(
-    initial?.folderId ?? NO_FOLDER,
+  // null = ninguna carpeta elegida (muestra placeholder). Solo aplica a coaches.
+  const [folderId, setFolderId] = useState<string | null>(
+    initial?.folderId ?? null,
   );
+  const [newFolderName, setNewFolderName] = useState("");
   const [days, setDays] = useState<DayDraft[]>(initial?.days ?? [emptyDay()]);
 
   const isEdit = Boolean(initial);
 
-  // Mapa value -> label para que el Select muestre el nombre de la carpeta
-  // (y "Sin carpeta (raíz)") en vez del id crudo.
+  // Carpetas existentes + opción para crear una nueva en el momento.
   const folderItems: Record<string, string> = {
-    [NO_FOLDER]: "Sin carpeta (raíz)",
     ...Object.fromEntries(folders.map((f) => [f.id, f.name])),
+    [NEW_FOLDER]: "➕ Crear carpeta nueva",
   };
 
   // --- mutadores de estado ---------------------------------------------------
@@ -110,6 +113,24 @@ export function RoutineBuilder({
 
   // --- guardar ---------------------------------------------------------------
   const handleSubmit = () => {
+    // Resolución de carpeta según rol (validación inmediata para coaches).
+    let folderIdPayload: string | null = null;
+    let newFolderNamePayload: string | null = null;
+    if (isCoach) {
+      if (folderId === NEW_FOLDER) {
+        if (!newFolderName.trim()) {
+          toast.error("Poné un nombre para la carpeta nueva.");
+          return;
+        }
+        newFolderNamePayload = newFolderName.trim();
+      } else if (folderId) {
+        folderIdPayload = folderId;
+      } else {
+        toast.error("Elegí o creá una carpeta para guardar la rutina.");
+        return;
+      }
+    }
+
     const payloadDays: RoutineDayInput[] = days.map((day) => ({
       id: day.id,
       name: day.name.trim(),
@@ -122,7 +143,8 @@ export function RoutineBuilder({
 
     const payload = {
       name: name.trim(),
-      folderId: folderId === NO_FOLDER ? null : folderId,
+      folderId: folderIdPayload,
+      newFolderName: newFolderNamePayload,
       days: payloadDays,
     };
 
@@ -154,26 +176,38 @@ export function RoutineBuilder({
           />
         </div>
 
-        <div className="space-y-2">
-          <Label>Carpeta (opcional)</Label>
-          <Select
-            value={folderId}
-            onValueChange={(v) => setFolderId(v ?? NO_FOLDER)}
-            items={folderItems}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NO_FOLDER}>Sin carpeta (raíz)</SelectItem>
-              {folders.map((f) => (
-                <SelectItem key={f.id} value={f.id}>
-                  {f.name}
+        {isCoach && (
+          <div className="space-y-2">
+            <Label>Carpeta del alumno</Label>
+            <Select
+              value={folderId}
+              onValueChange={(v) => setFolderId(v)}
+              items={folderItems}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Elegí una carpeta" />
+              </SelectTrigger>
+              <SelectContent>
+                {folders.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.name}
+                  </SelectItem>
+                ))}
+                <SelectItem value={NEW_FOLDER}>
+                  ➕ Crear carpeta nueva
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+              </SelectContent>
+            </Select>
+            {folderId === NEW_FOLDER && (
+              <Input
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                placeholder="Nombre de la carpeta (ej: Juan Pérez)"
+                autoFocus
+              />
+            )}
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">

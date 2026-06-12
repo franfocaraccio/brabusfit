@@ -12,8 +12,51 @@ export type ActionResult<T = undefined> =
 type RoutinePayload = {
   name: string;
   folderId: string | null;
+  /** Si viene, se crea una carpeta nueva con este nombre y se usa para la rutina. */
+  newFolderName?: string | null;
   days: RoutineDayInput[];
 };
+
+/**
+ * Resuelve a qué carpeta va la rutina según el rol:
+ * - Coach: obligatorio carpeta (existente o nueva). Crea la nueva si corresponde.
+ * - Alumno: sin carpeta (todas sus rutinas van juntas) -> folderId null.
+ */
+async function resolveFolderId(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  payload: RoutinePayload,
+): Promise<{ folderId: string | null } | { error: string }> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "No autenticado." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("is_coach")
+    .eq("id", user.id)
+    .single();
+  const isCoach = profile?.is_coach ?? false;
+
+  // Los alumnos no usan carpetas.
+  if (!isCoach) return { folderId: null };
+
+  const newName = payload.newFolderName?.trim();
+  if (newName) {
+    const { data: folder, error } = await supabase
+      .from("folders")
+      .insert({ owner_id: user.id, name: newName })
+      .select("id")
+      .single();
+    if (error) return { error: error.message };
+    return { folderId: folder.id };
+  }
+
+  if (!payload.folderId) {
+    return { error: "Elegí o creá una carpeta para guardar la rutina." };
+  }
+  return { folderId: payload.folderId };
+}
 
 function validateRoutine(payload: RoutinePayload): string | null {
   if (!payload.name.trim()) return "La rutina necesita un nombre.";
@@ -36,9 +79,12 @@ export async function createRoutine(
   if (error) return { ok: false, error };
 
   const supabase = await createClient();
+  const resolved = await resolveFolderId(supabase, payload);
+  if ("error" in resolved) return { ok: false, error: resolved.error };
+
   const { data, error: rpcError } = await supabase.rpc("create_full_routine", {
     p_name: payload.name.trim(),
-    p_folder_id: payload.folderId,
+    p_folder_id: resolved.folderId,
     p_days: payload.days,
   });
 
@@ -56,10 +102,13 @@ export async function updateRoutine(
   if (error) return { ok: false, error };
 
   const supabase = await createClient();
+  const resolved = await resolveFolderId(supabase, payload);
+  if ("error" in resolved) return { ok: false, error: resolved.error };
+
   const { data, error: rpcError } = await supabase.rpc("update_full_routine", {
     p_routine_id: routineId,
     p_name: payload.name.trim(),
-    p_folder_id: payload.folderId,
+    p_folder_id: resolved.folderId,
     p_days: payload.days,
   });
 
