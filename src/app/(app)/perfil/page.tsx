@@ -1,3 +1,4 @@
+import { EditProfileForm } from "@/components/profile/edit-profile-form";
 import { requireProfile } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -21,23 +22,21 @@ export default async function PerfilPage() {
         <CardHeader>
           <CardTitle className="text-base">Datos personales</CardTitle>
         </CardHeader>
+        <CardContent>
+          <EditProfileForm profile={profile} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Cuenta</CardTitle>
+        </CardHeader>
         <CardContent className="pt-0">
-          <Row label="Nombre" value={profile.first_name} />
-          <Row label="Apellido" value={profile.last_name} />
           <Row label="Email" value={email} />
-          <Row
-            label="Fecha de nacimiento"
-            value={profile.birth_date ?? "—"}
-          />
-          <Row
-            label="Altura"
-            value={profile.height_cm ? `${profile.height_cm} cm` : "—"}
-          />
-          <Row
-            label="Peso"
-            value={profile.weight_kg ? `${profile.weight_kg} kg` : "—"}
-          />
           <Row label="Rol" value={profile.is_coach ? "Coach" : "Alumno"} />
+          <p className="text-muted-foreground pt-3 text-xs">
+            El email y el rol no se pueden modificar.
+          </p>
         </CardContent>
       </Card>
     </div>
