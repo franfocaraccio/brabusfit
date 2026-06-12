@@ -57,6 +57,13 @@ export function RoutineBuilder({
 
   const isEdit = Boolean(initial);
 
+  // Mapa value -> label para que el Select muestre el nombre de la carpeta
+  // (y "Sin carpeta (raíz)") en vez del id crudo.
+  const folderItems: Record<string, string> = {
+    [NO_FOLDER]: "Sin carpeta (raíz)",
+    ...Object.fromEntries(folders.map((f) => [f.id, f.name])),
+  };
+
   // --- mutadores de estado ---------------------------------------------------
   const updateDay = (key: string, patch: Partial<DayDraft>) =>
     setDays((d) => d.map((day) => (day.key === key ? { ...day, ...patch } : day)));
@@ -152,9 +159,10 @@ export function RoutineBuilder({
           <Select
             value={folderId}
             onValueChange={(v) => setFolderId(v ?? NO_FOLDER)}
+            items={folderItems}
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Sin carpeta" />
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={NO_FOLDER}>Sin carpeta (raíz)</SelectItem>
