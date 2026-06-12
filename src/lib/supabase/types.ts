@@ -6,6 +6,16 @@
 export type ShareStatus = "pending" | "accepted";
 export type SessionStatus = "in_progress" | "finished" | "abandoned";
 
+// Estado de un email al validarlo para compartir (RPC validate_share_email).
+export type ShareEmailStatus =
+  | "invalid"
+  | "forbidden"
+  | "self"
+  | "coach"
+  | "already"
+  | "existing"
+  | "new";
+
 // Forma del payload que reciben las RPC create_full_routine / update_full_routine.
 export type ExerciseInput = {
   id?: string;
@@ -236,6 +246,10 @@ export type Database = {
       share_routine: {
         Args: { p_routine_id: string; p_email: string };
         Returns: { existed: boolean; email: string };
+      };
+      validate_share_email: {
+        Args: { p_routine_id: string; p_email: string };
+        Returns: ShareEmailStatus;
       };
     };
     Enums: {

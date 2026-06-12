@@ -1,11 +1,16 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Clock, Share2, Trash2, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 
-import { shareRoutine, unshareRoutine } from "@/lib/actions/shares";
+import {
+  checkShareEmail,
+  shareRoutine,
+  unshareRoutine,
+} from "@/lib/actions/shares";
+import type { ShareEmailStatus } from "@/lib/supabase/types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -35,11 +40,46 @@ export function ShareRoutine({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<ShareEmailStatus | null>(null);
+  const [checking, setChecking] = useState(false);
   const [pending, startTransition] = useTransition();
+
+  const looksLikeEmail = (v: string) => /.+@.+\..+/.test(v.trim());
+
+  // Validación en vivo (debounced). El reset inmediato se hace en onChange
+  // (event handler); el effect solo agenda el chequeo async.
+  useEffect(() => {
+    if (!looksLikeEmail(email)) return;
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      const result = await checkShareEmail(routineId, email.trim());
+      if (!cancelled) {
+        setStatus(result);
+        setChecking(false);
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [email, routineId]);
+
+  const onEmailChange = (v: string) => {
+    setEmail(v);
+    setStatus(null);
+    setChecking(looksLikeEmail(v));
+  };
+
+  // Estados que impiden compartir.
+  const blocked =
+    status === "self" ||
+    status === "coach" ||
+    status === "invalid" ||
+    status === "forbidden";
 
   const submit = () => {
     const value = email.trim();
-    if (!value) return;
+    if (!value || blocked) return;
     startTransition(async () => {
       const result = await shareRoutine(routineId, value);
       if (!result.ok) {
@@ -52,6 +92,8 @@ export function ShareRoutine({
           : "Invitación enviada. Se vinculará cuando cree su cuenta.",
       );
       setEmail("");
+      setStatus(null);
+      setChecking(false);
       router.refresh();
     });
   };
@@ -67,6 +109,34 @@ export function ShareRoutine({
       router.refresh();
     });
   };
+
+  const feedback: { text: string; cls: string } | null = checking
+    ? { text: "Verificando…", cls: "text-muted-foreground" }
+    : status === "self"
+      ? { text: "Ese es tu propio email.", cls: "text-destructive" }
+      : status === "coach"
+        ? {
+            text: "No podés compartir una rutina con un coach.",
+            cls: "text-destructive",
+          }
+        : status === "invalid"
+          ? { text: "Email inválido.", cls: "text-destructive" }
+          : status === "already"
+            ? {
+                text: "Ya está compartida con este email.",
+                cls: "text-amber-500",
+              }
+            : status === "existing"
+              ? {
+                  text: "Usuario encontrado — le llega al instante.",
+                  cls: "text-emerald-500",
+                }
+              : status === "new"
+                ? {
+                    text: "Se le enviará una invitación para crear su cuenta.",
+                    cls: "text-muted-foreground",
+                  }
+                : null;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -91,23 +161,32 @@ export function ShareRoutine({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex items-end gap-2">
-          <div className="flex-1 space-y-2">
-            <Label htmlFor="share-email">Email del alumno</Label>
-            <Input
-              id="share-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="alumno@email.com"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") submit();
-              }}
-            />
+        <div className="space-y-1.5">
+          <div className="flex items-end gap-2">
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="share-email">Email del alumno</Label>
+              <Input
+                id="share-email"
+                type="email"
+                value={email}
+                onChange={(e) => onEmailChange(e.target.value)}
+                placeholder="alumno@email.com"
+                aria-invalid={blocked}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") submit();
+                }}
+              />
+            </div>
+            <Button
+              onClick={submit}
+              disabled={pending || checking || !email.trim() || blocked}
+            >
+              Compartir
+            </Button>
           </div>
-          <Button onClick={submit} disabled={pending || !email.trim()}>
-            Compartir
-          </Button>
+          {feedback ? (
+            <p className={`text-xs ${feedback.cls}`}>{feedback.text}</p>
+          ) : null}
         </div>
 
         {shares.length > 0 && (

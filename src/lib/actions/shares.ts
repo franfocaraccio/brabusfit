@@ -6,6 +6,24 @@ import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { sendRoutineInviteEmail, sendRoutineSharedEmail } from "@/lib/email";
 import type { ActionResult } from "@/lib/actions/routines";
+import type { ShareEmailStatus } from "@/lib/supabase/types";
+
+/**
+ * Valida en vivo el email a compartir. Devuelve null si la RPC falla (p. ej. la
+ * migración aún no corrió): degradación elegante, sin bloquear ni mostrar error.
+ */
+export async function checkShareEmail(
+  routineId: string,
+  email: string,
+): Promise<ShareEmailStatus | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("validate_share_email", {
+    p_routine_id: routineId,
+    p_email: email,
+  });
+  if (error) return null;
+  return data as ShareEmailStatus;
+}
 
 export async function shareRoutine(
   routineId: string,
