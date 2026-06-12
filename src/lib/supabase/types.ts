@@ -16,6 +16,16 @@ export type ShareEmailStatus =
   | "existing"
   | "new";
 
+// Estado de un username al validarlo para compartir (RPC validate_share_username).
+export type ShareUsernameStatus =
+  | "invalid"
+  | "forbidden"
+  | "not_found"
+  | "self"
+  | "coach"
+  | "already"
+  | "existing";
+
 // Forma del payload que reciben las RPC create_full_routine / update_full_routine.
 export type ExerciseInput = {
   id?: string;
@@ -41,6 +51,7 @@ export type Database = {
           weight_kg: number | null;
           is_coach: boolean;
           onboarded: boolean;
+          username: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -53,6 +64,7 @@ export type Database = {
           weight_kg?: number | null;
           is_coach?: boolean;
           onboarded?: boolean;
+          username?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -191,6 +203,7 @@ export type Database = {
           session_id: string;
           exercise_id: string;
           completed: boolean;
+          note: string | null;
           created_at: string;
         };
         Insert: {
@@ -198,6 +211,7 @@ export type Database = {
           session_id: string;
           exercise_id: string;
           completed?: boolean;
+          note?: string | null;
           created_at?: string;
         };
         Update: Partial<
@@ -250,6 +264,18 @@ export type Database = {
       validate_share_email: {
         Args: { p_routine_id: string; p_email: string };
         Returns: ShareEmailStatus;
+      };
+      validate_share_username: {
+        Args: { p_routine_id: string; p_username: string };
+        Returns: ShareUsernameStatus;
+      };
+      share_routine_by_username: {
+        Args: { p_routine_id: string; p_username: string };
+        Returns: { existed: boolean; email: string };
+      };
+      username_available: {
+        Args: { p_username: string };
+        Returns: boolean;
       };
     };
     Enums: {

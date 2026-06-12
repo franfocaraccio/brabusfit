@@ -7,10 +7,12 @@ import { toast } from "sonner";
 
 import {
   checkShareEmail,
+  checkShareUsername,
   shareRoutine,
+  shareRoutineByUsername,
   unshareRoutine,
 } from "@/lib/actions/shares";
-import type { ShareEmailStatus } from "@/lib/supabase/types";
+import { usernameError } from "@/lib/username";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 export type ShareRow = {
   id: string;
@@ -29,6 +32,8 @@ export type ShareRow = {
   status: "pending" | "accepted";
   student: { first_name: string; last_name: string } | null;
 };
+
+type Mode = "email" | "username";
 
 export function ShareRoutine({
   routineId,
@@ -39,20 +44,25 @@ export function ShareRoutine({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<ShareEmailStatus | null>(null);
+  const [mode, setMode] = useState<Mode>("email");
+  const [value, setValue] = useState("");
+  const [status, setStatus] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  const looksLikeEmail = (v: string) => /.+@.+\..+/.test(v.trim());
+  const looksValid = (v: string) =>
+    mode === "email" ? /.+@.+\..+/.test(v.trim()) : !usernameError(v.trim());
 
-  // Validación en vivo (debounced). El reset inmediato se hace en onChange
-  // (event handler); el effect solo agenda el chequeo async.
+  // Validación en vivo (debounced) según el modo.
   useEffect(() => {
-    if (!looksLikeEmail(email)) return;
+    const v = value.trim();
+    if (!v || !looksValid(v)) return;
     let cancelled = false;
     const t = setTimeout(async () => {
-      const result = await checkShareEmail(routineId, email.trim());
+      const result =
+        mode === "email"
+          ? await checkShareEmail(routineId, v)
+          : await checkShareUsername(routineId, v);
       if (!cancelled) {
         setStatus(result);
         setChecking(false);
@@ -62,26 +72,39 @@ export function ShareRoutine({
       cancelled = true;
       clearTimeout(t);
     };
-  }, [email, routineId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, mode, routineId]);
 
-  const onEmailChange = (v: string) => {
-    setEmail(v);
+  const onChange = (raw: string) => {
+    const v = mode === "username" ? raw.toLowerCase() : raw;
+    setValue(v);
     setStatus(null);
-    setChecking(looksLikeEmail(v));
+    setChecking(v.trim() !== "" && looksValid(v));
   };
 
-  // Estados que impiden compartir.
-  const blocked =
-    status === "self" ||
-    status === "coach" ||
-    status === "invalid" ||
-    status === "forbidden";
+  const switchMode = (m: Mode) => {
+    setMode(m);
+    setValue("");
+    setStatus(null);
+    setChecking(false);
+  };
+
+  // El botón se habilita SOLO cuando el destino es realmente compartible.
+  const canShare =
+    !pending &&
+    !checking &&
+    (mode === "email"
+      ? status === "existing" || status === "new"
+      : status === "existing");
 
   const submit = () => {
-    const value = email.trim();
-    if (!value || blocked) return;
+    const v = value.trim();
+    if (!canShare || !v) return;
     startTransition(async () => {
-      const result = await shareRoutine(routineId, value);
+      const result =
+        mode === "email"
+          ? await shareRoutine(routineId, v)
+          : await shareRoutineByUsername(routineId, v);
       if (!result.ok) {
         toast.error(result.error);
         return;
@@ -91,7 +114,7 @@ export function ShareRoutine({
           ? "Rutina compartida. Le avisamos por email."
           : "Invitación enviada. Se vinculará cuando cree su cuenta.",
       );
-      setEmail("");
+      setValue("");
       setStatus(null);
       setChecking(false);
       router.refresh();
@@ -110,33 +133,49 @@ export function ShareRoutine({
     });
   };
 
-  const feedback: { text: string; cls: string } | null = checking
-    ? { text: "Verificando…", cls: "text-muted-foreground" }
-    : status === "self"
-      ? { text: "Ese es tu propio email.", cls: "text-destructive" }
-      : status === "coach"
-        ? {
-            text: "No podés compartir una rutina con un coach.",
-            cls: "text-destructive",
-          }
-        : status === "invalid"
-          ? { text: "Email inválido.", cls: "text-destructive" }
-          : status === "already"
-            ? {
-                text: "Ya está compartida con este email.",
-                cls: "text-amber-500",
-              }
-            : status === "existing"
-              ? {
-                  text: "Usuario encontrado — le llega al instante.",
-                  cls: "text-emerald-500",
-                }
-              : status === "new"
-                ? {
-                    text: "Se le enviará una invitación para crear su cuenta.",
-                    cls: "text-muted-foreground",
-                  }
-                : null;
+  const feedback = ((): { text: string; cls: string } | null => {
+    const v = value.trim();
+    if (checking) return { text: "Verificando…", cls: "text-muted-foreground" };
+    if (v && !looksValid(v)) {
+      return mode === "username"
+        ? { text: usernameError(v) ?? "", cls: "text-destructive" }
+        : { text: "Email inválido.", cls: "text-destructive" };
+    }
+    switch (status) {
+      case "self":
+        return {
+          text: mode === "email" ? "Ese es tu propio email." : "Ese sos vos.",
+          cls: "text-destructive",
+        };
+      case "coach":
+        return {
+          text: "No podés compartir una rutina con un coach.",
+          cls: "text-destructive",
+        };
+      case "not_found":
+        return {
+          text: "No existe un usuario con ese nombre.",
+          cls: "text-destructive",
+        };
+      case "already":
+        return {
+          text: "Ya está compartida con ese destinatario.",
+          cls: "text-amber-500",
+        };
+      case "existing":
+        return {
+          text: "Usuario encontrado — le llega al instante.",
+          cls: "text-emerald-500",
+        };
+      case "new":
+        return {
+          text: "Se le enviará una invitación para crear su cuenta.",
+          cls: "text-muted-foreground",
+        };
+      default:
+        return null;
+    }
+  })();
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -156,31 +195,52 @@ export function ShareRoutine({
         <DialogHeader>
           <DialogTitle>Compartir rutina</DialogTitle>
           <DialogDescription>
-            Ingresá el email de tu alumno. Si ya tiene cuenta la verá al
-            instante; si no, le enviamos una invitación.
+            Compartí con tu alumno por email o por nombre de usuario.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Selector de modo */}
+        <div className="bg-muted inline-flex w-fit rounded-lg p-0.5">
+          {(["email", "username"] as Mode[]).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => switchMode(m)}
+              className={cn(
+                "rounded-md px-3 py-1 text-sm font-medium transition-colors",
+                mode === m
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {m === "email" ? "Email" : "Usuario"}
+            </button>
+          ))}
+        </div>
 
         <div className="space-y-1.5">
           <div className="flex items-end gap-2">
             <div className="flex-1 space-y-2">
-              <Label htmlFor="share-email">Email del alumno</Label>
+              <Label htmlFor="share-input">
+                {mode === "email" ? "Email del alumno" : "Nombre de usuario"}
+              </Label>
               <Input
-                id="share-email"
-                type="email"
-                value={email}
-                onChange={(e) => onEmailChange(e.target.value)}
-                placeholder="alumno@email.com"
-                aria-invalid={blocked}
+                id="share-input"
+                type={mode === "email" ? "email" : "text"}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder={
+                  mode === "email" ? "alumno@email.com" : "juan.perez"
+                }
+                autoCapitalize="none"
+                autoComplete="off"
+                aria-invalid={Boolean(feedback && feedback.cls.includes("destructive"))}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") submit();
                 }}
               />
             </div>
-            <Button
-              onClick={submit}
-              disabled={pending || checking || !email.trim() || blocked}
-            >
+            <Button onClick={submit} disabled={!canShare}>
               Compartir
             </Button>
           </div>

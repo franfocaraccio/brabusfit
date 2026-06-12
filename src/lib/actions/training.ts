@@ -43,13 +43,19 @@ export async function saveExerciseLog(
   sessionId: string,
   exerciseId: string,
   sets: SetInput[],
+  note: string | null = null,
 ): Promise<ActionResult> {
   const supabase = await createClient();
 
   const { data: log, error: upsertErr } = await supabase
     .from("exercise_logs")
     .upsert(
-      { session_id: sessionId, exercise_id: exerciseId, completed: true },
+      {
+        session_id: sessionId,
+        exercise_id: exerciseId,
+        completed: true,
+        note: note && note.trim() ? note.trim() : null,
+      },
       { onConflict: "session_id,exercise_id" },
     )
     .select("id")

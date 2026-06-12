@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
+import { usernameError } from "@/lib/username";
 
 export type AuthResult = { error: string } | undefined;
 
@@ -21,6 +22,9 @@ export async function signUpAction(
   const birthDate = String(formData.get("birth_date") ?? "").trim();
   const heightCm = String(formData.get("height_cm") ?? "").trim();
   const weightKg = String(formData.get("weight_kg") ?? "").trim();
+  const username = String(formData.get("username") ?? "")
+    .trim()
+    .toLowerCase();
   // base-ui Checkbox puede serializar el valor como "on" o "true" cuando está
   // marcado; ausente o "false"/"off" cuando no lo está.
   const isCoach = ["on", "true"].includes(String(formData.get("is_coach")));
@@ -31,6 +35,8 @@ export async function signUpAction(
   if (password.length < 6) {
     return { error: "La contraseña debe tener al menos 6 caracteres." };
   }
+  const uErr = usernameError(username);
+  if (uErr) return { error: `Nombre de usuario: ${uErr}` };
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
@@ -45,6 +51,7 @@ export async function signUpAction(
         birth_date: birthDate || null,
         height_cm: heightCm ? Number(heightCm) : null,
         weight_kg: weightKg ? Number(weightKg) : null,
+        username,
         is_coach: isCoach,
       },
     },

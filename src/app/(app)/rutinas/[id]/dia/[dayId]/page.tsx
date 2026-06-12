@@ -13,6 +13,7 @@ type SetLogRow = { set_number: number; weight: number | null; reps: number | nul
 type LogRow = {
   exercise_id: string;
   completed: boolean;
+  note: string | null;
   set_logs: SetLogRow[];
 };
 type HistorySessionRow = {
@@ -62,7 +63,7 @@ export default async function TrainDayPage({
   if (current) {
     const { data } = await supabase
       .from("exercise_logs")
-      .select("exercise_id, completed, set_logs(set_number, weight, reps)")
+      .select("exercise_id, completed, note, set_logs(set_number, weight, reps)")
       .eq("session_id", current.id);
     currentLogs = (data ?? []) as unknown as LogRow[];
   }
@@ -109,6 +110,7 @@ export default async function TrainDayPage({
       setsReps: ex.sets_reps,
       completed: log?.completed ?? false,
       savedSets: sets,
+      note: log?.note ?? "",
       history: historyByExercise.get(ex.id) ?? [],
     };
   });

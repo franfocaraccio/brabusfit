@@ -6,7 +6,10 @@ import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { sendRoutineInviteEmail, sendRoutineSharedEmail } from "@/lib/email";
 import type { ActionResult } from "@/lib/actions/routines";
-import type { ShareEmailStatus } from "@/lib/supabase/types";
+import type {
+  ShareEmailStatus,
+  ShareUsernameStatus,
+} from "@/lib/supabase/types";
 
 /**
  * Valida en vivo el email a compartir. Devuelve null si la RPC falla (p. ej. la
@@ -23,6 +26,20 @@ export async function checkShareEmail(
   });
   if (error) return null;
   return data as ShareEmailStatus;
+}
+
+/** Valida en vivo el username a compartir. */
+export async function checkShareUsername(
+  routineId: string,
+  username: string,
+): Promise<ShareUsernameStatus | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("validate_share_username", {
+    p_routine_id: routineId,
+    p_username: username,
+  });
+  if (error) return null;
+  return data as ShareUsernameStatus;
 }
 
 export async function shareRoutine(
@@ -65,6 +82,48 @@ export async function shareRoutine(
     });
   } else {
     await sendRoutineInviteEmail({
+      to: result.email,
+      coachName,
+      routineName: routine.name,
+    });
+  }
+
+  revalidatePath(`/rutinas/${routineId}`);
+  return { ok: true, data: { existed: result.existed } };
+}
+
+export async function shareRoutineByUsername(
+  routineId: string,
+  username: string,
+): Promise<ActionResult<{ existed: boolean }>> {
+  const { profile } = await requireProfile();
+  if (!profile.is_coach) {
+    return { ok: false, error: "Solo los coaches pueden compartir rutinas." };
+  }
+
+  const supabase = await createClient();
+  const { data: routine } = await supabase
+    .from("routines")
+    .select("name")
+    .eq("id", routineId)
+    .maybeSingle();
+  if (!routine) {
+    return { ok: false, error: "No se encontró la rutina." };
+  }
+
+  const { data, error } = await supabase.rpc("share_routine_by_username", {
+    p_routine_id: routineId,
+    p_username: username,
+  });
+
+  if (error) return { ok: false, error: error.message };
+
+  const result = data as { existed: boolean; email: string };
+  const coachName = `${profile.first_name} ${profile.last_name}`.trim();
+
+  // Por username el usuario siempre existe -> aviso de rutina compartida.
+  if (result.existed) {
+    await sendRoutineSharedEmail({
       to: result.email,
       coachName,
       routineName: routine.name,

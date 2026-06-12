@@ -4,8 +4,25 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { usernameError } from "@/lib/username";
 
 export type ProfileResult = { error: string } | undefined;
+
+/**
+ * ¿Está disponible el username? Optimista ante error de RPC (no bloquea si la
+ * migración aún no corrió); la unicidad se garantiza igual a nivel DB.
+ */
+export async function checkUsername(
+  username: string,
+): Promise<{ available: boolean }> {
+  if (usernameError(username)) return { available: false };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("username_available", {
+    p_username: username,
+  });
+  if (error) return { available: true };
+  return { available: data as boolean };
+}
 
 export type EditableProfile = {
   firstName: string;
@@ -60,11 +77,16 @@ export async function completeProfile(
   const birthDate = String(formData.get("birth_date") ?? "").trim();
   const heightCm = String(formData.get("height_cm") ?? "").trim();
   const weightKg = String(formData.get("weight_kg") ?? "").trim();
+  const username = String(formData.get("username") ?? "")
+    .trim()
+    .toLowerCase();
   const isCoach = ["on", "true"].includes(String(formData.get("is_coach")));
 
   if (!firstName || !lastName) {
     return { error: "Completá nombre y apellido." };
   }
+  const uErr = usernameError(username);
+  if (uErr) return { error: `Nombre de usuario: ${uErr}` };
 
   const supabase = await createClient();
   const {
@@ -80,12 +102,18 @@ export async function completeProfile(
       birth_date: birthDate || null,
       height_cm: heightCm ? Number(heightCm) : null,
       weight_kg: weightKg ? Number(weightKg) : null,
+      username,
       is_coach: isCoach,
       onboarded: true,
     })
     .eq("id", user.id);
 
-  if (error) return { error: error.message };
+  if (error) {
+    if (error.code === "23505") {
+      return { error: "Ese nombre de usuario ya está en uso." };
+    }
+    return { error: error.message };
+  }
 
   redirect("/dashboard");
 }

@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { signUpAction, type AuthResult } from "@/lib/actions/auth";
+import { UsernameField } from "@/components/auth/username-field";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ export function SignupForm() {
     signUpAction,
     undefined,
   );
+  const [usernameValid, setUsernameValid] = useState(false);
 
   return (
     <form action={formAction} className="space-y-4">
@@ -72,6 +74,8 @@ export function SignupForm() {
         />
       </div>
 
+      <UsernameField onValidChange={setUsernameValid} />
+
       <div className="space-y-2">
         <Label htmlFor="password">Contraseña</Label>
         <Input
@@ -98,7 +102,11 @@ export function SignupForm() {
         <p className="text-destructive text-sm">{state.error}</p>
       ) : null}
 
-      <Button type="submit" className="w-full" disabled={pending}>
+      <Button
+        type="submit"
+        className="w-full"
+        disabled={pending || !usernameValid}
+      >
         {pending ? "Creando cuenta…" : "Crear cuenta"}
       </Button>
 

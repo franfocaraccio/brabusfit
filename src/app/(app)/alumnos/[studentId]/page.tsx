@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 type SetLog = { set_number: number; weight: number | null; reps: number | null };
 type ExLog = {
   completed: boolean;
+  note: string | null;
   exercise: { name: string } | null;
   set_logs: SetLog[];
 };
@@ -63,7 +64,7 @@ export default async function AlumnoDetailPage({
   const { data: sessionsData } = await supabase
     .from("workout_sessions")
     .select(
-      "id, finished_at, started_at, day:routine_days(name), routine:routines(name), exercise_logs(completed, exercise:exercises(name), set_logs(set_number, weight, reps))",
+      "id, finished_at, started_at, day:routine_days(name), routine:routines(name), exercise_logs(completed, note, exercise:exercises(name), set_logs(set_number, weight, reps))",
     )
     .eq("user_id", studentId)
     .eq("status", "finished")
@@ -107,9 +108,9 @@ export default async function AlumnoDetailPage({
                   {formatDate(s.finished_at ?? s.started_at)}
                 </span>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {s.exercise_logs
-                  .filter((l) => l.set_logs.length > 0)
+                  .filter((l) => l.set_logs.length > 0 || l.note)
                   .map((l, i) => (
                     <div key={i} className="text-sm">
                       <span className="font-medium">
@@ -118,10 +119,15 @@ export default async function AlumnoDetailPage({
                       <span className="text-muted-foreground ml-2 text-xs">
                         {summarize(l.set_logs)}
                       </span>
+                      {l.note ? (
+                        <p className="text-muted-foreground mt-0.5 text-xs italic">
+                          “{l.note}”
+                        </p>
+                      ) : null}
                     </div>
                   ))}
-                {s.exercise_logs.filter((l) => l.set_logs.length > 0).length ===
-                  0 && (
+                {s.exercise_logs.filter((l) => l.set_logs.length > 0 || l.note)
+                  .length === 0 && (
                   <p className="text-muted-foreground text-xs">
                     Sin series registradas.
                   </p>

@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { completeProfile, type ProfileResult } from "@/lib/actions/profile";
 import type { Profile } from "@/lib/supabase/types";
+import { UsernameField } from "@/components/auth/username-field";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,9 @@ export function CompleteProfileForm({ profile }: { profile: Profile }) {
   const [state, formAction, pending] = useActionState<ProfileResult, FormData>(
     completeProfile,
     undefined,
+  );
+  const [usernameValid, setUsernameValid] = useState(
+    Boolean(profile.username),
   );
 
   return (
@@ -37,6 +41,11 @@ export function CompleteProfileForm({ profile }: { profile: Profile }) {
           />
         </div>
       </div>
+
+      <UsernameField
+        defaultValue={profile.username ?? ""}
+        onValidChange={setUsernameValid}
+      />
 
       <div className="space-y-2">
         <Label htmlFor="birth_date">Fecha de nacimiento</Label>
@@ -96,7 +105,11 @@ export function CompleteProfileForm({ profile }: { profile: Profile }) {
         <p className="text-destructive text-sm">{state.error}</p>
       ) : null}
 
-      <Button type="submit" className="w-full" disabled={pending}>
+      <Button
+        type="submit"
+        className="w-full"
+        disabled={pending || !usernameValid}
+      >
         {pending ? "Guardando…" : "Guardar y continuar"}
       </Button>
     </form>

@@ -38,6 +38,7 @@ export type ExerciseState = {
   setsReps: string;
   completed: boolean;
   savedSets: SavedSet[];
+  note: string;
   history: HistoryEntry[];
 };
 
@@ -97,6 +98,9 @@ export function DayTrainer({
   const [rows, setRows] = useState<Record<string, SetRow[]>>(
     Object.fromEntries(exercises.map((e) => [e.id, toRows(e.savedSets)])),
   );
+  const [notes, setNotes] = useState<Record<string, string>>(
+    Object.fromEntries(exercises.map((e) => [e.id, e.note])),
+  );
   const [showCloseWarning, setShowCloseWarning] = useState(false);
 
   const completedCount = Object.values(completed).filter(Boolean).length;
@@ -145,7 +149,7 @@ export function DayTrainer({
         reps: r.reps.trim() === "" ? null : Number(r.reps),
       }));
 
-      const res = await saveExerciseLog(sessionId, exId, sets);
+      const res = await saveExerciseLog(sessionId, exId, sets, notes[exId]);
       if (!res.ok) {
         toast.error(res.error);
         return;
@@ -283,17 +287,25 @@ export function DayTrainer({
                         <span className="text-muted-foreground w-14 shrink-0 text-xs">
                           Serie {i + 1}
                         </span>
-                        <Input
-                          type="number"
-                          inputMode="decimal"
-                          step="0.5"
-                          min="0"
-                          placeholder="Peso"
-                          value={row.weight}
-                          onChange={(e) =>
-                            setRow(ex.id, row.key, { weight: e.target.value })
-                          }
-                        />
+                        <div className="relative flex-1">
+                          <Input
+                            type="number"
+                            inputMode="decimal"
+                            step="0.5"
+                            min="0"
+                            placeholder="Peso"
+                            value={row.weight}
+                            onChange={(e) =>
+                              setRow(ex.id, row.key, { weight: e.target.value })
+                            }
+                            className={cn(row.weight.trim() !== "" && "pr-9")}
+                          />
+                          {row.weight.trim() !== "" && (
+                            <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm">
+                              Kg
+                            </span>
+                          )}
+                        </div>
                         <Input
                           type="number"
                           inputMode="numeric"
@@ -303,6 +315,7 @@ export function DayTrainer({
                           onChange={(e) =>
                             setRow(ex.id, row.key, { reps: e.target.value })
                           }
+                          className="flex-1"
                         />
                         <Button
                           variant="ghost"
@@ -323,6 +336,26 @@ export function DayTrainer({
                     >
                       <Plus className="size-4" /> Agregar serie
                     </Button>
+                  </div>
+
+                  {/* Detalle / comentario opcional del ejercicio */}
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor={`note-${ex.id}`}
+                      className="text-muted-foreground text-xs font-medium"
+                    >
+                      Detalle (opcional)
+                    </label>
+                    <textarea
+                      id={`note-${ex.id}`}
+                      rows={2}
+                      value={notes[ex.id] ?? ""}
+                      onChange={(e) =>
+                        setNotes((n) => ({ ...n, [ex.id]: e.target.value }))
+                      }
+                      placeholder="Ej: me costó la última serie, subir peso la próxima"
+                      className="border-input bg-input/40 placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/40 w-full resize-y rounded-xl border px-3.5 py-2 text-sm outline-none transition-colors focus-visible:ring-3"
+                    />
                   </div>
 
                   <Button
