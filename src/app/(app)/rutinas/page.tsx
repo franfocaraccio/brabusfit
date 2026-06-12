@@ -56,16 +56,23 @@ export default async function RutinasPage() {
         : null,
     }));
 
+  // Si no hay nada, el empty state ya ofrece "Crear mi primera rutina":
+  // ocultamos el botón chico del header para no duplicar.
+  const hasNothing =
+    routines.length === 0 && folders.length === 0 && shared.length === 0;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold tracking-tight">Rutinas</h1>
-        <Link
-          href="/rutinas/crear"
-          className={cn(buttonVariants({ size: "sm" }), "gap-1.5")}
-        >
-          <Plus className="size-4" /> Crear rutina
-        </Link>
+        {!hasNothing && (
+          <Link
+            href="/rutinas/crear"
+            className={cn(buttonVariants({ size: "sm" }), "gap-1.5")}
+          >
+            <Plus className="size-4" /> Crear rutina
+          </Link>
+        )}
       </div>
 
       <RoutinesBrowser
