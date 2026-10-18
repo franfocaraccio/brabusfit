@@ -23,6 +23,8 @@ web; perdemos push, cámara y pasos).
   compartidas / buscador) → días → **entrenar y guardar sesión** (misma lógica
   que la web: precarga de la última sesión, completar rápido, coma decimal,
   detalle, aviso de cambios sin guardar).
+- **EAS Update** (proyecto `@franfoca/brabus-fit`): `npm run publish` desde
+  `apps/mobile` publica la app para abrirla en Expo Go desde cualquier red.
 
 ### Pendiente (paso 4 — nativo)
 - **Google SSO en mobile:** requiere development build (no Expo Go), OAuth
@@ -30,7 +32,10 @@ web; perdemos push, cámara y pasos).
 - **Notificaciones push** (avisos de progresión, recordatorio del check-in).
 - **Cámara** (fotos de progreso / check-in) y **pasos** (Apple Health / Google Fit).
 - **Builds y publicación:** EAS Build + EAS Submit (cuentas Apple Developer
-  USD 99/año y Google Play USD 25).
+  USD 99/año y Google Play USD 25). TestFlight para la beta. Al pasar a builds
+  propias, cambiar `runtimeVersion` a `{"policy": "appVersion"}`. Las tiendas
+  piden: ícono/capturas, URL de política de privacidad, borrado de cuenta, y
+  "Sign in with Apple" si hay login con Google.
 - Pantallas de gestión en mobile (crear/editar/compartir rutinas, perfil): hoy
   se hacen desde la web.
 

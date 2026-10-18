@@ -67,7 +67,16 @@ npm run dev:mobile     # mobile → QR para Expo Go
 **Probar mobile en tu teléfono:** con la compu y el teléfono en la **misma red
 wifi**, corré `npm run dev:mobile`, abrí **Expo Go** y escaneá el QR (en iPhone,
 con la cámara). Si la red bloquea la conexión, usá
-`npm run start --workspace=@brabus/mobile -- --tunnel`.
+`npm run start --workspace=@brabus/mobile -- --tunnel`. Expo Go tiene que estar
+logueado con la misma cuenta de Expo que la CLI (`npx expo login`, cuenta `franfoca`).
+
+**Usar la app fuera de casa (EAS Update):** desde `apps/mobile`, corré
+`npm run publish`. Sube la versión actual del código a Expo (branch `main`) y
+aparece en Expo Go → perfil → proyecto *brabus-fit*, usable desde cualquier red
+sin la compu. Las variables `EXPO_PUBLIC_*` se toman del entorno `production`
+de EAS (expo.dev → proyecto → Environment variables), no del `.env` local.
+`runtimeVersion` está fijado en `exposdk:57.0.0` para que Expo Go acepte las
+updates; al pasar a builds propias (EAS Build) cambiarlo a `{"policy": "appVersion"}`.
 
 > Si `expo start` falla con `Cannot find module 'expo-router/...'`, borrá
 > `node_modules` (raíz y workspaces) y `package-lock.json` y volvé a correr
