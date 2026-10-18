@@ -91,7 +91,7 @@ export function DayTrainer({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  // Todo vive en memoria hasta "Cerrar rutina". Si el usuario se va sin
+  // Todo vive en memoria hasta "Guardar sesión". Si el usuario se va sin
   // cerrar, la sesión se pierde. Cada sesión nueva arranca precargada con las
   // series del último entrenamiento; si progresó, las edita a mano.
   const [completed, setCompleted] = useState<Record<string, boolean>>({});
@@ -254,7 +254,7 @@ export function DayTrainer({
       }
       setShowCloseWarning(false);
       toast.success(
-        logs.length > 0 ? "Entrenamiento guardado" : "Rutina cerrada sin cambios",
+        logs.length > 0 ? "Sesión guardada" : "Saliste sin registrar ejercicios",
       );
       leave(`/rutinas/${routineId}`);
       router.refresh();
@@ -469,7 +469,7 @@ export function DayTrainer({
                     onClick={() => handleDone(ex.id)}
                     disabled={pending}
                   >
-                    Listo
+                    Guardar ejercicio
                   </Button>
                 </div>
               )}
@@ -478,7 +478,7 @@ export function DayTrainer({
         })}
       </div>
 
-      {/* Cerrar rutina */}
+      {/* Guardar sesión */}
       <div className="bg-background/90 sticky bottom-16 z-20 -mx-4 border-t px-4 py-3 backdrop-blur md:bottom-0 md:mx-0">
         <Button
           className="w-full"
@@ -486,7 +486,7 @@ export function DayTrainer({
           onClick={handleCloseClick}
           disabled={pending}
         >
-          Listo — Cerrar rutina
+          Guardar sesión
         </Button>
       </div>
 
@@ -496,8 +496,8 @@ export function DayTrainer({
             <DialogTitle>Todavía no terminaste</DialogTitle>
             <DialogDescription>
               {completedCount === 0
-                ? "No marcaste ningún ejercicio como completado, así que no se va a guardar nada. ¿Querés cerrar la rutina igualmente?"
-                : `Te quedan ${exercises.length - completedCount} ejercicios sin completar. Se guardan solo los ${completedCount} que marcaste como listos. ¿Querés cerrar la rutina igualmente?`}
+                ? "No guardaste ningún ejercicio, así que la sesión no va a registrar nada. ¿Querés salir igualmente?"
+                : `Te quedan ${exercises.length - completedCount} ejercicios sin guardar. Se registran solo los ${completedCount} que guardaste. ¿Querés guardar la sesión igualmente?`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -509,7 +509,11 @@ export function DayTrainer({
               Seguir entrenando
             </Button>
             <Button onClick={doClose} disabled={pending}>
-              {pending ? "Guardando…" : "Cerrar igualmente"}
+              {pending
+                ? "Guardando…"
+                : completedCount === 0
+                  ? "Salir igualmente"
+                  : "Guardar igualmente"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -527,7 +531,7 @@ export function DayTrainer({
             <DialogTitle>Los cambios no fueron guardados</DialogTitle>
             <DialogDescription>
               Si salís ahora se pierde lo que cargaste en este entrenamiento.
-              Para guardarlo, usá &quot;Listo — Cerrar rutina&quot;.
+              Para guardarlo, usá &quot;Guardar sesión&quot;.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
