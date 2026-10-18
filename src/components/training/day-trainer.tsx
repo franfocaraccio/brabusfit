@@ -254,7 +254,7 @@ export function DayTrainer({
       }
       setShowCloseWarning(false);
       toast.success(
-        logs.length > 0 ? "Sesión guardada" : "Saliste sin registrar ejercicios",
+        "Sesión guardada",
       );
       leave(`/rutinas/${routineId}`);
       router.refresh();
@@ -482,9 +482,9 @@ export function DayTrainer({
       <div className="bg-background/90 sticky bottom-16 z-20 -mx-4 border-t px-4 py-3 backdrop-blur md:bottom-0 md:mx-0">
         <Button
           className="w-full"
-          variant={allDone ? "default" : "secondary"}
+          variant={completedCount > 0 ? "default" : "secondary"}
           onClick={handleCloseClick}
-          disabled={pending}
+          disabled={pending || completedCount === 0}
         >
           Guardar sesión
         </Button>
@@ -495,9 +495,7 @@ export function DayTrainer({
           <DialogHeader>
             <DialogTitle>Todavía no terminaste</DialogTitle>
             <DialogDescription>
-              {completedCount === 0
-                ? "No guardaste ningún ejercicio, así que la sesión no va a registrar nada. ¿Querés salir igualmente?"
-                : `Te quedan ${exercises.length - completedCount} ejercicios sin guardar. Se registran solo los ${completedCount} que guardaste. ¿Querés guardar la sesión igualmente?`}
+              {`Te quedan ${exercises.length - completedCount} ejercicios sin guardar. Se registran solo los ${completedCount} que guardaste. ¿Querés guardar la sesión igualmente?`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -509,11 +507,7 @@ export function DayTrainer({
               Seguir entrenando
             </Button>
             <Button onClick={doClose} disabled={pending}>
-              {pending
-                ? "Guardando…"
-                : completedCount === 0
-                  ? "Salir igualmente"
-                  : "Guardar igualmente"}
+              {pending ? "Guardando…" : "Guardar igualmente"}
             </Button>
           </DialogFooter>
         </DialogContent>
