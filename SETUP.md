@@ -69,6 +69,8 @@ wifi**, corré `npm run dev:mobile`, abrí **Expo Go** y escaneá el QR (en iPho
 con la cámara). Si la red bloquea la conexión, usá
 `npm run start --workspace=@brabus/mobile -- --tunnel`. Expo Go tiene que estar
 logueado con la misma cuenta de Expo que la CLI (`npx expo login`, cuenta `franfoca`).
+El proyecto pertenece a la organización `brabusfit-team`: para que otra persona
+lo abra en Expo Go, invitarla en expo.dev → brabusfit-team → Members (rol Viewer).
 
 **Usar la app fuera de casa (EAS Update):** desde `apps/mobile`, corré
 `npm run publish`. Sube la versión actual del código a Expo (branch `main`) y

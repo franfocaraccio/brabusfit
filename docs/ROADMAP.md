@@ -23,7 +23,7 @@ web; perdemos push, cámara y pasos).
   compartidas / buscador) → días → **entrenar y guardar sesión** (misma lógica
   que la web: precarga de la última sesión, completar rápido, coma decimal,
   detalle, aviso de cambios sin guardar).
-- **EAS Update** (proyecto `@franfoca/brabus-fit`): `npm run publish` desde
+- **EAS Update** (proyecto `@brabusfit-team/brabus-fit`): `npm run publish` desde
   `apps/mobile` publica la app para abrirla en Expo Go desde cualquier red.
 
 ### Pendiente (paso 4 — nativo)
