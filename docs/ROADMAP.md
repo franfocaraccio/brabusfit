@@ -105,3 +105,45 @@ aislamiento de datos por tenant vía RLS de Postgres). Falta la capa de negocio:
   RLS + roles coach/alumno) está hecha.
 - Stripe funciona bien con Next.js (server actions / route handlers para
   checkout y webhooks) y con Vercel.
+
+---
+
+## 5. Módulos futuros (plan)
+
+Todos encajan en el stack actual (Supabase: Postgres + RLS + Storage + cron;
+Next.js en Vercel). Cada uno sigue el mismo patrón: tablas con RLS + archivos en
+Storage + (si hace falta) un job programado.
+
+### Entrenamiento avanzado
+- **Historial de la rutina:** listar sesiones pasadas (`workout_sessions` →
+  `exercise_logs` → `set_logs`) y permitir ver/editar valores. Los datos ya están;
+  falta la UI y policies de update sobre sesiones finalizadas.
+- **Gráficos de evolución:** queries agregadas por ejercicio/fecha (peso máx.,
+  volumen = peso × reps, PRs, frecuencia semanal) + librería de charts (ej.
+  Recharts).
+- **Alertas de progresión:** regla en SQL (ej. mismo peso N semanas y reps en el
+  tope del rango → sugerir subir). Calcular on-the-fly o con `pg_cron` diario
+  guardando avisos en una tabla.
+- **Fotos/videos de ejercicios:** fotos en Supabase Storage. Videos: opciones
+  (a) clips cortos comprimidos en Storage, (b) servicio de video (Mux /
+  Cloudflare Stream) si son muchos/largos, (c) links de YouTube/Vimeo no
+  listados (costo cero).
+
+### Nutrición
+- Plantillas de alimentación del coach (plantilla → comidas → alimentos con
+  calorías/macros) asignables a alumnos. Mismo patrón que rutinas
+  (owner + share por alumno + RLS). Totales calculados por query.
+
+### Reportes semanales (check-in)
+- Tabla de reportes (semana, peso, pasos, notas de entrenamiento, etc.) + fotos
+  privadas en Storage.
+- "Información requerida por el coach": campos configurables guardados como
+  **JSONB** (cada coach define su formulario sin migrar la base).
+- Recordatorio semanal con `pg_cron` / Vercel Cron.
+
+### A tener en cuenta
+- **Notificaciones:** in-app OK con el stack; email requiere dominio (Resend);
+  push en iPhone desde la web solo con PWA instalada (más simple con app nativa).
+- **Planes gratuitos:** Supabase Free tiene topes y **pausa proyectos inactivos
+  1 semana** → Pro para producción. Vercel Hobby es **no comercial** → Pro al
+  monetizar.
