@@ -1,45 +1,38 @@
 # Roadmap / Notas de futuro — Brabus Fit
 
-Ideas y decisiones de arquitectura para más adelante. **Nada de esto está
-implementado todavía.** Es una guía para cuando se encare.
+Ideas y decisiones de arquitectura. Cada sección indica si ya está hecha o
+pendiente.
 
 ---
 
-## 1. App mobile (Android + iPhone)
+## 1. App mobile (Android + iPhone) — ✅ base hecha
 
-**Lo clave:** el backend (Supabase: Postgres + Auth + RLS + funciones RPC) se
-reutiliza al **100%**. Cualquier cliente le pega con el mismo SDK, así que el
-modelo de datos, la seguridad, la auth y la lógica que vive en SQL **no se
-reescriben**. Lo único que cambia es la **capa de UI** (Next.js dibuja HTML, no
-componentes nativos).
+**Decisión:** mismo repositorio convertido en **monorepo** (npm workspaces +
+Turborepo) y app **cross-platform con React Native + Expo** (un solo código para
+iOS y Android). Descartados: repo aparte (los tipos de la base se desincronizan),
+Flutter (no comparte código), nativo puro (dos apps), Capacitor/PWA (se siente
+web; perdemos push, cámara y pasos).
 
-### Opciones
+### Hecho
+- `apps/web` (Next.js) y `apps/mobile` (Expo SDK 58 + Expo Router).
+- `packages/shared` (tipos, validaciones, helpers) y `packages/supabase`
+  (consultas y mutaciones que reciben el cliente Supabase): **la lógica de datos
+  se escribe una vez** y la usan las dos apps. Las server actions de la web son
+  wrappers finos (revalidar caché, redirect, emails).
+- Mobile v1: login email/contraseña → rutinas (carpetas coach / lista alumno /
+  compartidas / buscador) → días → **entrenar y guardar sesión** (misma lógica
+  que la web: precarga de la última sesión, completar rápido, coma decimal,
+  detalle, aviso de cambios sin guardar).
 
-| Opción | Qué se reutiliza | Trade-off |
-|--------|------------------|-----------|
-| **PWA** (web instalable) | Todo (es la misma web) | Más rápido/barato. Android OK; iPhone con limitaciones (push flojo). No es nativa real. |
-| **Capacitor** (envolver la web) | Casi todo (web en caparazón nativo) | Rápido para estar en tiendas, pero es un WebView. |
-| **React Native + Expo** ⭐ | Backend + tipos + validaciones + lógica + queries; se reescribe solo la UI | Más trabajo, pero calidad nativa real y una sola base iOS+Android. Camino estándar viniendo de React/TS. |
-
-### Estructura recomendada (con RN + Expo): monorepo (ej. Turborepo)
-
-```
-packages/
-  types/      -> tipos de la DB (hoy en src/lib/supabase/types.ts)
-  supabase/   -> cliente + queries / llamadas a RPC
-  logic/      -> validaciones y reglas de negocio
-apps/
-  web/        -> Next.js actual
-  mobile/     -> Expo (UI nativa)
-```
-
-> Hoy parte de la lógica está en **server actions** (propias de Next) y parte en
-> **RPCs de SQL** (compartidas). En mobile se llama directo a Supabase/RPCs, así
-> que la lógica real (que está en la DB) ya es portable; las server actions son
-> wrappers finos fáciles de reescribir.
-
-**Sugerencia:** primer salto rápido → **PWA**. App nativa en serio → **RN + Expo**
-en monorepo.
+### Pendiente (paso 4 — nativo)
+- **Google SSO en mobile:** requiere development build (no Expo Go), OAuth
+  clients de iOS/Android en Google Cloud y redirect `brabusfit://` en Supabase.
+- **Notificaciones push** (avisos de progresión, recordatorio del check-in).
+- **Cámara** (fotos de progreso / check-in) y **pasos** (Apple Health / Google Fit).
+- **Builds y publicación:** EAS Build + EAS Submit (cuentas Apple Developer
+  USD 99/año y Google Play USD 25).
+- Pantallas de gestión en mobile (crear/editar/compartir rutinas, perfil): hoy
+  se hacen desde la web.
 
 ---
 
