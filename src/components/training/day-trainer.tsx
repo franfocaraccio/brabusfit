@@ -85,6 +85,10 @@ export function DayTrainer({
     Object.fromEntries(exercises.map((e) => [e.id, [emptyRow()]])),
   );
   const [notes, setNotes] = useState<Record<string, string>>({});
+  // Ejercicios completados desde el círculo con los pesos de la sesión anterior.
+  const [copiedFromLast, setCopiedFromLast] = useState<Record<string, boolean>>(
+    {},
+  );
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   // Destino al que el usuario quiso ir con cambios sin guardar (o BACK).
   const [leaveTarget, setLeaveTarget] = useState<string | null>(null);
@@ -177,11 +181,14 @@ export function DayTrainer({
     else leave(target);
   };
 
-  const setRow = (exId: string, key: string, patch: Partial<SetRow>) =>
+  const setRow = (exId: string, key: string, patch: Partial<SetRow>) => {
     setRows((prev) => ({
       ...prev,
       [exId]: prev[exId].map((r) => (r.key === key ? { ...r, ...patch } : r)),
     }));
+    // Si edita los valores copiados, ya no son "los de la última sesión".
+    setCopiedFromLast((c) => (c[exId] ? { ...c, [exId]: false } : c));
+  };
 
   const addRow = (exId: string) =>
     setRows((prev) => ({
@@ -202,6 +209,31 @@ export function DayTrainer({
   const handleDone = (exId: string) => {
     setCompleted((c) => ({ ...c, [exId]: true }));
     setOpenId(null);
+  };
+
+  const rowsAreEmpty = (exId: string) =>
+    rows[exId].every((r) => r.weight.trim() === "" && r.reps.trim() === "");
+
+  // Tocar el círculo: completa (o descompleta) sin abrir el ejercicio. Si no se
+  // cargó nada, copia las series de la última sesión registrada.
+  const toggleQuickDone = (ex: ExerciseState) => {
+    if (completed[ex.id]) {
+      setCompleted((c) => ({ ...c, [ex.id]: false }));
+      return;
+    }
+    const last = ex.history[0];
+    if (last && rowsAreEmpty(ex.id)) {
+      setRows((prev) => ({
+        ...prev,
+        [ex.id]: last.sets.map((s) => ({
+          key: newKey(),
+          weight: s.weight !== null ? String(s.weight).replace(".", ",") : "",
+          reps: s.reps !== null ? String(s.reps) : "",
+        })),
+      }));
+      setCopiedFromLast((c) => ({ ...c, [ex.id]: true }));
+    }
+    setCompleted((c) => ({ ...c, [ex.id]: true }));
   };
 
   const doClose = () => {
@@ -269,37 +301,60 @@ export function DayTrainer({
                 isDone && !isOpen && "opacity-60",
               )}
             >
-              <button
-                onClick={() => setOpenId(isOpen ? null : ex.id)}
-                className="hover:bg-muted/40 active:bg-muted/60 flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors"
-              >
-                <span
-                  className={cn(
-                    "flex size-6 shrink-0 items-center justify-center rounded-full border text-xs transition-all duration-200",
+              <div className="flex items-center">
+                {/* Círculo: completar / descompletar sin abrir el ejercicio */}
+                <button
+                  type="button"
+                  onClick={() => toggleQuickDone(ex)}
+                  aria-pressed={isDone}
+                  aria-label={
                     isDone
-                      ? "border-success bg-success text-success-foreground"
-                      : "text-muted-foreground",
-                  )}
+                      ? `Desmarcar ${ex.name}`
+                      : `Marcar ${ex.name} como completado`
+                  }
+                  className="group/check flex size-12 shrink-0 cursor-pointer items-center justify-center self-stretch pl-2"
                 >
-                  {isDone ? (
-                    <Check className="size-4 animate-in zoom-in-50 duration-200" />
-                  ) : null}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold">
-                    {ex.name}
+                  <span
+                    className={cn(
+                      "flex size-6 items-center justify-center rounded-full border text-xs transition-all duration-200 group-active/check:scale-90",
+                      isDone
+                        ? "border-success bg-success text-success-foreground"
+                        : "text-muted-foreground group-hover/check:border-success/70",
+                    )}
+                  >
+                    {isDone ? (
+                      <Check className="size-4 animate-in zoom-in-50 duration-200" />
+                    ) : null}
                   </span>
-                  <span className="text-muted-foreground text-xs">
-                    {ex.setsReps}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setOpenId(isOpen ? null : ex.id)}
+                  className="hover:bg-muted/40 active:bg-muted/60 flex min-w-0 flex-1 items-center gap-3 py-3.5 pr-4 pl-1 text-left transition-colors"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold">
+                      {ex.name}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      {ex.setsReps}
+                      {isDone && copiedFromLast[ex.id] ? (
+                        <span className="text-success">
+                          {" "}
+                          · pesos de la última sesión
+                        </span>
+                      ) : null}
+                    </span>
                   </span>
-                </span>
-                <ChevronDown
-                  className={cn(
-                    "text-muted-foreground size-4 transition-transform",
-                    isOpen && "rotate-180",
-                  )}
-                />
-              </button>
+                  <ChevronDown
+                    className={cn(
+                      "text-muted-foreground size-4 transition-transform",
+                      isOpen && "rotate-180",
+                    )}
+                  />
+                </button>
+              </div>
 
               {isOpen && (
                 <div className="space-y-4 border-t px-4 py-4">
