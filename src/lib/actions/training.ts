@@ -1,98 +1,100 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/actions/routines";
 
 export type SetInput = { set_number: number; weight: number | null; reps: number | null };
 
-/** Devuelve la sesión in_progress de este día para el usuario, o crea una nueva. */
-export async function startSession(
+export type ExerciseLogInput = {
+  exerciseId: string;
+  sets: SetInput[];
+  note: string | null;
+};
+
+/**
+ * Guarda una sesión de entrenamiento completa de una sola vez, al cerrar la
+ * rutina. Mientras el usuario entrena nada se persiste: si sale sin cerrar,
+ * la sesión se pierde y al volver arranca de cero.
+ */
+export async function saveWorkout(
   routineId: string,
   dayId: string,
-): Promise<ActionResult<{ sessionId: string }>> {
+  logs: ExerciseLogInput[],
+): Promise<ActionResult> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado." };
 
-  const { data: existing } = await supabase
+  // Limpia sesiones "en progreso" que hayan quedado de la lógica anterior.
+  await supabase
     .from("workout_sessions")
-    .select("id")
+    .delete()
     .eq("user_id", user.id)
     .eq("day_id", dayId)
-    .eq("status", "in_progress")
-    .order("started_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .eq("status", "in_progress");
 
-  if (existing) return { ok: true, data: { sessionId: existing.id } };
+  if (logs.length === 0) return { ok: true, data: undefined };
 
-  const { data: created, error } = await supabase
+  const now = new Date().toISOString();
+  const { data: session, error: sessionErr } = await supabase
     .from("workout_sessions")
-    .insert({ user_id: user.id, routine_id: routineId, day_id: dayId })
+    .insert({
+      user_id: user.id,
+      routine_id: routineId,
+      day_id: dayId,
+      started_at: now,
+      finished_at: now,
+      status: "finished",
+    })
     .select("id")
     .single();
 
-  if (error) return { ok: false, error: error.message };
-  return { ok: true, data: { sessionId: created.id } };
-}
+  if (sessionErr) return { ok: false, error: sessionErr.message };
 
-/** Guarda (o actualiza) el registro de un ejercicio y lo marca como completado. */
-export async function saveExerciseLog(
-  sessionId: string,
-  exerciseId: string,
-  sets: SetInput[],
-  note: string | null = null,
-): Promise<ActionResult> {
-  const supabase = await createClient();
+  // Si algo falla después, borramos la sesión (cascade) para no dejarla a medias.
+  const rollback = async (message: string): Promise<ActionResult> => {
+    await supabase.from("workout_sessions").delete().eq("id", session.id);
+    return { ok: false, error: message };
+  };
 
-  const { data: log, error: upsertErr } = await supabase
+  const { data: exerciseLogs, error: logsErr } = await supabase
     .from("exercise_logs")
-    .upsert(
-      {
-        session_id: sessionId,
-        exercise_id: exerciseId,
+    .insert(
+      logs.map((l) => ({
+        session_id: session.id,
+        exercise_id: l.exerciseId,
         completed: true,
-        note: note && note.trim() ? note.trim() : null,
-      },
-      { onConflict: "session_id,exercise_id" },
+        note: l.note && l.note.trim() ? l.note.trim() : null,
+      })),
     )
-    .select("id")
-    .single();
+    .select("id, exercise_id");
 
-  if (upsertErr) return { ok: false, error: upsertErr.message };
+  if (logsErr) return rollback(logsErr.message);
 
-  // Reemplaza los sets anteriores por los nuevos.
-  await supabase.from("set_logs").delete().eq("exercise_log_id", log.id);
+  const logIdByExercise = new Map(
+    exerciseLogs.map((l) => [l.exercise_id, l.id]),
+  );
 
-  const rows = sets
-    .filter((s) => s.weight !== null || s.reps !== null)
-    .map((s) => ({
-      exercise_log_id: log.id,
-      set_number: s.set_number,
-      weight: s.weight,
-      reps: s.reps,
-    }));
+  const setRows = logs.flatMap((l) =>
+    l.sets
+      .filter((s) => s.weight !== null || s.reps !== null)
+      .map((s) => ({
+        exercise_log_id: logIdByExercise.get(l.exerciseId)!,
+        set_number: s.set_number,
+        weight: s.weight,
+        reps: s.reps,
+      })),
+  );
 
-  if (rows.length > 0) {
-    const { error: insErr } = await supabase.from("set_logs").insert(rows);
-    if (insErr) return { ok: false, error: insErr.message };
+  if (setRows.length > 0) {
+    const { error: setsErr } = await supabase.from("set_logs").insert(setRows);
+    if (setsErr) return rollback(setsErr.message);
   }
 
-  return { ok: true, data: undefined };
-}
-
-/** Cierra la sesión (la marca como finalizada). */
-export async function finishSession(
-  sessionId: string,
-): Promise<ActionResult> {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("workout_sessions")
-    .update({ status: "finished", finished_at: new Date().toISOString() })
-    .eq("id", sessionId);
-
-  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/rutinas/${routineId}/dia/${dayId}`);
   return { ok: true, data: undefined };
 }

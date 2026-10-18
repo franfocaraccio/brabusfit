@@ -12,8 +12,6 @@ type ExerciseRow = { id: string; name: string; sets_reps: string; position: numb
 type SetLogRow = { set_number: number; weight: number | null; reps: number | null };
 type LogRow = {
   exercise_id: string;
-  completed: boolean;
-  note: string | null;
   set_logs: SetLogRow[];
 };
 type HistorySessionRow = {
@@ -48,31 +46,12 @@ export default async function TrainDayPage({
 
   const exercises = (exercisesData ?? []) as ExerciseRow[];
 
-  // Sesión en curso (si la hay) para prellenar lo ya cargado.
-  const { data: current } = await supabase
-    .from("workout_sessions")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("day_id", dayId)
-    .eq("status", "in_progress")
-    .order("started_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  let currentLogs: LogRow[] = [];
-  if (current) {
-    const { data } = await supabase
-      .from("exercise_logs")
-      .select("exercise_id, completed, note, set_logs(set_number, weight, reps)")
-      .eq("session_id", current.id);
-    currentLogs = (data ?? []) as unknown as LogRow[];
-  }
-
-  // Últimas 3 sesiones finalizadas de este día (historial).
+  // Cada entrenamiento arranca de cero: nada se persiste hasta cerrar la
+  // rutina. Solo cargamos las últimas 3 sesiones finalizadas como historial.
   const { data: finishedSessions } = await supabase
     .from("workout_sessions")
     .select(
-      "id, finished_at, started_at, exercise_logs(exercise_id, completed, set_logs(set_number, weight, reps))",
+      "id, finished_at, started_at, exercise_logs(exercise_id, set_logs(set_number, weight, reps))",
     )
     .eq("user_id", userId)
     .eq("day_id", dayId)
@@ -81,9 +60,6 @@ export default async function TrainDayPage({
     .limit(3);
 
   const history = (finishedSessions ?? []) as unknown as HistorySessionRow[];
-
-  // Mapas auxiliares.
-  const currentByExercise = new Map(currentLogs.map((l) => [l.exercise_id, l]));
 
   const historyByExercise = new Map<string, HistoryEntry[]>();
   for (const session of history) {
@@ -99,28 +75,18 @@ export default async function TrainDayPage({
     }
   }
 
-  const exerciseStates: ExerciseState[] = exercises.map((ex) => {
-    const log = currentByExercise.get(ex.id);
-    const sets = log
-      ? [...(log.set_logs ?? [])].sort((a, b) => a.set_number - b.set_number)
-      : [];
-    return {
-      id: ex.id,
-      name: ex.name,
-      setsReps: ex.sets_reps,
-      completed: log?.completed ?? false,
-      savedSets: sets,
-      note: log?.note ?? "",
-      history: historyByExercise.get(ex.id) ?? [],
-    };
-  });
+  const exerciseStates: ExerciseState[] = exercises.map((ex) => ({
+    id: ex.id,
+    name: ex.name,
+    setsReps: ex.sets_reps,
+    history: historyByExercise.get(ex.id) ?? [],
+  }));
 
   return (
     <DayTrainer
       routineId={routineId}
       dayId={dayId}
       dayName={day.name}
-      initialSessionId={current?.id ?? null}
       exercises={exerciseStates}
     />
   );

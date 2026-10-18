@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
   Check,
   ChevronDown,
@@ -11,12 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import {
-  finishSession,
-  saveExerciseLog,
-  startSession,
-  type SetInput,
-} from "@/lib/actions/training";
+import { saveWorkout, type SetInput } from "@/lib/actions/training";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -36,24 +31,13 @@ export type ExerciseState = {
   id: string;
   name: string;
   setsReps: string;
-  completed: boolean;
-  savedSets: SavedSet[];
-  note: string;
   history: HistoryEntry[];
 };
 
 type SetRow = { key: string; weight: string; reps: string };
 
 const newKey = () => crypto.randomUUID();
-
-function toRows(saved: SavedSet[]): SetRow[] {
-  if (saved.length === 0) return [{ key: newKey(), weight: "", reps: "" }];
-  return saved.map((s) => ({
-    key: newKey(),
-    weight: s.weight?.toString() ?? "",
-    reps: s.reps?.toString() ?? "",
-  }));
-}
+const emptyRow = (): SetRow => ({ key: newKey(), weight: "", reps: "" });
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("es-AR", {
@@ -73,48 +57,121 @@ function summarizeSets(sets: SavedSet[]) {
     .join("  ·  ");
 }
 
+const BACK = "__back__";
+
 export function DayTrainer({
   routineId,
   dayId,
   dayName,
-  initialSessionId,
   exercises,
 }: {
   routineId: string;
   dayId: string;
   dayName: string;
-  initialSessionId: string | null;
   exercises: ExerciseState[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  const sessionRef = useRef<string | null>(initialSessionId);
-  const [completed, setCompleted] = useState<Record<string, boolean>>(
-    Object.fromEntries(exercises.map((e) => [e.id, e.completed])),
-  );
+  // Todo vive en memoria hasta "Cerrar rutina". Si el usuario se va sin
+  // cerrar, la sesión se pierde y la próxima vez arranca de cero.
+  const [completed, setCompleted] = useState<Record<string, boolean>>({});
   const [openId, setOpenId] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState<Record<string, boolean>>({});
   const [rows, setRows] = useState<Record<string, SetRow[]>>(
-    Object.fromEntries(exercises.map((e) => [e.id, toRows(e.savedSets)])),
+    Object.fromEntries(exercises.map((e) => [e.id, [emptyRow()]])),
   );
-  const [notes, setNotes] = useState<Record<string, string>>(
-    Object.fromEntries(exercises.map((e) => [e.id, e.note])),
-  );
+  const [notes, setNotes] = useState<Record<string, string>>({});
   const [showCloseWarning, setShowCloseWarning] = useState(false);
+  // Destino al que el usuario quiso ir con cambios sin guardar (o BACK).
+  const [leaveTarget, setLeaveTarget] = useState<string | null>(null);
 
   const completedCount = Object.values(completed).filter(Boolean).length;
   const allDone = exercises.length > 0 && completedCount === exercises.length;
 
-  const ensureSession = async (): Promise<string | null> => {
-    if (sessionRef.current) return sessionRef.current;
-    const res = await startSession(routineId, dayId);
-    if (!res.ok) {
-      toast.error(res.error);
-      return null;
+  const dirty =
+    completedCount > 0 ||
+    Object.values(notes).some((n) => n.trim() !== "") ||
+    Object.values(rows).some((rs) =>
+      rs.some((r) => r.weight.trim() !== "" || r.reps.trim() !== ""),
+    );
+
+  // Cuando salimos a propósito (guardado o "salir sin guardar") no avisamos.
+  const allowLeaveRef = useRef(false);
+  const dirtyRef = useRef(dirty);
+  useEffect(() => {
+    dirtyRef.current = dirty;
+  }, [dirty]);
+
+  // 1) Cerrar pestaña / recargar: aviso nativo del navegador.
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!dirtyRef.current || allowLeaveRef.current) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
+
+  // 2) Clicks en links internos de la app (nav inferior, sidebar, etc.).
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (!dirtyRef.current || allowLeaveRef.current) return;
+      if (e.defaultPrevented || e.button !== 0) return;
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const anchor = (e.target as HTMLElement).closest("a");
+      if (!anchor || anchor.target === "_blank") return;
+      const url = new URL(anchor.href, window.location.href);
+      if (url.origin !== window.location.origin) return;
+      if (url.pathname === window.location.pathname) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setLeaveTarget(url.pathname + url.search);
+    };
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, []);
+
+  // 3) Botón "atrás" del navegador / celular: dejamos una entrada "centinela"
+  //    en el historial apenas hay cambios, y si vuelven atrás la reponemos y
+  //    preguntamos.
+  const guardArmedRef = useRef(false);
+  useEffect(() => {
+    if (!dirty || guardArmedRef.current) return;
+    guardArmedRef.current = true;
+    window.history.pushState({ brabusGuard: true }, "");
+  }, [dirty]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      if (!guardArmedRef.current || allowLeaveRef.current) return;
+      if (!dirtyRef.current) {
+        // Sin cambios: dejamos seguir el "atrás" normalmente.
+        guardArmedRef.current = false;
+        window.history.back();
+        return;
+      }
+      window.history.pushState({ brabusGuard: true }, "");
+      setLeaveTarget(BACK);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  const leave = (target: string) => {
+    allowLeaveRef.current = true;
+    if (target === BACK) {
+      // Salteamos la entrada centinela y volvemos a la página anterior real.
+      window.history.go(-2);
+    } else {
+      router.push(target);
     }
-    sessionRef.current = res.data.sessionId;
-    return res.data.sessionId;
+  };
+
+  const navigate = (target: string) => {
+    if (dirty) setLeaveTarget(target);
+    else leave(target);
   };
 
   const setRow = (exId: string, key: string, patch: Partial<SetRow>) =>
@@ -138,39 +195,38 @@ export function DayTrainer({
           : prev[exId],
     }));
 
+  // Marca el ejercicio como hecho (solo en memoria; se guarda al cerrar).
   const handleDone = (exId: string) => {
-    startTransition(async () => {
-      const sessionId = await ensureSession();
-      if (!sessionId) return;
+    setCompleted((c) => ({ ...c, [exId]: true }));
+    setOpenId(null);
+  };
 
-      const sets: SetInput[] = rows[exId].map((r, i) => ({
-        set_number: i + 1,
-        weight: r.weight.trim() === "" ? null : Number(r.weight),
-        reps: r.reps.trim() === "" ? null : Number(r.reps),
+  const doClose = () => {
+    const logs = exercises
+      .filter((ex) => completed[ex.id])
+      .map((ex) => ({
+        exerciseId: ex.id,
+        note: notes[ex.id] ?? null,
+        sets: rows[ex.id].map(
+          (r, i): SetInput => ({
+            set_number: i + 1,
+            weight: r.weight.trim() === "" ? null : Number(r.weight),
+            reps: r.reps.trim() === "" ? null : Number(r.reps),
+          }),
+        ),
       }));
 
-      const res = await saveExerciseLog(sessionId, exId, sets, notes[exId]);
+    startTransition(async () => {
+      const res = await saveWorkout(routineId, dayId, logs);
       if (!res.ok) {
         toast.error(res.error);
         return;
       }
-      setCompleted((c) => ({ ...c, [exId]: true }));
-      setOpenId(null);
-      toast.success("Ejercicio guardado");
-    });
-  };
-
-  const doClose = () => {
-    startTransition(async () => {
-      if (sessionRef.current) {
-        const res = await finishSession(sessionRef.current);
-        if (!res.ok) {
-          toast.error(res.error);
-          return;
-        }
-      }
-      toast.success("Entrenamiento finalizado");
-      router.push(`/rutinas/${routineId}`);
+      setShowCloseWarning(false);
+      toast.success(
+        logs.length > 0 ? "Entrenamiento guardado" : "Rutina cerrada sin cambios",
+      );
+      leave(`/rutinas/${routineId}`);
       router.refresh();
     });
   };
@@ -187,7 +243,7 @@ export function DayTrainer({
     <div className="space-y-5">
       <div>
         <button
-          onClick={() => router.push(`/rutinas/${routineId}`)}
+          onClick={() => navigate(`/rutinas/${routineId}`)}
           className="text-muted-foreground hover:text-foreground text-sm"
         >
           ← Volver a la rutina
@@ -389,8 +445,9 @@ export function DayTrainer({
           <DialogHeader>
             <DialogTitle>Todavía no terminaste</DialogTitle>
             <DialogDescription>
-              Te quedan {exercises.length - completedCount} ejercicios sin
-              completar. ¿Querés cerrar la rutina igualmente?
+              {completedCount === 0
+                ? "No marcaste ningún ejercicio como completado, así que no se va a guardar nada. ¿Querés cerrar la rutina igualmente?"
+                : `Te quedan ${exercises.length - completedCount} ejercicios sin completar. Se guardan solo los ${completedCount} que marcaste como listos. ¿Querés cerrar la rutina igualmente?`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -402,7 +459,40 @@ export function DayTrainer({
               Seguir entrenando
             </Button>
             <Button onClick={doClose} disabled={pending}>
-              Cerrar igualmente
+              {pending ? "Guardando…" : "Cerrar igualmente"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Aviso al salir con cambios sin guardar */}
+      <Dialog
+        open={leaveTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setLeaveTarget(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Los cambios no fueron guardados</DialogTitle>
+            <DialogDescription>
+              Si salís ahora se pierde lo que cargaste en este entrenamiento.
+              Para guardarlo, usá &quot;Listo — Cerrar rutina&quot;.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setLeaveTarget(null)}>
+              Seguir entrenando
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                const target = leaveTarget;
+                setLeaveTarget(null);
+                if (target) leave(target);
+              }}
+            >
+              Salir sin guardar
             </Button>
           </DialogFooter>
         </DialogContent>
