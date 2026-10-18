@@ -41,6 +41,21 @@ type SetRow = { key: string; weight: string; reps: string };
 const newKey = () => crypto.randomUUID();
 const emptyRow = (): SetRow => ({ key: newKey(), weight: "", reps: "" });
 
+/** Series iniciales: las del último entrenamiento, o una fila vacía. */
+function initialRowsFor(ex: ExerciseState): SetRow[] {
+  const last = ex.history[0];
+  if (!last || last.sets.length === 0) return [emptyRow()];
+  return last.sets.map((s) => ({
+    key: newKey(),
+    weight: s.weight !== null ? String(s.weight).replace(".", ",") : "",
+    reps: s.reps !== null ? String(s.reps) : "",
+  }));
+}
+
+/** Firma comparable de las series (para saber si el usuario cambió algo). */
+const rowsSignature = (rs: SetRow[]) =>
+  rs.map((r) => `${r.weight.trim()}|${r.reps.trim()}`).join(";");
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("es-AR", {
     day: "2-digit",
@@ -77,18 +92,21 @@ export function DayTrainer({
   const [pending, startTransition] = useTransition();
 
   // Todo vive en memoria hasta "Cerrar rutina". Si el usuario se va sin
-  // cerrar, la sesión se pierde y la próxima vez arranca de cero.
+  // cerrar, la sesión se pierde. Cada sesión nueva arranca precargada con las
+  // series del último entrenamiento; si progresó, las edita a mano.
   const [completed, setCompleted] = useState<Record<string, boolean>>({});
   const [openId, setOpenId] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState<Record<string, boolean>>({});
-  const [rows, setRows] = useState<Record<string, SetRow[]>>(
-    Object.fromEntries(exercises.map((e) => [e.id, [emptyRow()]])),
+  const [rows, setRows] = useState<Record<string, SetRow[]>>(() =>
+    Object.fromEntries(exercises.map((e) => [e.id, initialRowsFor(e)])),
+  );
+  // Foto de lo precargado, para detectar cambios reales del usuario.
+  const [initialSignatures] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      Object.entries(rows).map(([id, rs]) => [id, rowsSignature(rs)]),
+    ),
   );
   const [notes, setNotes] = useState<Record<string, string>>({});
-  // Ejercicios completados desde el círculo con los pesos de la sesión anterior.
-  const [copiedFromLast, setCopiedFromLast] = useState<Record<string, boolean>>(
-    {},
-  );
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   // Destino al que el usuario quiso ir con cambios sin guardar (o BACK).
   const [leaveTarget, setLeaveTarget] = useState<string | null>(null);
@@ -99,8 +117,8 @@ export function DayTrainer({
   const dirty =
     completedCount > 0 ||
     Object.values(notes).some((n) => n.trim() !== "") ||
-    Object.values(rows).some((rs) =>
-      rs.some((r) => r.weight.trim() !== "" || r.reps.trim() !== ""),
+    Object.entries(rows).some(
+      ([id, rs]) => rowsSignature(rs) !== initialSignatures[id],
     );
 
   // Cuando salimos a propósito (guardado o "salir sin guardar") no avisamos.
@@ -181,14 +199,11 @@ export function DayTrainer({
     else leave(target);
   };
 
-  const setRow = (exId: string, key: string, patch: Partial<SetRow>) => {
+  const setRow = (exId: string, key: string, patch: Partial<SetRow>) =>
     setRows((prev) => ({
       ...prev,
       [exId]: prev[exId].map((r) => (r.key === key ? { ...r, ...patch } : r)),
     }));
-    // Si edita los valores copiados, ya no son "los de la última sesión".
-    setCopiedFromLast((c) => (c[exId] ? { ...c, [exId]: false } : c));
-  };
 
   const addRow = (exId: string) =>
     setRows((prev) => ({
@@ -211,30 +226,10 @@ export function DayTrainer({
     setOpenId(null);
   };
 
-  const rowsAreEmpty = (exId: string) =>
-    rows[exId].every((r) => r.weight.trim() === "" && r.reps.trim() === "");
-
-  // Tocar el círculo: completa (o descompleta) sin abrir el ejercicio. Si no se
-  // cargó nada, copia las series de la última sesión registrada.
-  const toggleQuickDone = (ex: ExerciseState) => {
-    if (completed[ex.id]) {
-      setCompleted((c) => ({ ...c, [ex.id]: false }));
-      return;
-    }
-    const last = ex.history[0];
-    if (last && rowsAreEmpty(ex.id)) {
-      setRows((prev) => ({
-        ...prev,
-        [ex.id]: last.sets.map((s) => ({
-          key: newKey(),
-          weight: s.weight !== null ? String(s.weight).replace(".", ",") : "",
-          reps: s.reps !== null ? String(s.reps) : "",
-        })),
-      }));
-      setCopiedFromLast((c) => ({ ...c, [ex.id]: true }));
-    }
-    setCompleted((c) => ({ ...c, [ex.id]: true }));
-  };
+  // Tocar el círculo: completa (o descompleta) sin abrir el ejercicio. Se
+  // guardan las series tal como estén (precargadas o editadas).
+  const toggleQuickDone = (ex: ExerciseState) =>
+    setCompleted((c) => ({ ...c, [ex.id]: !c[ex.id] }));
 
   const doClose = () => {
     const logs = exercises
@@ -339,12 +334,6 @@ export function DayTrainer({
                     </span>
                     <span className="text-muted-foreground text-xs">
                       {ex.setsReps}
-                      {isDone && copiedFromLast[ex.id] ? (
-                        <span className="text-success">
-                          {" "}
-                          · pesos de la última sesión
-                        </span>
-                      ) : null}
                     </span>
                   </span>
                   <ChevronDown
@@ -396,6 +385,13 @@ export function DayTrainer({
 
                   {/* Inputs de series */}
                   <div className="space-y-2">
+                    {ex.history[0] ? (
+                      <p className="text-muted-foreground text-xs">
+                        Precargado con tu entrenamiento del{" "}
+                        {formatDate(ex.history[0].date)}. Si progresaste,
+                        editalo.
+                      </p>
+                    ) : null}
                     {rows[ex.id].map((row, i) => (
                       <div key={row.key} className="flex items-center gap-2">
                         <span className="text-muted-foreground w-14 shrink-0 text-xs">
