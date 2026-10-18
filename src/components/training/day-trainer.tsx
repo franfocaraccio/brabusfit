@@ -22,7 +22,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DecimalInput } from "@/components/ui/decimal-input";
 import { Input } from "@/components/ui/input";
+import { parseDecimal } from "@/lib/decimal";
 import { cn } from "@/lib/utils";
 
 type SavedSet = { set_number: number; weight: number | null; reps: number | null };
@@ -49,7 +51,8 @@ function formatDate(iso: string) {
 function summarizeSets(sets: SavedSet[]) {
   return sets
     .map((s) => {
-      const w = s.weight !== null ? `${s.weight}kg` : "";
+      const w =
+        s.weight !== null ? `${s.weight.toLocaleString("es-AR")}kg` : "";
       const r = s.reps !== null ? `${s.reps}` : "";
       return [w, r].filter(Boolean).join(" × ");
     })
@@ -210,7 +213,7 @@ export function DayTrainer({
         sets: rows[ex.id].map(
           (r, i): SetInput => ({
             set_number: i + 1,
-            weight: r.weight.trim() === "" ? null : Number(r.weight),
+            weight: parseDecimal(r.weight),
             reps: r.reps.trim() === "" ? null : Number(r.reps),
           }),
         ),
@@ -344,11 +347,7 @@ export function DayTrainer({
                           Serie {i + 1}
                         </span>
                         <div className="relative flex-1">
-                          <Input
-                            type="number"
-                            inputMode="decimal"
-                            step="0.5"
-                            min="0"
+                          <DecimalInput
                             placeholder="Peso"
                             value={row.weight}
                             onChange={(e) =>

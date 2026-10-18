@@ -34,7 +34,8 @@ function summarize(sets: SetLog[]) {
   return [...sets]
     .sort((a, b) => a.set_number - b.set_number)
     .map((s) => {
-      const w = s.weight !== null ? `${s.weight}kg` : "";
+      const w =
+        s.weight !== null ? `${s.weight.toLocaleString("es-AR")}kg` : "";
       const r = s.reps !== null ? `${s.reps}` : "";
       return [w, r].filter(Boolean).join(" × ");
     })

@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
+import { parseDecimal } from "@/lib/decimal";
 import { usernameError } from "@/lib/username";
 
 export type AuthResult = { error: string } | undefined;
@@ -49,8 +50,8 @@ export async function signUpAction(
         first_name: firstName,
         last_name: lastName,
         birth_date: birthDate || null,
-        height_cm: heightCm ? Number(heightCm) : null,
-        weight_kg: weightKg ? Number(weightKg) : null,
+        height_cm: parseDecimal(heightCm),
+        weight_kg: parseDecimal(weightKg),
         username,
         is_coach: isCoach,
       },

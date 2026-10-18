@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { parseDecimal } from "@/lib/decimal";
 import { usernameError } from "@/lib/username";
 
 export type ProfileResult = { error: string } | undefined;
@@ -57,8 +58,8 @@ export async function updateProfile(
       first_name: firstName,
       last_name: lastName,
       birth_date: input.birthDate || null,
-      height_cm: input.heightCm.trim() ? Number(input.heightCm) : null,
-      weight_kg: input.weightKg.trim() ? Number(input.weightKg) : null,
+      height_cm: parseDecimal(input.heightCm),
+      weight_kg: parseDecimal(input.weightKg),
     })
     .eq("id", user.id);
 
@@ -100,8 +101,8 @@ export async function completeProfile(
       first_name: firstName,
       last_name: lastName,
       birth_date: birthDate || null,
-      height_cm: heightCm ? Number(heightCm) : null,
-      weight_kg: weightKg ? Number(weightKg) : null,
+      height_cm: parseDecimal(heightCm),
+      weight_kg: parseDecimal(weightKg),
       username,
       is_coach: isCoach,
       onboarded: true,

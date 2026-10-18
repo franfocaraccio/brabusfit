@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { updateProfile } from "@/lib/actions/profile";
 import type { Profile } from "@/lib/supabase/types";
 import { Button } from "@/components/ui/button";
+import { DecimalInput } from "@/components/ui/decimal-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -80,12 +81,8 @@ export function EditProfileForm({ profile }: { profile: Profile }) {
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
           <Label htmlFor="height_cm">Altura (cm)</Label>
-          <Input
+          <DecimalInput
             id="height_cm"
-            type="number"
-            inputMode="decimal"
-            step="0.1"
-            min="0"
             placeholder="175"
             value={heightCm}
             onChange={(e) => setHeightCm(e.target.value)}
@@ -93,12 +90,8 @@ export function EditProfileForm({ profile }: { profile: Profile }) {
         </div>
         <div className="space-y-2">
           <Label htmlFor="weight_kg">Peso (kg)</Label>
-          <Input
+          <DecimalInput
             id="weight_kg"
-            type="number"
-            inputMode="decimal"
-            step="0.1"
-            min="0"
             placeholder="70"
             value={weightKg}
             onChange={(e) => setWeightKg(e.target.value)}
