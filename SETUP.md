@@ -71,6 +71,9 @@ con la cámara). Si la red bloquea la conexión, usá
 logueado con la misma cuenta de Expo que la CLI (`npx expo login`, cuenta `franfoca`).
 El proyecto pertenece a la organización `brabusfit-team`: para que otra persona
 lo abra en Expo Go, invitarla en expo.dev → brabusfit-team → Members (rol Viewer).
+Para abrirla: escanear `docs/expo-go-qr.png` con la cámara (link fijo al canal
+`main`, siempre trae la última versión publicada):
+`exp://u.expo.dev/6f6c74e5-fc15-451d-9808-66cce2ea769d?channel-name=main&runtime-version=exposdk:57.0.0`
 
 **Usar la app fuera de casa (EAS Update):** desde `apps/mobile`, corré
 `npm run publish`. Sube la versión actual del código a Expo (branch `main`) y
