@@ -1,11 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import {
-  router,
-  Stack,
-  useLocalSearchParams,
-  usePreventRemove,
-} from "expo-router";
+import { router, Stack, useLocalSearchParams, useNavigation } from "expo-router";
+// SDK 57: usePreventRemove todavía no se exporta desde "expo-router".
+import { usePreventRemove } from "expo-router/react-navigation";
 import { useEffect, useState, useTransition } from "react";
 import {
   ActivityIndicator,
@@ -145,16 +142,29 @@ function Trainer({
     );
 
   // Aviso al salir con cambios sin guardar (botón atrás y gesto de swipe).
-  const allowLeave = usePreventRemove(dirty, ({ repeat }) => {
+  // "leaving" apaga el aviso cuando salimos a propósito (después de guardar).
+  const navigation = useNavigation();
+  const [leaving, setLeaving] = useState(false);
+
+  usePreventRemove(dirty && !leaving, ({ data }) => {
     Alert.alert(
       "Los cambios no fueron guardados",
       'Si salís ahora se pierde lo que cargaste. Para guardarlo usá "Guardar sesión".',
       [
         { text: "Seguir entrenando", style: "cancel" },
-        { text: "Salir sin guardar", style: "destructive", onPress: repeat },
+        {
+          text: "Salir sin guardar",
+          style: "destructive",
+          onPress: () => navigation.dispatch(data.action),
+        },
       ],
     );
   });
+
+  // Volver atrás recién cuando el aviso ya está desactivado.
+  useEffect(() => {
+    if (leaving) router.back();
+  }, [leaving]);
 
   // --- mutadores ------------------------------------------------------------
   const setRow = (exId: string, key: string, patch: Partial<SetRow>) =>
@@ -205,8 +215,7 @@ function Trainer({
         return;
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      allowLeave();
-      router.back();
+      setLeaving(true);
     });
   };
 
