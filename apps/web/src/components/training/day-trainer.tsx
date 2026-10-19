@@ -434,17 +434,12 @@ export function DayTrainer({
 
                   {/* Detalle / comentario opcional del ejercicio */}
                   <div className="space-y-1.5">
-                    <div className="flex items-baseline justify-between">
-                      <label
-                        htmlFor={`note-${ex.id}`}
-                        className="text-muted-foreground text-xs font-medium"
-                      >
-                        Detalle (opcional)
-                      </label>
-                      <span className="text-muted-foreground text-[11px] tabular-nums">
-                        {(notes[ex.id] ?? "").length}/{NOTE_MAX_LENGTH}
-                      </span>
-                    </div>
+                    <label
+                      htmlFor={`note-${ex.id}`}
+                      className="text-muted-foreground text-xs font-medium"
+                    >
+                      Detalle (opcional)
+                    </label>
                     {/* Una línea; crece sola si el texto no entra. */}
                     <textarea
                       id={`note-${ex.id}`}
@@ -457,7 +452,7 @@ export function DayTrainer({
                         setNotes((n) => ({ ...n, [ex.id]: e.target.value }));
                       }}
                       placeholder="Ej: hecho en Smith"
-                      className="border-input bg-input/40 placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/40 block w-full resize-none overflow-hidden rounded-xl border px-3.5 py-2 text-sm outline-none transition-colors focus-visible:ring-3"
+                      className="border-input bg-input/40 placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/40 block w-full resize-none overflow-hidden rounded-xl border px-3.5 py-1.5 text-sm outline-none transition-colors focus-visible:ring-3"
                     />
                   </div>
 

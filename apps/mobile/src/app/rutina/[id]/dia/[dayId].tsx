@@ -333,6 +333,7 @@ function Trainer({
                           }
                           placeholder="Peso"
                           keyboardType="decimal-pad"
+                          style={styles.compactInput}
                           suffix={row.weight.trim() !== "" ? "Kg" : undefined}
                         />
                       </View>
@@ -342,6 +343,7 @@ function Trainer({
                           onChangeText={(v) => setRow(ex.id, row.key, { reps: onlyDigits(v) })}
                           placeholder="Reps"
                           keyboardType="number-pad"
+                          style={styles.compactInput}
                         />
                       </View>
                       <Pressable
@@ -361,15 +363,11 @@ function Trainer({
                     variant="outline"
                     onPress={() => addRow(ex.id)}
                     icon={<Ionicons name="add" size={18} color={colors.foreground} />}
+                    style={styles.compactButton}
                   />
 
                   <View style={{ gap: 6 }}>
-                    <View style={styles.noteHeader}>
-                      <Text style={styles.noteLabel}>Detalle (opcional)</Text>
-                      <Text style={styles.noteCount}>
-                        {(notes[ex.id] ?? "").length}/{NOTE_MAX_LENGTH}
-                      </Text>
-                    </View>
+                    <Text style={styles.noteLabel}>Detalle (opcional)</Text>
                     {/* Una línea; crece sola si el texto no entra. */}
                     <TextInput
                       value={notes[ex.id] ?? ""}
@@ -470,17 +468,20 @@ const styles = StyleSheet.create({
   historySets: { flex: 1, fontFamily: fonts.regular, fontSize: 13, color: colors.foreground },
   setRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   setLabel: { width: 54, fontFamily: fonts.regular, fontSize: 13, color: colors.mutedForeground },
-  noteHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" },
+  // Campos y botones secundarios más bajos que el estándar (48) para que la
+  // lista de series sea compacta; sigue siendo cómodo de tocar (≥ 38).
+  compactInput: { minHeight: 40, paddingVertical: 6, fontSize: 15 },
+  compactButton: { minHeight: 40 },
   noteLabel: { fontFamily: fonts.medium, fontSize: 13, color: colors.mutedForeground },
-  noteCount: { fontFamily: fonts.regular, fontSize: 12, color: colors.mutedForeground },
   note: {
-    minHeight: 44,
+    minHeight: 38,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.input,
     backgroundColor: "rgba(43,51,61,0.4)",
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingTop: 9,
+    paddingBottom: 9,
     color: colors.foreground,
     fontFamily: fonts.regular,
     fontSize: 15,
