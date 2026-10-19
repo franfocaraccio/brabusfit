@@ -1,7 +1,9 @@
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 
+import type { CatalogEntry } from "@brabus/shared";
 import {
+  getCatalog,
   getFolders,
   getRoutineForEdit,
   type EditableRoutine,
@@ -17,7 +19,8 @@ export default function EditarRutinaScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session, profile } = useAuth();
   const [data, setData] = useState<
-    { routine: EditableRoutine | null; folders: FolderLite[] } | undefined
+    | { routine: EditableRoutine | null; folders: FolderLite[]; catalog: CatalogEntry[] }
+    | undefined
   >(undefined);
 
   useEffect(() => {
@@ -25,7 +28,8 @@ export default function EditarRutinaScreen() {
     Promise.all([
       getRoutineForEdit(supabase, id, session.user.id),
       getFolders(supabase, session.user.id),
-    ]).then(([routine, folders]) => setData({ routine, folders }));
+      getCatalog(supabase, session.user.id),
+    ]).then(([routine, folders, catalog]) => setData({ routine, folders, catalog }));
   }, [id, session]);
 
   if (!data) return <Loading />;
@@ -35,6 +39,7 @@ export default function EditarRutinaScreen() {
   return (
     <RoutineBuilder
       folders={data.folders}
+      catalog={data.catalog}
       isCoach={profile?.is_coach ?? false}
       initial={data.routine}
     />

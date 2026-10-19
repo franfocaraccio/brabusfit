@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import type { RoutineDayInput } from "@brabus/shared";
+import type { CatalogEntry, RoutineDayInput } from "@brabus/shared";
 import {
   createRoutine,
   updateRoutine,
@@ -21,20 +21,32 @@ import {
   type FolderLite,
 } from "@brabus/supabase";
 
+import { ExercisePicker } from "@/components/exercise-picker";
 import { ErrorText } from "@/components/forms";
 import { OptionList, Sheet } from "@/components/sheet";
 import { Button, Card, TextField } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
 import { colors, fonts, radius } from "@/lib/theme";
 
-type ExerciseDraft = { key: string; id?: string; name: string; sets_reps: string };
+type ExerciseDraft = {
+  key: string;
+  id?: string;
+  catalog: CatalogEntry | null;
+  variant: string;
+  sets_reps: string;
+};
 type DayDraft = { key: string; id?: string; name: string; exercises: ExerciseDraft[] };
 
 const NEW_FOLDER = "__new__";
 let keySeq = 0;
 const newKey = () => `k${Date.now().toString(36)}${(keySeq++).toString(36)}`;
 
-const emptyExercise = (): ExerciseDraft => ({ key: newKey(), name: "", sets_reps: "" });
+const emptyExercise = (): ExerciseDraft => ({
+  key: newKey(),
+  catalog: null,
+  variant: "",
+  sets_reps: "",
+});
 const emptyDay = (): DayDraft => ({ key: newKey(), name: "", exercises: [emptyExercise()] });
 
 /**
@@ -43,10 +55,13 @@ const emptyDay = (): DayDraft => ({ key: newKey(), name: "", exercises: [emptyEx
  */
 export function RoutineBuilder({
   folders,
+  catalog,
   isCoach,
   initial,
 }: {
   folders: FolderLite[];
+  /** Catálogo de ejercicios disponible (general + propios). */
+  catalog: CatalogEntry[];
   isCoach: boolean;
   initial?: EditableRoutine;
 }) {
@@ -63,10 +78,18 @@ export function RoutineBuilder({
           key: d.id,
           id: d.id,
           name: d.name,
-          exercises: d.exercises.map((e) => ({ key: e.id, ...e })),
+          exercises: d.exercises.map((e) => ({
+            key: e.id,
+            id: e.id,
+            catalog: e.catalog,
+            variant: e.variant ?? "",
+            sets_reps: e.sets_reps,
+          })),
         }))
       : [emptyDay()],
   );
+  // Catálogo local: suma los ejercicios propios que se crean en el momento.
+  const [catalogList, setCatalogList] = useState<CatalogEntry[]>(catalog);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -130,7 +153,8 @@ export function RoutineBuilder({
       name: day.name.trim(),
       exercises: day.exercises.map((ex) => ({
         id: ex.id,
-        name: ex.name.trim(),
+        catalog_id: ex.catalog?.id,
+        variant: ex.variant.trim() || null,
         sets_reps: ex.sets_reps.trim(),
       })),
     }));
@@ -224,16 +248,30 @@ export function RoutineBuilder({
             {day.exercises.map((ex) => (
               <View key={ex.key} style={styles.exercise}>
                 <View style={{ flex: 1, gap: 8 }}>
-                  <TextField
-                    value={ex.name}
-                    onChangeText={(v) => updateExercise(day.key, ex.key, { name: v })}
-                    placeholder="Press Militar"
+                  <ExercisePicker
+                    value={ex.catalog}
+                    catalog={catalogList}
+                    onChange={(entry) => updateExercise(day.key, ex.key, { catalog: entry })}
+                    onCreated={(entry) => setCatalogList((list) => [...list, entry])}
                   />
-                  <TextField
-                    value={ex.sets_reps}
-                    onChangeText={(v) => updateExercise(day.key, ex.key, { sets_reps: v })}
-                    placeholder="4 x (10 a 12)"
-                  />
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    <View style={{ flex: 1 }}>
+                      <TextField
+                        value={ex.sets_reps}
+                        onChangeText={(v) => updateExercise(day.key, ex.key, { sets_reps: v })}
+                        placeholder="4 x (10 a 12)"
+                        accessibilityLabel="Series y repeticiones"
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <TextField
+                        value={ex.variant}
+                        onChangeText={(v) => updateExercise(day.key, ex.key, { variant: v })}
+                        placeholder="Variante"
+                        accessibilityLabel="Variante"
+                      />
+                    </View>
+                  </View>
                 </View>
                 <IconButton
                   icon="trash-outline"

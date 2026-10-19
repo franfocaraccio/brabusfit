@@ -167,7 +167,11 @@ type ProgressRow = {
   finished_at: string | null;
   started_at: string;
   exercise_logs: {
-    exercise: { name: string } | null;
+    exercise: {
+      name: string;
+      catalog_id: string | null;
+      catalog: { name: string } | null;
+    } | null;
     set_logs: { weight: number | null; reps: number | null }[];
   }[];
 };
@@ -183,7 +187,7 @@ export async function getProgressSessions(
   const { data } = await client
     .from("workout_sessions")
     .select(
-      "id, finished_at, started_at, exercise_logs(exercise:exercises(name), set_logs(weight, reps))",
+      "id, finished_at, started_at, exercise_logs(exercise:exercises(name, catalog_id, catalog:exercise_catalog(name)), set_logs(weight, reps))",
     )
     .eq("user_id", userId)
     .eq("status", "finished")
@@ -195,6 +199,11 @@ export async function getProgressSessions(
     date: s.finished_at ?? s.started_at,
     entries: s.exercise_logs
       .filter((l) => l.exercise)
-      .map((l) => ({ name: l.exercise!.name, sets: l.set_logs })),
+      .map((l) => ({
+        catalogId: l.exercise!.catalog_id,
+        // Nombre del catálogo (sin variante); si no se puede leer, la etiqueta.
+        name: l.exercise!.catalog?.name ?? l.exercise!.name,
+        sets: l.set_logs,
+      })),
   }));
 }

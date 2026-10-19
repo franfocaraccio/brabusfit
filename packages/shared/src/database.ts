@@ -29,7 +29,12 @@ export type ShareUsernameStatus =
 // Forma del payload que reciben las RPC create_full_routine / update_full_routine.
 export type ExerciseInput = {
   id?: string;
-  name: string;
+  /** Ejercicio del catálogo (la app actual siempre lo manda). */
+  catalog_id?: string;
+  /** Aclaración opcional: "Mancuernas / Smith". */
+  variant?: string | null;
+  /** Solo para compatibilidad: sin catalog_id, la base busca por nombre. */
+  name?: string;
   sets_reps: string;
 };
 export type RoutineDayInput = {
@@ -37,6 +42,22 @@ export type RoutineDayInput = {
   name: string;
   exercises: ExerciseInput[];
 };
+
+export type MuscleGroup =
+  | "pecho"
+  | "espalda"
+  | "hombros"
+  | "biceps"
+  | "triceps"
+  | "antebrazos"
+  | "cuadriceps"
+  | "isquiotibiales"
+  | "gluteos"
+  | "aductores"
+  | "pantorrillas"
+  | "core"
+  | "full_body"
+  | "otros";
 
 /** Payload de update_session_logs: series y detalle nuevos de un ejercicio. */
 export type SessionLogUpdate = {
@@ -138,7 +159,10 @@ export type Database = {
         Row: {
           id: string;
           day_id: string;
+          /** Etiqueta calculada por la base: "Nombre del catálogo (variante)". */
           name: string;
+          catalog_id: string;
+          variant: string | null;
           sets_reps: string;
           position: number;
           created_at: string;
@@ -146,12 +170,34 @@ export type Database = {
         Insert: {
           id?: string;
           day_id: string;
-          name: string;
+          name?: string;
+          catalog_id?: string;
+          variant?: string | null;
           sets_reps: string;
           position?: number;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["exercises"]["Insert"]>;
+        Relationships: [];
+      };
+      exercise_catalog: {
+        Row: {
+          id: string;
+          name: string;
+          muscle_group: MuscleGroup;
+          /** null = catálogo general; si no, ejercicio propio de ese usuario. */
+          owner_id: string | null;
+          name_key: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          muscle_group: MuscleGroup;
+          owner_id?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["exercise_catalog"]["Insert"]>;
         Relationships: [];
       };
       routine_shares: {

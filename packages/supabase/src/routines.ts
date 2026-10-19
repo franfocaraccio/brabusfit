@@ -3,6 +3,7 @@ import {
   ok,
   validateRoutine,
   type ActionResult,
+  type CatalogEntry,
   type Folder,
   type Routine,
   type RoutinePayload,
@@ -202,7 +203,12 @@ export async function getFolders(
   return (data ?? []) as FolderLite[];
 }
 
-export type EditableExercise = { id: string; name: string; sets_reps: string };
+export type EditableExercise = {
+  id: string;
+  catalog: CatalogEntry;
+  variant: string | null;
+  sets_reps: string;
+};
 export type EditableDay = { id: string; name: string; exercises: EditableExercise[] };
 export type EditableRoutine = {
   id: string;
@@ -215,7 +221,13 @@ type EditDayRow = {
   id: string;
   name: string;
   position: number;
-  exercises: { id: string; name: string; sets_reps: string; position: number }[];
+  exercises: {
+    id: string;
+    variant: string | null;
+    sets_reps: string;
+    position: number;
+    catalog: CatalogEntry;
+  }[];
 };
 
 /** Rutina completa para editar. Null si no existe o el usuario no es el dueño. */
@@ -233,7 +245,9 @@ export async function getRoutineForEdit(
 
   const { data: daysData } = await client
     .from("routine_days")
-    .select("id, name, position, exercises(id, name, sets_reps, position)")
+    .select(
+      "id, name, position, exercises(id, variant, sets_reps, position, catalog:exercise_catalog(id, name, muscle_group, owner_id))",
+    )
     .eq("routine_id", routineId)
     .order("position");
 
@@ -246,7 +260,12 @@ export async function getRoutineForEdit(
       name: d.name,
       exercises: [...d.exercises]
         .sort((a, b) => a.position - b.position)
-        .map((e) => ({ id: e.id, name: e.name, sets_reps: e.sets_reps })),
+        .map((e) => ({
+          id: e.id,
+          catalog: e.catalog,
+          variant: e.variant,
+          sets_reps: e.sets_reps,
+        })),
     })),
   };
 }

@@ -6,8 +6,9 @@ import { GripVertical, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { createRoutine, updateRoutine } from "@/lib/actions/routines";
-import type { RoutineDayInput } from "@brabus/shared";
+import type { CatalogEntry, RoutineDayInput } from "@brabus/shared";
 import type { FolderLite } from "@brabus/supabase";
+import { ExercisePicker } from "@/components/routines/exercise-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,14 +21,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type ExerciseDraft = { key: string; id?: string; name: string; sets_reps: string };
+type ExerciseDraft = {
+  key: string;
+  id?: string;
+  catalog: CatalogEntry | null;
+  variant: string;
+  sets_reps: string;
+};
 type DayDraft = { key: string; id?: string; name: string; exercises: ExerciseDraft[] };
 
 const NEW_FOLDER = "__new__";
 const newKey = () => crypto.randomUUID();
 
 function emptyExercise(): ExerciseDraft {
-  return { key: newKey(), name: "", sets_reps: "" };
+  return { key: newKey(), catalog: null, variant: "", sets_reps: "" };
 }
 function emptyDay(): DayDraft {
   return { key: newKey(), name: "", exercises: [emptyExercise()] };
@@ -42,10 +49,13 @@ export type RoutineBuilderInitial = {
 
 export function RoutineBuilder({
   folders,
+  catalog,
   isCoach,
   initial,
 }: {
   folders: FolderLite[];
+  /** Catálogo de ejercicios disponible (general + propios). */
+  catalog: CatalogEntry[];
   isCoach: boolean;
   initial?: RoutineBuilderInitial;
 }) {
@@ -59,6 +69,8 @@ export function RoutineBuilder({
   );
   const [newFolderName, setNewFolderName] = useState("");
   const [days, setDays] = useState<DayDraft[]>(initial?.days ?? [emptyDay()]);
+  // Catálogo local: suma los ejercicios propios que se crean en el momento.
+  const [catalogList, setCatalogList] = useState<CatalogEntry[]>(catalog);
 
   const isEdit = Boolean(initial);
 
@@ -137,7 +149,8 @@ export function RoutineBuilder({
       name: day.name.trim(),
       exercises: day.exercises.map((ex) => ({
         id: ex.id,
-        name: ex.name.trim(),
+        catalog_id: ex.catalog?.id,
+        variant: ex.variant.trim() || null,
         sets_reps: ex.sets_reps.trim(),
       })),
     }));
@@ -244,23 +257,33 @@ export function RoutineBuilder({
                     className="bg-muted/30 flex items-start gap-2 rounded-md border p-3"
                   >
                     <GripVertical className="text-muted-foreground mt-2.5 size-4 shrink-0" />
-                    <div className="grid flex-1 gap-2">
-                      <Input
-                        value={ex.name}
-                        onChange={(e) =>
-                          updateExercise(day.key, ex.key, { name: e.target.value })
-                        }
-                        placeholder="Press Militar"
+                    <div className="grid min-w-0 flex-1 gap-2">
+                      <ExercisePicker
+                        value={ex.catalog}
+                        catalog={catalogList}
+                        onChange={(entry) => updateExercise(day.key, ex.key, { catalog: entry })}
+                        onCreated={(entry) => setCatalogList((list) => [...list, entry])}
                       />
-                      <Input
-                        value={ex.sets_reps}
-                        onChange={(e) =>
-                          updateExercise(day.key, ex.key, {
-                            sets_reps: e.target.value,
-                          })
-                        }
-                        placeholder="4 x (10 a 12)"
-                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          value={ex.sets_reps}
+                          onChange={(e) =>
+                            updateExercise(day.key, ex.key, {
+                              sets_reps: e.target.value,
+                            })
+                          }
+                          placeholder="4 x (10 a 12)"
+                          aria-label="Series y repeticiones"
+                        />
+                        <Input
+                          value={ex.variant}
+                          onChange={(e) =>
+                            updateExercise(day.key, ex.key, { variant: e.target.value })
+                          }
+                          placeholder="Variante (opcional)"
+                          aria-label="Variante"
+                        />
+                      </div>
                     </div>
                     <Button
                       type="button"

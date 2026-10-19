@@ -139,6 +139,14 @@ Storage + (si hace falta) un job programado.
   Si la app se cierra de golpe, al volver a ese día se ofrece "Continuar sesión"
   o "Descartar". Se borra al guardar la sesión, al "Salir sin guardar" o a las
   24 h (`packages/shared/src/draft.ts`).
+- ✅ **Catálogo de ejercicios** (2026-10-20, migración 0008): tabla
+  `exercise_catalog` con 121 ejercicios generales por grupo muscular + ejercicios
+  propios (solo los ve quien los crea). En el editor de rutinas el ejercicio se
+  elige con buscador y filtro por grupo muscular, con "Crear" si no existe, y
+  una variante opcional ("Mancuernas / Smith"). `exercises.catalog_id` apunta al
+  catálogo; `exercises.name` queda como etiqueta calculada por trigger
+  ("Nombre (variante)"). Los gráficos de Progreso agrupan por ejercicio del
+  catálogo. Pendiente a futuro: borrar `exercises.name` cuando ya no haga falta.
 - Ideas siguientes: reordenar ejercicios/días (el ícono de "arrastrar" del editor
   web hoy es decorativo), duplicar rutina.
 - **Alertas de progresión:** regla en SQL (ej. mismo peso N semanas y reps en el

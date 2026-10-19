@@ -6,7 +6,16 @@
 import { formatShortDate, formatWeight } from "./training";
 
 export type ProgressSet = { weight: number | null; reps: number | null };
-export type ProgressEntry = { name: string; sets: ProgressSet[] };
+export type ProgressEntry = {
+  /** Ejercicio del catálogo: agrupa la evolución aunque cambie la variante o la rutina. */
+  catalogId?: string | null;
+  /** Nombre del catálogo (sin variante). */
+  name: string;
+  sets: ProgressSet[];
+};
+
+/** Clave de agrupación de una entrada: el ejercicio del catálogo (o el nombre). */
+const entryKey = (e: ProgressEntry) => e.catalogId ?? exerciseKey(e.name);
 export type ProgressSession = { id: string; date: string; entries: ProgressEntry[] };
 
 // ---------------------------------------------------------------------------
@@ -34,7 +43,7 @@ export function periodStart(period: Period, now: Date = new Date()): Date | null
 const inPeriod = (iso: string, since: Date | null) => !since || new Date(iso) >= since;
 
 // ---------------------------------------------------------------------------
-// Ejercicios (agrupados por nombre entre rutinas)
+// Ejercicios (agrupados por ejercicio del catálogo, entre rutinas)
 // ---------------------------------------------------------------------------
 
 /** Clave de agrupación: "Jalón  al Pecho" y "jalon al pecho" son el mismo ejercicio. */
@@ -64,7 +73,7 @@ export function listExercises(sessions: ProgressSession[]): ExerciseOption[] {
     const seen = new Set<string>();
     for (const e of s.entries) {
       if (!hasData(e.sets)) continue;
-      const key = exerciseKey(e.name);
+      const key = entryKey(e);
       if (!key || seen.has(key)) continue;
       seen.add(key);
       const prev = byKey.get(key);
@@ -85,7 +94,7 @@ export function listExercises(sessions: ProgressSession[]): ExerciseOption[] {
 /** Series de un ejercicio en una sesión (si aparece dos veces, se juntan). */
 function setsFor(session: ProgressSession, key: string): ProgressSet[] {
   return session.entries
-    .filter((e) => exerciseKey(e.name) === key)
+    .filter((e) => entryKey(e) === key)
     .flatMap((e) => e.sets)
     .filter((s) => s.weight !== null || s.reps !== null);
 }

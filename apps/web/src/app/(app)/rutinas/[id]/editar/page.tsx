@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { getFolders, getRoutineForEdit } from "@brabus/supabase";
+import { getCatalog, getFolders, getRoutineForEdit } from "@brabus/supabase";
 
 import {
   RoutineBuilder,
@@ -18,9 +18,10 @@ export default async function EditarRutinaPage({
   const { userId, profile } = await requireProfile();
   const supabase = await createClient();
 
-  const [routine, folders] = await Promise.all([
+  const [routine, folders, catalog] = await Promise.all([
     getRoutineForEdit(supabase, id, userId),
     getFolders(supabase, userId),
+    getCatalog(supabase, userId),
   ]);
 
   // Solo el dueño puede editar.
@@ -34,14 +35,25 @@ export default async function EditarRutinaPage({
       key: d.id,
       id: d.id,
       name: d.name,
-      exercises: d.exercises.map((e) => ({ key: e.id, ...e })),
+      exercises: d.exercises.map((e) => ({
+        key: e.id,
+        id: e.id,
+        catalog: e.catalog,
+        variant: e.variant ?? "",
+        sets_reps: e.sets_reps,
+      })),
     })),
   };
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold tracking-tight">Editar rutina</h1>
-      <RoutineBuilder folders={folders} isCoach={profile.is_coach} initial={initial} />
+      <RoutineBuilder
+        folders={folders}
+        catalog={catalog}
+        isCoach={profile.is_coach}
+        initial={initial}
+      />
     </div>
   );
 }

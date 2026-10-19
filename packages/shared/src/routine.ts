@@ -16,9 +16,8 @@ export function validateRoutine(payload: RoutinePayload): string | null {
   for (const day of payload.days) {
     if (!day.name.trim()) return "Cada día necesita un nombre.";
     for (const ex of day.exercises) {
-      if (!ex.name.trim() || !ex.sets_reps.trim()) {
-        return "Cada ejercicio necesita nombre y series/repeticiones.";
-      }
+      if (!ex.catalog_id && !ex.name?.trim()) return "Elegí el ejercicio en cada fila.";
+      if (!ex.sets_reps.trim()) return "Cada ejercicio necesita series/repeticiones.";
     }
   }
   return null;
