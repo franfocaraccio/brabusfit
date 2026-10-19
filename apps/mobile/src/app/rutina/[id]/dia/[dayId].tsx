@@ -381,7 +381,11 @@ function Trainer({
                     />
                   </View>
 
-                  <Button title="Guardar ejercicio" onPress={() => saveExercise(ex.id)} />
+                  <Button
+                    title="Guardar ejercicio"
+                    onPress={() => saveExercise(ex.id)}
+                    style={styles.saveExerciseButton}
+                  />
                 </View>
               )}
             </View>
@@ -472,6 +476,8 @@ const styles = StyleSheet.create({
   // lista de series sea compacta; sigue siendo cómodo de tocar (≥ 38).
   compactInput: { minHeight: 40, paddingVertical: 6, fontSize: 15 },
   compactButton: { minHeight: 40 },
+  // Mínimo recomendado por Apple para un objetivo táctil.
+  saveExerciseButton: { minHeight: 44 },
   noteLabel: { fontFamily: fonts.medium, fontSize: 13, color: colors.mutedForeground },
   note: {
     minHeight: 38,
