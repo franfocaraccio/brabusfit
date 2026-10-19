@@ -15,7 +15,7 @@ import {
   formatShortDate as formatDate,
   formatWeight,
   parseDecimal,
-  summarizeSets,
+  summarizeHistory,
   type SetInput,
   type TrainingExercise,
 } from "@brabus/shared";
@@ -314,9 +314,14 @@ export function DayTrainer({
                     <span className="block truncate text-sm font-semibold">
                       {ex.name}
                     </span>
-                    <span className="text-muted-foreground text-xs">
+                    <span className="text-muted-foreground block text-xs">
                       {ex.setsReps}
                     </span>
+                    {ex.history[0] ? (
+                      <span className="text-foreground/70 mt-0.5 block text-xs">
+                        {summarizeHistory(ex.history[0])}
+                      </span>
+                    ) : null}
                   </span>
                   <ChevronDown
                     className={cn(
@@ -357,7 +362,7 @@ export function DayTrainer({
                               <span className="text-muted-foreground mr-2 font-medium">
                                 {formatDate(h.date)}
                               </span>
-                              {summarizeSets(h.sets)}
+                              {summarizeHistory(h)}
                             </div>
                           ))}
                         </div>

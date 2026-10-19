@@ -13,7 +13,7 @@ import { getUserId, type BrabusClient } from "./client";
 type HistorySessionRow = {
   finished_at: string | null;
   started_at: string;
-  exercise_logs: { exercise_id: string; set_logs: SavedSet[] }[];
+  exercise_logs: { exercise_id: string; note: string | null; set_logs: SavedSet[] }[];
 };
 
 /**
@@ -47,7 +47,7 @@ export async function getTrainingDay(
       client
         .from("workout_sessions")
         .select(
-          "finished_at, started_at, exercise_logs(exercise_id, set_logs(set_number, weight, reps))",
+          "finished_at, started_at, exercise_logs(exercise_id, note, set_logs(set_number, weight, reps))",
         )
         .eq("user_id", userId)
         .eq("day_id", dayId)
@@ -64,9 +64,10 @@ export async function getTrainingDay(
       const sets = [...(log.set_logs ?? [])].sort(
         (a, b) => a.set_number - b.set_number,
       );
-      if (sets.length === 0) continue;
+      const note = log.note?.trim() || null;
+      if (sets.length === 0 && !note) continue;
       const list = historyByExercise.get(log.exercise_id) ?? [];
-      list.push({ date, sets });
+      list.push({ date, sets, note });
       historyByExercise.set(log.exercise_id, list);
     }
   }

@@ -20,7 +20,7 @@ import {
   formatWeight,
   parseDecimal,
   sanitizeDecimal,
-  summarizeSets,
+  summarizeHistory,
   type ExerciseLogInput,
   type TrainingExercise,
 } from "@brabus/shared";
@@ -275,6 +275,9 @@ function Trainer({
                   <View style={{ flex: 1 }}>
                     <Text style={styles.exerciseName}>{ex.name}</Text>
                     <Text style={styles.exerciseSets}>{ex.setsReps}</Text>
+                    {ex.history[0] ? (
+                      <Text style={styles.exerciseLast}>{summarizeHistory(ex.history[0])}</Text>
+                    ) : null}
                   </View>
                   <Ionicons
                     name={isOpen ? "chevron-up" : "chevron-down"}
@@ -308,7 +311,7 @@ function Trainer({
                         ex.history.map((h, i) => (
                           <View key={i} style={styles.historyRow}>
                             <Text style={styles.historyDate}>{formatShortDate(h.date)}</Text>
-                            <Text style={styles.historySets}>{summarizeSets(h.sets)}</Text>
+                            <Text style={styles.historySets}>{summarizeHistory(h)}</Text>
                           </View>
                         ))}
                       <Muted style={{ fontSize: 13 }}>
@@ -433,6 +436,12 @@ const styles = StyleSheet.create({
   },
   exerciseName: { fontFamily: fonts.semibold, fontSize: 16, color: colors.foreground },
   exerciseSets: { fontFamily: fonts.regular, fontSize: 13, color: colors.mutedForeground },
+  exerciseLast: {
+    marginTop: 2,
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    color: "rgba(244,246,250,0.7)",
+  },
   exerciseBody: {
     borderTopWidth: 1,
     borderTopColor: colors.border,

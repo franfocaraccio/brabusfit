@@ -18,7 +18,7 @@ export type SavedSet = {
   reps: number | null;
 };
 
-export type HistoryEntry = { date: string; sets: SavedSet[] };
+export type HistoryEntry = { date: string; sets: SavedSet[]; note: string | null };
 
 /** Un ejercicio del día con su historial (últimas sesiones finalizadas). */
 export type TrainingExercise = {
@@ -43,6 +43,14 @@ export function summarizeSets(sets: SavedSet[]): string {
     })
     .filter(Boolean)
     .join("  ·  ");
+}
+
+/** Series de un entrenamiento + su detalle entre paréntesis: "35kg × 12 · 35kg × 10 (Hecho en Smith)". */
+export function summarizeHistory(entry: Pick<HistoryEntry, "sets" | "note">): string {
+  const sets = summarizeSets(entry.sets);
+  const note = entry.note?.trim();
+  if (!note) return sets;
+  return sets ? `${sets} (${note})` : `(${note})`;
 }
 
 /** Fecha dd/mm/aaaa. */
