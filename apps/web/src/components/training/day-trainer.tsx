@@ -14,9 +14,12 @@ import { toast } from "sonner";
 import {
   formatShortDate as formatDate,
   formatWeight,
+  HISTORY_PREVIEW,
+  historyLabel,
   NOTE_MAX_LENGTH,
   parseDecimal,
   summarizeHistory,
+  type HistoryEntry,
   type SetInput,
   type TrainingExercise,
 } from "@brabus/shared";
@@ -80,6 +83,8 @@ export function DayTrainer({
   const [completed, setCompleted] = useState<Record<string, boolean>>({});
   const [openId, setOpenId] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState<Record<string, boolean>>({});
+  // Ejercicio cuyo historial completo se muestra en el popup "Ver más".
+  const [historyDialog, setHistoryDialog] = useState<ExerciseState | null>(null);
   const [rows, setRows] = useState<Record<string, SetRow[]>>(() =>
     Object.fromEntries(exercises.map((e) => [e.id, initialRowsFor(e)])),
   );
@@ -345,7 +350,7 @@ export function DayTrainer({
                         className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium"
                       >
                         <History className="size-3.5" />
-                        Últimos {ex.history.length} entrenamientos
+                        {historyLabel(ex.history.length)}
                         <ChevronDown
                           className={cn(
                             "size-3.5 transition-transform",
@@ -355,17 +360,18 @@ export function DayTrainer({
                       </button>
                       {historyOpen[ex.id] && (
                         <div className="mt-2 space-y-1.5">
-                          {ex.history.map((h, i) => (
-                            <div
-                              key={i}
-                              className="bg-muted/40 rounded-md px-3 py-2 text-xs"
-                            >
-                              <span className="text-muted-foreground mr-2 font-medium">
-                                {formatDate(h.date)}
-                              </span>
-                              {summarizeHistory(h)}
-                            </div>
+                          {ex.history.slice(0, HISTORY_PREVIEW).map((h, i) => (
+                            <HistoryRow key={i} entry={h} />
                           ))}
+                          {ex.history.length > HISTORY_PREVIEW && (
+                            <button
+                              type="button"
+                              onClick={() => setHistoryDialog(ex)}
+                              className="text-primary text-xs font-medium hover:underline"
+                            >
+                              Ver más
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -537,6 +543,39 @@ export function DayTrainer({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Historial completo de un ejercicio ("Ver más") */}
+      <Dialog
+        open={historyDialog !== null}
+        onOpenChange={(o) => {
+          if (!o) setHistoryDialog(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{historyDialog?.name}</DialogTitle>
+            <DialogDescription>
+              {historyDialog ? historyLabel(historyDialog.history.length) : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="-mx-1 max-h-[60vh] space-y-1.5 overflow-y-auto px-1">
+            {historyDialog?.history.map((h, i) => (
+              <HistoryRow key={i} entry={h} />
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function HistoryRow({ entry }: { entry: HistoryEntry }) {
+  return (
+    <div className="bg-muted/40 rounded-md px-3 py-2 text-xs">
+      <span className="text-muted-foreground mr-2 font-medium">
+        {formatDate(entry.date)}
+      </span>
+      {summarizeHistory(entry)}
     </div>
   );
 }

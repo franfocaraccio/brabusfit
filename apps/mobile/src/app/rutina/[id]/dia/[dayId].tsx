@@ -17,16 +17,20 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   formatShortDate,
+  HISTORY_PREVIEW,
+  historyLabel,
   formatWeight,
   NOTE_MAX_LENGTH,
   parseDecimal,
   sanitizeDecimal,
   summarizeHistory,
   type ExerciseLogInput,
+  type HistoryEntry,
   type TrainingExercise,
 } from "@brabus/shared";
 import { getTrainingDay, saveWorkout } from "@brabus/supabase";
 
+import { Sheet } from "@/components/sheet";
 import { Button, Muted, TextField } from "@/components/ui";
 import { confirm, notify } from "@/lib/confirm";
 import { supabase } from "@/lib/supabase";
@@ -122,6 +126,8 @@ function Trainer({
   const [completed, setCompleted] = useState<Record<string, boolean>>({});
   const [openId, setOpenId] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState<Record<string, boolean>>({});
+  // Ejercicio cuyo historial completo se muestra en el panel "Ver más".
+  const [historySheet, setHistorySheet] = useState<TrainingExercise | null>(null);
   const [rows, setRows] = useState<Record<string, SetRow[]>>(() =>
     Object.fromEntries(exercises.map((e) => [e.id, initialRowsFor(e)])),
   );
@@ -300,7 +306,7 @@ function Trainer({
                       >
                         <Ionicons name="time-outline" size={15} color={colors.mutedForeground} />
                         <Text style={styles.historyToggleText}>
-                          Últimos {ex.history.length} entrenamientos
+                          {historyLabel(ex.history.length)}
                         </Text>
                         <Ionicons
                           name={historyOpen[ex.id] ? "chevron-up" : "chevron-down"}
@@ -309,12 +315,19 @@ function Trainer({
                         />
                       </Pressable>
                       {historyOpen[ex.id] &&
-                        ex.history.map((h, i) => (
-                          <View key={i} style={styles.historyRow}>
-                            <Text style={styles.historyDate}>{formatShortDate(h.date)}</Text>
-                            <Text style={styles.historySets}>{summarizeHistory(h)}</Text>
-                          </View>
-                        ))}
+                        ex.history
+                          .slice(0, HISTORY_PREVIEW)
+                          .map((h, i) => <HistoryRow key={i} entry={h} />)}
+                      {historyOpen[ex.id] && ex.history.length > HISTORY_PREVIEW ? (
+                        <Pressable
+                          onPress={() => setHistorySheet(ex)}
+                          hitSlop={8}
+                          accessibilityRole="button"
+                          style={{ alignSelf: "flex-start" }}
+                        >
+                          <Text style={styles.seeMore}>Ver más</Text>
+                        </Pressable>
+                      ) : null}
                       <Muted style={{ fontSize: 13 }}>
                         Precargado con tu entrenamiento del{" "}
                         {formatShortDate(ex.history[0].date)}. Si progresaste, editalo.
@@ -402,7 +415,28 @@ function Trainer({
           onPress={onSavePress}
         />
       </View>
+
+      {/* Historial completo de un ejercicio ("Ver más") */}
+      <Sheet
+        visible={historySheet !== null}
+        onClose={() => setHistorySheet(null)}
+        title={historySheet?.name ?? ""}
+        description={historySheet ? historyLabel(historySheet.history.length) : undefined}
+      >
+        <View style={{ gap: 6 }}>
+          {historySheet?.history.map((h, i) => <HistoryRow key={i} entry={h} />)}
+        </View>
+      </Sheet>
     </SafeAreaView>
+  );
+}
+
+function HistoryRow({ entry }: { entry: HistoryEntry }) {
+  return (
+    <View style={styles.historyRow}>
+      <Text style={styles.historyDate}>{formatShortDate(entry.date)}</Text>
+      <Text style={styles.historySets}>{summarizeHistory(entry)}</Text>
+    </View>
   );
 }
 
@@ -470,6 +504,7 @@ const styles = StyleSheet.create({
   },
   historyDate: { fontFamily: fonts.medium, fontSize: 13, color: colors.mutedForeground },
   historySets: { flex: 1, fontFamily: fonts.regular, fontSize: 13, color: colors.foreground },
+  seeMore: { fontFamily: fonts.semibold, fontSize: 13, color: colors.primary },
   setRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   setLabel: { width: 54, fontFamily: fonts.regular, fontSize: 13, color: colors.mutedForeground },
   // Campos y botones secundarios más bajos que el estándar (48) para que la

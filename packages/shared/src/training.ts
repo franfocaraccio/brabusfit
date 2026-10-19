@@ -12,6 +12,16 @@ export type ExerciseLogInput = {
   note: string | null;
 };
 
+/** Entrenamientos anteriores que se muestran al expandir un ejercicio. */
+export const HISTORY_PREVIEW = 3;
+/** Máximo de entrenamientos anteriores que se traen por ejercicio ("Ver más"). */
+export const HISTORY_MAX = 12;
+
+/** "Último entrenamiento" (1) o "Últimos entrenamientos" (2 o más). */
+export function historyLabel(count: number): string {
+  return count === 1 ? "Último entrenamiento" : "Últimos entrenamientos";
+}
+
 /** Largo máximo del detalle de un ejercicio. */
 export const NOTE_MAX_LENGTH = 80;
 

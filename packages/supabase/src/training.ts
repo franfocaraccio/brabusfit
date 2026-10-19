@@ -1,5 +1,6 @@
 import {
   fail,
+  HISTORY_MAX,
   NOTE_MAX_LENGTH,
   ok,
   type ActionResult,
@@ -18,8 +19,8 @@ type HistorySessionRow = {
 };
 
 /**
- * Datos para entrenar un día: ejercicios + historial de las últimas 3 sesiones
- * finalizadas. Cada sesión nueva arranca de cero (nada se persiste hasta
+ * Datos para entrenar un día: ejercicios + historial de cada uno (hasta
+ * HISTORY_MAX entrenamientos finalizados, el más reciente primero). Cada sesión nueva arranca de cero (nada se persiste hasta
  * guardar la sesión). Null si el día no existe o no pertenece a la rutina.
  */
 export async function getTrainingDay(
@@ -54,7 +55,9 @@ export async function getTrainingDay(
         .eq("day_id", dayId)
         .eq("status", "finished")
         .order("finished_at", { ascending: false })
-        .limit(3),
+        // Margen por si algún ejercicio no se hizo en todas las sesiones; abajo
+        // se recorta a HISTORY_MAX por ejercicio.
+        .limit(HISTORY_MAX * 3),
     ]);
 
   const history = (finishedSessions ?? []) as unknown as HistorySessionRow[];
@@ -68,6 +71,7 @@ export async function getTrainingDay(
       const note = log.note?.trim() || null;
       if (sets.length === 0 && !note) continue;
       const list = historyByExercise.get(log.exercise_id) ?? [];
+      if (list.length >= HISTORY_MAX) continue;
       list.push({ date, sets, note });
       historyByExercise.set(log.exercise_id, list);
     }
