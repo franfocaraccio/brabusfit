@@ -1,5 +1,6 @@
 export * from "./auth";
 export * from "./client";
+export * from "./history";
 export * from "./profile";
 export * from "./routines";
 export * from "./shares";

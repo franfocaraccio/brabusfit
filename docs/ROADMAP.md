@@ -124,12 +124,18 @@ Next.js en Vercel). Cada uno sigue el mismo patrón: tablas con RLS + archivos e
 Storage + (si hace falta) un job programado.
 
 ### Entrenamiento avanzado
-- **Historial de la rutina:** listar sesiones pasadas (`workout_sessions` →
-  `exercise_logs` → `set_logs`) y permitir ver/editar valores. Los datos ya están;
-  falta la UI y policies de update sobre sesiones finalizadas.
-- **Gráficos de evolución:** queries agregadas por ejercicio/fecha (peso máx.,
-  volumen = peso × reps, PRs, frecuencia semanal) + librería de charts (ej.
-  Recharts).
+- ✅ **Historial de la rutina** (2026-10-19): botón "Historial" en cada rutina →
+  lista de sesiones → detalle editable (series, detalle, borrar sesión) para quien
+  entrenó; el coach lo ve en solo lectura desde Alumnos. Guardado atómico con la
+  función SQL `update_session_logs` (migración 0007).
+- ✅ **Gráficos de evolución** (2026-10-19): sección "Progreso" (menú web +
+  pestaña mobile) y pestaña Progreso en el detalle del alumno (coach). Ejercicios
+  agrupados por nombre entre rutinas; período 1M/3M/6M/Todo; récords (mejor peso,
+  mejor serie, 1RM estimado Epley), peso máximo (línea), volumen y frecuencia
+  semanal (barras). Cálculos en `packages/shared/src/progress.ts`; gráficos SVG
+  propios (web: svg, mobile: react-native-svg) — sin librería de charts.
+- Ideas siguientes: reordenar ejercicios/días (el ícono de "arrastrar" del editor
+  web hoy es decorativo), duplicar rutina.
 - **Alertas de progresión:** regla en SQL (ej. mismo peso N semanas y reps en el
   tope del rango → sugerir subir). Calcular on-the-fly o con `pg_cron` diario
   guardando avisos en una tabla.

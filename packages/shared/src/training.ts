@@ -1,5 +1,7 @@
 /** Tipos y helpers del entrenamiento, compartidos entre web y mobile. */
 
+import { parseDecimal } from "./decimal";
+
 export type SetInput = {
   set_number: number;
   weight: number | null;
@@ -40,6 +42,30 @@ export type TrainingExercise = {
   setsReps: string;
   history: HistoryEntry[];
 };
+
+/** Fila de serie tal como se edita en pantalla (texto). */
+export type SetRowInput = { weight: string; reps: string };
+
+/** Convierte filas de texto en series (descarta las vacías). */
+export function parseSetRows(rows: SetRowInput[]): { weight: number | null; reps: number | null }[] {
+  return rows
+    .map((r) => {
+      const reps = r.reps.trim() === "" ? null : Number.parseInt(r.reps, 10);
+      return {
+        weight: parseDecimal(r.weight),
+        reps: reps === null || Number.isNaN(reps) ? null : reps,
+      };
+    })
+    .filter((s) => s.weight !== null || s.reps !== null);
+}
+
+/** Series guardadas → filas de texto para editar. */
+export function setsToRows(sets: SavedSet[]): SetRowInput[] {
+  return sets.map((s) => ({
+    weight: s.weight !== null ? formatWeight(s.weight) : "",
+    reps: s.reps !== null ? String(s.reps) : "",
+  }));
+}
 
 /** Formatea un peso con coma decimal (es-AR), sin separador de miles. */
 export function formatWeight(weight: number): string {

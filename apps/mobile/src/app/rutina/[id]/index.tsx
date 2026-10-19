@@ -69,8 +69,8 @@ export default function RutinaScreen() {
         {!isOwner ? <Muted>Rutina compartida por tu coach.</Muted> : null}
       </View>
 
-      {isOwner ? (
-        <View style={styles.actions}>
+      <View style={styles.actions}>
+        {isOwner ? (
           <Button
             title="Editar"
             variant="outline"
@@ -78,15 +78,24 @@ export default function RutinaScreen() {
             onPress={() => router.push(`/rutina/${id}/editar`)}
             icon={<Ionicons name="create-outline" size={18} color={colors.foreground} />}
           />
-          {canShare ? (
-            <Button
-              title={shareCount > 0 ? `Compartir (${shareCount})` : "Compartir"}
-              variant="outline"
-              style={styles.action}
-              onPress={() => router.push(`/rutina/${id}/compartir`)}
-              icon={<Ionicons name="share-social-outline" size={18} color={colors.foreground} />}
-            />
-          ) : null}
+        ) : null}
+        {canShare ? (
+          <Button
+            title={shareCount > 0 ? `Compartir (${shareCount})` : "Compartir"}
+            variant="outline"
+            style={styles.action}
+            onPress={() => router.push(`/rutina/${id}/compartir`)}
+            icon={<Ionicons name="share-social-outline" size={18} color={colors.foreground} />}
+          />
+        ) : null}
+        <Button
+          title="Historial"
+          variant="outline"
+          style={styles.action}
+          onPress={() => router.push(`/rutina/${id}/historial`)}
+          icon={<Ionicons name="time-outline" size={18} color={colors.foreground} />}
+        />
+        {isOwner ? (
           <Button
             title="Eliminar"
             variant="destructive"
@@ -95,8 +104,8 @@ export default function RutinaScreen() {
             loading={deleting}
             icon={<Ionicons name="trash-outline" size={18} color={colors.destructive} />}
           />
-        </View>
-      ) : null}
+        ) : null}
+      </View>
 
       <View style={styles.section}>
         <SectionLabel>Elegí un día para entrenar</SectionLabel>

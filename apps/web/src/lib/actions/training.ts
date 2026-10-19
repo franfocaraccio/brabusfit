@@ -17,6 +17,10 @@ export async function saveWorkout(
   logs: ExerciseLogInput[],
 ): Promise<ActionResult> {
   const result = await db.saveWorkout(await createClient(), routineId, dayId, logs);
-  if (result.ok) revalidatePath(`/rutinas/${routineId}/dia/${dayId}`);
+  if (result.ok) {
+    revalidatePath(`/rutinas/${routineId}/dia/${dayId}`);
+    revalidatePath(`/rutinas/${routineId}/historial`);
+    revalidatePath("/progreso");
+  }
   return result;
 }

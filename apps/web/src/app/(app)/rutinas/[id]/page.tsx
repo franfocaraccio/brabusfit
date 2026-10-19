@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Pencil } from "lucide-react";
+import { History, Pencil } from "lucide-react";
 
 import { getRoutineDetail, getRoutineShares } from "@brabus/supabase";
 
@@ -51,18 +51,24 @@ export default async function RutinaDetailPage({
         )}
       </div>
 
-      {isOwner && (
-        <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2">
+        {isOwner && (
           <Link
             href={`/rutinas/${id}/editar`}
             className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}
           >
             <Pencil className="size-4" /> Editar
           </Link>
-          {canShare && <ShareRoutine routineId={id} shares={shares} />}
-          <DeleteRoutineButton routineId={id} routineName={routine.name} />
-        </div>
-      )}
+        )}
+        {canShare && <ShareRoutine routineId={id} shares={shares} />}
+        <Link
+          href={`/rutinas/${id}/historial`}
+          className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}
+        >
+          <History className="size-4" /> Historial
+        </Link>
+        {isOwner && <DeleteRoutineButton routineId={id} routineName={routine.name} />}
+      </div>
 
       <section className="space-y-2.5">
         <h2 className="text-muted-foreground text-sm font-semibold">

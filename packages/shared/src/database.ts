@@ -38,6 +38,13 @@ export type RoutineDayInput = {
   exercises: ExerciseInput[];
 };
 
+/** Payload de update_session_logs: series y detalle nuevos de un ejercicio. */
+export type SessionLogUpdate = {
+  log_id: string;
+  note: string | null;
+  sets: { weight: number | null; reps: number | null }[];
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -276,6 +283,10 @@ export type Database = {
       username_available: {
         Args: { p_username: string };
         Returns: boolean;
+      };
+      update_session_logs: {
+        Args: { p_session_id: string; p_logs: SessionLogUpdate[] };
+        Returns: undefined;
       };
     };
     Enums: {
