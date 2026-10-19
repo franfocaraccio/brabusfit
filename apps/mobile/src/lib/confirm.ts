@@ -11,6 +11,7 @@ export function confirm({
   cancelText = "Cancelar",
   destructive,
   onConfirm,
+  onCancel,
 }: {
   title: string;
   message?: string;
@@ -18,15 +19,22 @@ export function confirm({
   cancelText?: string;
   destructive?: boolean;
   onConfirm: () => void;
+  onCancel?: () => void;
 }) {
   if (Platform.OS === "web") {
     if (window.confirm([title, message].filter(Boolean).join("\n\n"))) onConfirm();
+    else onCancel?.();
     return;
   }
-  Alert.alert(title, message, [
-    { text: cancelText, style: "cancel" },
-    { text: confirmText, style: destructive ? "destructive" : "default", onPress: onConfirm },
-  ]);
+  Alert.alert(
+    title,
+    message,
+    [
+      { text: cancelText, style: "cancel", onPress: onCancel },
+      { text: confirmText, style: destructive ? "destructive" : "default", onPress: onConfirm },
+    ],
+    { cancelable: false },
+  );
 }
 
 /** Aviso simple (un botón). */

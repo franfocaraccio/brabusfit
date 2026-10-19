@@ -19,8 +19,14 @@ import {
   NOTE_MAX_LENGTH,
   parseDecimal,
   summarizeHistory,
+  clearDraft,
+  describeDraft,
+  draftKey,
+  loadDraft,
+  saveDraft,
   type HistoryEntry,
   type SetInput,
+  type WorkoutDraft,
   type TrainingExercise,
 } from "@brabus/shared";
 
@@ -64,11 +70,13 @@ const rowsSignature = (rs: SetRow[]) =>
 const BACK = "__back__";
 
 export function DayTrainer({
+  userId,
   routineId,
   dayId,
   dayName,
   exercises,
 }: {
+  userId: string;
   routineId: string;
   dayId: string;
   dayName: string;
@@ -77,9 +85,9 @@ export function DayTrainer({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  // Todo vive en memoria hasta "Guardar sesión". Si el usuario se va sin
-  // cerrar, la sesión se pierde. Cada sesión nueva arranca precargada con las
-  // series del último entrenamiento; si progresó, las edita a mano.
+  // Todo vive en memoria hasta "Guardar sesión" (con un respaldo local que se
+  // ofrece recuperar si la pestaña se cerró de golpe). Cada sesión nueva
+  // arranca precargada con las series del último entrenamiento.
   const [completed, setCompleted] = useState<Record<string, boolean>>({});
   const [openId, setOpenId] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState<Record<string, boolean>>({});
@@ -187,6 +195,53 @@ export function DayTrainer({
     else leave(target);
   };
 
+  // --- Respaldo local por si se cierra la pestaña/app de golpe -------------
+  const draftId = draftKey(userId, dayId);
+  const storage = () => (typeof window === "undefined" ? undefined : window.localStorage);
+  const [pendingDraft, setPendingDraft] = useState<WorkoutDraft | null>(null);
+
+  // Al entrar: si quedó una sesión sin guardar (menos de 24 h), preguntamos.
+  useEffect(() => {
+    const draft = loadDraft(storage(), draftId);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage solo existe en el cliente
+    if (draft) setPendingDraft(draft);
+  }, [draftId]);
+
+  /** Guarda el borrador con el estado actual (se llama al guardar/marcar un ejercicio). */
+  const persistDraft = (nextCompleted: Record<string, boolean>) =>
+    saveDraft(storage(), draftId, {
+      routineId,
+      dayId,
+      completed: Object.keys(nextCompleted).filter((id) => nextCompleted[id]),
+      rows: Object.fromEntries(
+        Object.entries(rows).map(([id, rs]) => [
+          id,
+          rs.map((r) => ({ weight: r.weight, reps: r.reps })),
+        ]),
+      ),
+      notes,
+    });
+
+  const restoreDraft = (draft: WorkoutDraft) => {
+    const ids = new Set(exercises.map((e) => e.id));
+    setCompleted(Object.fromEntries(draft.completed.filter((id) => ids.has(id)).map((id) => [id, true])));
+    setRows((prev) => ({
+      ...prev,
+      ...Object.fromEntries(
+        Object.entries(draft.rows)
+          .filter(([id, rs]) => ids.has(id) && rs.length > 0)
+          .map(([id, rs]) => [id, rs.map((r) => ({ key: newKey(), ...r }))]),
+      ),
+    }));
+    setNotes(Object.fromEntries(Object.entries(draft.notes).filter(([id]) => ids.has(id))));
+    setPendingDraft(null);
+  };
+
+  const discardDraft = () => {
+    clearDraft(storage(), draftId);
+    setPendingDraft(null);
+  };
+
   const setRow = (exId: string, key: string, patch: Partial<SetRow>) =>
     setRows((prev) => ({
       ...prev,
@@ -210,14 +265,19 @@ export function DayTrainer({
 
   // Marca el ejercicio como hecho (solo en memoria; se guarda al cerrar).
   const handleDone = (exId: string) => {
-    setCompleted((c) => ({ ...c, [exId]: true }));
+    const next = { ...completed, [exId]: true };
+    setCompleted(next);
+    persistDraft(next);
     setOpenId(null);
   };
 
   // Tocar el círculo: completa (o descompleta) sin abrir el ejercicio. Se
   // guardan las series tal como estén (precargadas o editadas).
-  const toggleQuickDone = (ex: ExerciseState) =>
-    setCompleted((c) => ({ ...c, [ex.id]: !c[ex.id] }));
+  const toggleQuickDone = (ex: ExerciseState) => {
+    const next = { ...completed, [ex.id]: !completed[ex.id] };
+    setCompleted(next);
+    persistDraft(next);
+  };
 
   const doClose = () => {
     const logs = exercises
@@ -240,6 +300,7 @@ export function DayTrainer({
         toast.error(res.error);
         return;
       }
+      clearDraft(storage(), draftId);
       setShowCloseWarning(false);
       toast.success(
         "Sesión guardada",
@@ -535,10 +596,33 @@ export function DayTrainer({
               onClick={() => {
                 const target = leaveTarget;
                 setLeaveTarget(null);
+                // Salida a propósito: el respaldo ya no hace falta.
+                clearDraft(storage(), draftId);
                 if (target) leave(target);
               }}
             >
               Salir sin guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sesión anterior sin guardar (la app/pestaña se cerró de golpe) */}
+      <Dialog open={pendingDraft !== null}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Tenés una sesión sin guardar</DialogTitle>
+            <DialogDescription>
+              {pendingDraft ? describeDraft(pendingDraft) : ""} ¿Querés continuarla o
+              empezar de nuevo?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={discardDraft}>
+              Descartar
+            </Button>
+            <Button onClick={() => pendingDraft && restoreDraft(pendingDraft)}>
+              Continuar sesión
             </Button>
           </DialogFooter>
         </DialogContent>

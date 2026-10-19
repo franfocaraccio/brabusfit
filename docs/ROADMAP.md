@@ -134,6 +134,11 @@ Storage + (si hace falta) un job programado.
   mejor serie, 1RM estimado Epley), peso máximo (línea), volumen y frecuencia
   semanal (barras). Cálculos en `packages/shared/src/progress.ts`; gráficos SVG
   propios (web: svg, mobile: react-native-svg) — sin librería de charts.
+- ✅ **Respaldo de sesión sin guardar** (2026-10-19): al guardar/marcar cada
+  ejercicio se guarda un borrador local (solo en el dispositivo, no en la base).
+  Si la app se cierra de golpe, al volver a ese día se ofrece "Continuar sesión"
+  o "Descartar". Se borra al guardar la sesión, al "Salir sin guardar" o a las
+  24 h (`packages/shared/src/draft.ts`).
 - Ideas siguientes: reordenar ejercicios/días (el ícono de "arrastrar" del editor
   web hoy es decorativo), duplicar rutina.
 - **Alertas de progresión:** regla en SQL (ej. mismo peso N semanas y reps en el

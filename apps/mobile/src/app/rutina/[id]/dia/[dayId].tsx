@@ -3,7 +3,7 @@ import * as Haptics from "expo-haptics";
 import { router, Stack, useLocalSearchParams, useNavigation } from "expo-router";
 // SDK 57: usePreventRemove todavía no se exporta desde "expo-router".
 import { usePreventRemove } from "expo-router/react-navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -16,7 +16,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
+  clearDraft,
+  describeDraft,
+  draftKey,
   formatShortDate,
+  loadDraft,
+  saveDraft,
   HISTORY_PREVIEW,
   historyLabel,
   formatWeight,
@@ -33,6 +38,7 @@ import { getTrainingDay, saveWorkout } from "@brabus/supabase";
 import { Sheet } from "@/components/sheet";
 import { Button, Muted, TextField } from "@/components/ui";
 import { confirm, notify } from "@/lib/confirm";
+import { authStorage } from "@/lib/storage";
 import { supabase } from "@/lib/supabase";
 import { colors, fonts, radius } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
@@ -99,6 +105,7 @@ export default function TrainDayScreen() {
 
   return (
     <Trainer
+      userId={session!.user.id}
       routineId={routineId}
       dayId={dayId}
       dayName={data.day.name}
@@ -112,11 +119,13 @@ export default function TrainDayScreen() {
 // ---------------------------------------------------------------------------
 
 function Trainer({
+  userId,
   routineId,
   dayId,
   dayName,
   exercises,
 }: {
+  userId: string;
   routineId: string;
   dayId: string;
   dayName: string;
@@ -152,6 +161,7 @@ function Trainer({
   // "leaving" apaga el aviso cuando salimos a propósito (después de guardar).
   const navigation = useNavigation();
   const [leaving, setLeaving] = useState(false);
+  const draftId = draftKey(userId, dayId);
 
   usePreventRemove(dirty && !leaving, ({ data }) => {
     confirm({
@@ -160,9 +170,60 @@ function Trainer({
       cancelText: "Seguir entrenando",
       confirmText: "Salir sin guardar",
       destructive: true,
-      onConfirm: () => navigation.dispatch(data.action),
+      onConfirm: () => {
+        // Salida a propósito: el respaldo ya no hace falta.
+        clearDraft(authStorage, draftId);
+        navigation.dispatch(data.action);
+      },
     });
   });
+
+  // --- Respaldo local por si la app se cierra de golpe ------------------------
+  /** Guarda el borrador con el estado actual (al guardar/marcar un ejercicio). */
+  const persistDraft = (nextCompleted: Record<string, boolean>) =>
+    saveDraft(authStorage, draftId, {
+      routineId,
+      dayId,
+      completed: Object.keys(nextCompleted).filter((id) => nextCompleted[id]),
+      rows: Object.fromEntries(
+        Object.entries(rows).map(([id, rs]) => [
+          id,
+          rs.map((r) => ({ weight: r.weight, reps: r.reps })),
+        ]),
+      ),
+      notes,
+    });
+
+  // Al entrar: si quedó una sesión sin guardar (menos de 24 h), preguntamos.
+  const askedDraftRef = useRef(false);
+  useEffect(() => {
+    if (askedDraftRef.current) return;
+    askedDraftRef.current = true;
+    const draft = loadDraft(authStorage, draftId);
+    if (!draft) return;
+    const ids = new Set(exercises.map((e) => e.id));
+    confirm({
+      title: "Tenés una sesión sin guardar",
+      message: `${describeDraft(draft)} ¿Querés continuarla o empezar de nuevo?`,
+      cancelText: "Descartar",
+      confirmText: "Continuar sesión",
+      onCancel: () => clearDraft(authStorage, draftId),
+      onConfirm: () => {
+        setCompleted(
+          Object.fromEntries(draft.completed.filter((id) => ids.has(id)).map((id) => [id, true])),
+        );
+        setRows((prev) => ({
+          ...prev,
+          ...Object.fromEntries(
+            Object.entries(draft.rows)
+              .filter(([id, rs]) => ids.has(id) && rs.length > 0)
+              .map(([id, rs]) => [id, rs.map((r) => ({ key: newKey(), ...r }))]),
+          ),
+        }));
+        setNotes(Object.fromEntries(Object.entries(draft.notes).filter(([id]) => ids.has(id))));
+      },
+    });
+  }, [draftId, exercises]);
 
   // Volver atrás recién cuando el aviso ya está desactivado.
   useEffect(() => {
@@ -188,12 +249,16 @@ function Trainer({
 
   const toggleDone = (exId: string) => {
     Haptics.selectionAsync();
-    setCompleted((c) => ({ ...c, [exId]: !c[exId] }));
+    const next = { ...completed, [exId]: !completed[exId] };
+    setCompleted(next);
+    persistDraft(next);
   };
 
   const saveExercise = (exId: string) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setCompleted((c) => ({ ...c, [exId]: true }));
+    const next = { ...completed, [exId]: true };
+    setCompleted(next);
+    persistDraft(next);
     setOpenId(null);
   };
 
@@ -218,6 +283,7 @@ function Trainer({
         return;
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      clearDraft(authStorage, draftId);
       setLeaving(true);
     });
   };

@@ -24,6 +24,7 @@ export default async function TrainDayPage({
 
   return (
     <DayTrainer
+      userId={userId}
       routineId={routineId}
       dayId={dayId}
       dayName={data.day.name}
