@@ -9,6 +9,11 @@
     "dev": "turbo run dev --filter=@brabus/web",
     "dev:web": "turbo run dev --filter=@brabus/web",
     "dev:mobile": "npm run start --workspace=@brabus/mobile",
+    "db:start": "npx supabase start",
+    "db:stop": "npx supabase stop",
+    "db:reset": "npx supabase db reset",
+    "local:web": "npm run dev:local --workspace=@brabus/web",
+    "local:mobile": "npm run dev:local --workspace=@brabus/mobile",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck"

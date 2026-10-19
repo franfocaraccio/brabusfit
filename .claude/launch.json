@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web-local",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "local:web"],
+      "port": 3001
+    },
+    {
+      "name": "mobile-local",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "local:mobile"],
+      "port": 8081
+    }
+  ]
+}

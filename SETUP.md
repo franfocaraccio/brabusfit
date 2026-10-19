@@ -83,6 +83,26 @@ de EAS (expo.dev → proyecto → Environment variables), no del `.env` local.
 `runtimeVersion` está fijado en `exposdk:57.0.0` para que Expo Go acepte las
 updates; al pasar a builds propias (EAS Build) cambiarlo a `{"policy": "appVersion"}`.
 
+### Entorno local (Supabase en Docker)
+
+Para desarrollar y probar sin tocar producción. Requiere **Docker Desktop** corriendo.
+
+```bash
+npm run db:start       # levanta Supabase local + migraciones + supabase/seed.sql
+npm run local:web      # web → http://localhost:3001 contra la base local
+npm run local:mobile   # mobile en el navegador → http://localhost:8081
+npm run db:reset       # borra todo y vuelve a aplicar migraciones + seed
+npm run db:stop
+```
+
+- Las variables locales van en `apps/web/.env.localdb` y `apps/mobile/.env.localdb`
+  (gitignored). Si faltan, `npx supabase status -o env` muestra la URL y las
+  claves locales (`API_URL`, `PUBLISHABLE_KEY`, `SECRET_KEY`).
+- Usuarios de prueba (contraseña `brabus-test-123`): `coach@brabus.test`,
+  `coach2@brabus.test`, `alumno@brabus.test`, `alumno2@brabus.test`. Ver `supabase/seed.sql`.
+- Studio local: http://127.0.0.1:54323 · emails locales: http://127.0.0.1:54324.
+- Una migración nueva se prueba con `npm run db:reset` antes de correrla en producción.
+
 > Si `expo start` falla con `Cannot find module 'expo-router/...'`, borrá
 > `node_modules` (raíz y workspaces) y `package-lock.json` y volvé a correr
 > `npm install` desde la raíz: npm a veces anida paquetes al instalar en tandas.
