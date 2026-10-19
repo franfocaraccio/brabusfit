@@ -6,7 +6,8 @@ import { GripVertical, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { createRoutine, updateRoutine } from "@/lib/actions/routines";
-import type { Folder, RoutineDayInput } from "@brabus/shared";
+import type { RoutineDayInput } from "@brabus/shared";
+import type { FolderLite } from "@brabus/supabase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -44,7 +45,7 @@ export function RoutineBuilder({
   isCoach,
   initial,
 }: {
-  folders: Folder[];
+  folders: FolderLite[];
   isCoach: boolean;
   initial?: RoutineBuilderInitial;
 }) {

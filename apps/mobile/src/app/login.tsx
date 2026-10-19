@@ -1,4 +1,4 @@
-import * as Linking from "expo-linking";
+import { router } from "expo-router";
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -10,8 +10,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { GoogleButton } from "@/components/google-button";
 import { Button, Card, Logo, Muted, TextField } from "@/components/ui";
-import { WEB_URL } from "@/lib/config";
 import { supabase } from "@/lib/supabase";
 import { colors, fonts } from "@/lib/theme";
 
@@ -51,6 +51,7 @@ export default function LoginScreen() {
           </View>
 
           <Card style={styles.card}>
+            <GoogleButton onError={setError} />
             <TextField
               label="Email"
               value={email}
@@ -83,11 +84,8 @@ export default function LoginScreen() {
 
           <Text style={styles.footer}>
             ¿No tenés cuenta?{" "}
-            <Text
-              style={styles.link}
-              onPress={() => Linking.openURL(`${WEB_URL}/signup`)}
-            >
-              Creala en la web
+            <Text style={styles.link} onPress={() => router.push("/signup")}>
+              Crear cuenta
             </Text>
           </Text>
         </ScrollView>

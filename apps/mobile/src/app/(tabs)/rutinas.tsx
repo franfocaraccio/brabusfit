@@ -1,9 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router, Stack, useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -14,14 +13,19 @@ import {
 } from "react-native";
 
 import {
+  createFolder,
+  deleteFolder,
   getRoutinesOverview,
   type FolderLite,
   type RoutineLite,
   type SharedRoutineLite,
 } from "@brabus/supabase";
 
+import { ErrorText } from "@/components/forms";
+import { Sheet } from "@/components/sheet";
 import { Tile } from "@/components/tile";
-import { Card, Muted, SectionLabel } from "@/components/ui";
+import { Button, Card, Muted, SectionLabel, TextField } from "@/components/ui";
+import { confirm, notify } from "@/lib/confirm";
 import { supabase } from "@/lib/supabase";
 import { colors, fonts, radius } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
@@ -35,7 +39,7 @@ type Overview = {
 };
 
 export default function RutinasScreen() {
-  const { session, profile, signOut } = useAuth();
+  const { session, profile } = useAuth();
   const isCoach = profile?.is_coach ?? false;
 
   const [data, setData] = useState<Overview | null>(null);
@@ -61,11 +65,40 @@ export default function RutinasScreen() {
     setRefreshing(false);
   };
 
-  const confirmSignOut = () =>
-    Alert.alert("Cerrar sesión", "¿Querés salir de tu cuenta?", [
-      { text: "Cancelar", style: "cancel" },
-      { text: "Salir", style: "destructive", onPress: signOut },
-    ]);
+  // --- carpetas (solo coach) --------------------------------------------------
+  const [folderSheet, setFolderSheet] = useState(false);
+  const [folderName, setFolderName] = useState("");
+  const [folderError, setFolderError] = useState<string | null>(null);
+  const [folderSaving, setFolderSaving] = useState(false);
+
+  const closeFolderSheet = () => {
+    setFolderSheet(false);
+    setFolderName("");
+    setFolderError(null);
+  };
+
+  const createNewFolder = async () => {
+    if (!folderName.trim() || folderSaving) return;
+    setFolderSaving(true);
+    const result = await createFolder(supabase, folderName);
+    setFolderSaving(false);
+    if (!result.ok) return setFolderError(result.error);
+    closeFolderSheet();
+    load();
+  };
+
+  const onDeleteFolder = (folderId: string, name: string) =>
+    confirm({
+      title: "Eliminar carpeta",
+      message: `Se eliminará la carpeta «${name}». Las rutinas que contiene no se borran: pasan a "Sin carpeta".`,
+      confirmText: "Eliminar",
+      destructive: true,
+      onConfirm: async () => {
+        const result = await deleteFolder(supabase, folderId);
+        if (!result.ok) return notify("No se pudo eliminar", result.error);
+        load();
+      },
+    });
 
   const q = query.trim().toLowerCase();
   const matches = (text: string) => text.toLowerCase().includes(q);
@@ -79,23 +112,9 @@ export default function RutinasScreen() {
       return next;
     });
 
-  const header = (
-    <Stack.Screen
-      options={{
-        title: "Rutinas",
-        headerRight: () => (
-          <Pressable onPress={confirmSignOut} hitSlop={12} accessibilityLabel="Cerrar sesión">
-            <Ionicons name="log-out-outline" size={24} color={colors.foreground} />
-          </Pressable>
-        ),
-      }}
-    />
-  );
-
   if (!data) {
     return (
       <View style={styles.center}>
-        {header}
         <ActivityIndicator color={colors.primary} />
       </View>
     );
@@ -136,33 +155,48 @@ export default function RutinasScreen() {
         />
       }
     >
-      {header}
-
-      {profile ? (
-        <Text style={styles.greeting}>Hola, {profile.first_name}</Text>
-      ) : null}
-
       {hasNothing ? (
         <Card style={styles.empty}>
-          <Muted>
-            Todavía no tenés rutinas. Cuando tu coach te comparta una (o crees
-            la tuya desde la web) va a aparecer acá.
-          </Muted>
+          <Muted style={{ textAlign: "center" }}>Todavía no tenés rutinas.</Muted>
+          <Button
+            title="Crear mi primera rutina"
+            onPress={() => router.push("/rutina/crear")}
+            icon={<Ionicons name="add" size={18} color={colors.primaryForeground} />}
+          />
         </Card>
       ) : (
         <>
-          <View style={styles.search}>
-            <Ionicons name="search" size={18} color={colors.mutedForeground} />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder={isCoach ? "Buscar por carpeta o rutina…" : "Buscar rutina…"}
-              placeholderTextColor={colors.mutedForeground}
-              selectionColor={colors.primary}
-              style={styles.searchInput}
-              autoCapitalize="none"
-              clearButtonMode="while-editing"
-            />
+          <Button
+            title="Crear rutina"
+            onPress={() => router.push("/rutina/crear")}
+            icon={<Ionicons name="add" size={18} color={colors.primaryForeground} />}
+          />
+
+          <View style={styles.searchRow}>
+            <View style={styles.search}>
+              <Ionicons name="search" size={18} color={colors.mutedForeground} />
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder={isCoach ? "Buscar por carpeta o rutina…" : "Buscar rutina…"}
+                placeholderTextColor={colors.mutedForeground}
+                selectionColor={colors.primary}
+                style={styles.searchInput}
+                autoCapitalize="none"
+                clearButtonMode="while-editing"
+              />
+            </View>
+            {isCoach ? (
+              <Pressable
+                onPress={() => setFolderSheet(true)}
+                style={styles.folderButton}
+                accessibilityRole="button"
+                accessibilityLabel="Nueva carpeta"
+              >
+                <Ionicons name="folder-open-outline" size={20} color={colors.foreground} />
+                <Ionicons name="add" size={14} color={colors.primary} style={styles.folderPlus} />
+              </Pressable>
+            ) : null}
           </View>
 
           {sharedFiltered.length > 0 && (
@@ -195,29 +229,42 @@ export default function RutinasScreen() {
                   const isOpen = q ? true : expanded.has(g.id);
                   return (
                     <View key={g.id} style={styles.group}>
-                      <Pressable
-                        onPress={() => toggle(g.id)}
-                        style={styles.folder}
-                        accessibilityRole="button"
-                        accessibilityState={{ expanded: isOpen }}
-                      >
-                        <View style={styles.folderIcon}>
-                          <Ionicons name="folder-outline" size={20} color={colors.foreground} />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.folderName} numberOfLines={1}>
-                            {g.name}
-                          </Text>
-                          <Text style={styles.folderCount}>
-                            {g.items.length} rutina(s)
-                          </Text>
-                        </View>
-                        <Ionicons
-                          name={isOpen ? "chevron-up" : "chevron-down"}
-                          size={20}
-                          color={colors.mutedForeground}
-                        />
-                      </Pressable>
+                      <View style={styles.folder}>
+                        <Pressable
+                          onPress={() => toggle(g.id)}
+                          style={styles.folderToggle}
+                          accessibilityRole="button"
+                          accessibilityState={{ expanded: isOpen }}
+                        >
+                          <View style={styles.folderIcon}>
+                            <Ionicons name="folder-outline" size={20} color={colors.foreground} />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.folderName} numberOfLines={1}>
+                              {g.name}
+                            </Text>
+                            <Text style={styles.folderCount}>
+                              {g.items.length} rutina(s)
+                            </Text>
+                          </View>
+                          <Ionicons
+                            name={isOpen ? "chevron-up" : "chevron-down"}
+                            size={20}
+                            color={colors.mutedForeground}
+                          />
+                        </Pressable>
+                        {g.id !== ROOT_GROUP ? (
+                          <Pressable
+                            onPress={() => onDeleteFolder(g.id, g.name)}
+                            hitSlop={10}
+                            accessibilityRole="button"
+                            accessibilityLabel="Eliminar carpeta"
+                            style={styles.folderTrash}
+                          >
+                            <Ionicons name="trash-outline" size={18} color={colors.mutedForeground} />
+                          </Pressable>
+                        ) : null}
+                      </View>
                       {isOpen && (
                         <View style={styles.groupItems}>
                           {items.length > 0 ? (
@@ -255,6 +302,24 @@ export default function RutinasScreen() {
           )}
         </>
       )}
+
+      <Sheet visible={folderSheet} onClose={closeFolderSheet} title="Nueva carpeta">
+        <TextField
+          label="Nombre"
+          value={folderName}
+          onChangeText={setFolderName}
+          placeholder="Alumnos 2026"
+          autoFocus
+          onSubmitEditing={createNewFolder}
+        />
+        {folderError ? <ErrorText>{folderError}</ErrorText> : null}
+        <Button
+          title="Crear carpeta"
+          onPress={createNewFolder}
+          disabled={!folderName.trim()}
+          loading={folderSaving}
+        />
+      </Sheet>
     </ScrollView>
   );
 }
@@ -268,9 +333,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: colors.background,
   },
-  greeting: { fontFamily: fonts.heading, fontSize: 28, color: colors.foreground },
-  empty: { padding: 20 },
+  empty: { padding: 20, gap: 16 },
+  searchRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  folderButton: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.input,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  folderPlus: { position: "absolute", right: 8, top: 8 },
+  folderToggle: { flex: 1, flexDirection: "row", alignItems: "center", gap: 12 },
+  folderTrash: { paddingLeft: 4 },
   search: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,

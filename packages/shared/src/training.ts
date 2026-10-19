@@ -45,6 +45,25 @@ export function summarizeSets(sets: SavedSet[]): string {
     .join("  ·  ");
 }
 
+/** Fecha dd/mm/aaaa. */
+export function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+/** Fecha con día de la semana: "mar, 14/10/2026". */
+export function formatSessionDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("es-AR", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
 /** Fecha corta dd/mm. */
 export function formatShortDate(iso: string): string {
   return new Date(iso).toLocaleDateString("es-AR", {

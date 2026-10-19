@@ -2,11 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Pencil } from "lucide-react";
 
-import { getRoutineDetail } from "@brabus/supabase";
+import { getRoutineDetail, getRoutineShares } from "@brabus/supabase";
 
 import { LinkTile } from "@/components/app/link-tile";
 import { DeleteRoutineButton } from "@/components/routines/delete-routine-button";
-import { ShareRoutine, type ShareRow } from "@/components/routines/share-routine";
+import { ShareRoutine } from "@/components/routines/share-routine";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireProfile } from "@/lib/auth";
@@ -29,18 +29,8 @@ export default async function RutinaDetailPage({
   const isOwner = routine.owner_id === userId;
   const canShare = isOwner && profile.is_coach;
 
-  // Panel de compartir: solo web (coach dueño).
-  const sharesRes = canShare
-    ? await supabase
-        .from("routine_shares")
-        .select(
-          "id, shared_with_email, status, student:profiles!routine_shares_shared_with_user_id_fkey(first_name, last_name)",
-        )
-        .eq("routine_id", id)
-        .order("created_at")
-    : { data: [] };
-
-  const shares = (sharesRes.data ?? []) as unknown as ShareRow[];
+  // Panel de compartir: solo el coach dueño.
+  const shares = canShare ? await getRoutineShares(supabase, id) : [];
 
   return (
     <div className="space-y-6">

@@ -2,85 +2,18 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRight, Users } from "lucide-react";
 
+import { formatDate } from "@brabus/shared";
+import { getStudents } from "@brabus/supabase";
+
 import { Card } from "@/components/ui/card";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-
-type ShareRow = {
-  shared_with_user_id: string | null;
-  student: { first_name: string; last_name: string } | null;
-  shared_with_email: string;
-  routine: { id: string; name: string } | null;
-};
-type SessionRow = { user_id: string; finished_at: string | null };
-
-type StudentGroup = {
-  id: string;
-  name: string;
-  email: string;
-  routines: string[];
-  lastActivity: string | null;
-};
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
 
 export default async function AlumnosPage() {
   const { profile } = await requireProfile();
   if (!profile.is_coach) notFound();
 
-  const supabase = await createClient();
-
-  const [sharesRes, sessionsRes] = await Promise.all([
-    supabase
-      .from("routine_shares")
-      .select(
-        "shared_with_user_id, shared_with_email, status, student:profiles!routine_shares_shared_with_user_id_fkey(first_name, last_name), routine:routines(id, name)",
-      )
-      .eq("status", "accepted"),
-    supabase
-      .from("workout_sessions")
-      .select("user_id, finished_at")
-      .eq("status", "finished")
-      .order("finished_at", { ascending: false }),
-  ]);
-
-  const shares = (sharesRes.data ?? []) as unknown as ShareRow[];
-  const sessions = (sessionsRes.data ?? []) as SessionRow[];
-
-  const lastByUser = new Map<string, string>();
-  for (const s of sessions) {
-    if (s.finished_at && !lastByUser.has(s.user_id)) {
-      lastByUser.set(s.user_id, s.finished_at);
-    }
-  }
-
-  const groups = new Map<string, StudentGroup>();
-  for (const s of shares) {
-    if (!s.shared_with_user_id) continue;
-    const existing = groups.get(s.shared_with_user_id);
-    const routineName = s.routine?.name;
-    if (existing) {
-      if (routineName) existing.routines.push(routineName);
-    } else {
-      groups.set(s.shared_with_user_id, {
-        id: s.shared_with_user_id,
-        name: s.student
-          ? `${s.student.first_name} ${s.student.last_name}`.trim()
-          : s.shared_with_email,
-        email: s.shared_with_email,
-        routines: routineName ? [routineName] : [],
-        lastActivity: lastByUser.get(s.shared_with_user_id) ?? null,
-      });
-    }
-  }
-
-  const students = [...groups.values()];
+  const students = await getStudents(await createClient());
 
   return (
     <div className="space-y-6">

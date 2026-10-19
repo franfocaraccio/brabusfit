@@ -48,7 +48,7 @@ function RootNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
   if (!ready) return null;
 
   const signedIn = !!session;
-  // Usuarios de Google que no completaron su perfil (se completa en la web).
+  // Usuarios de Google que todavía no completaron su perfil.
   const onboarded = profile?.onboarded !== false;
 
   return (
@@ -64,6 +64,7 @@ function RootNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
     >
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="signup" options={{ title: "Crear cuenta" }} />
       </Stack.Protected>
 
       <Stack.Protected guard={signedIn && !onboarded}>
@@ -71,10 +72,17 @@ function RootNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
       </Stack.Protected>
 
       <Stack.Protected guard={signedIn && onboarded}>
-        <Stack.Screen name="index" options={{ title: "Rutinas" }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="rutina/crear" options={{ title: "Crear rutina" }} />
         <Stack.Screen name="rutina/[id]/index" options={{ title: "" }} />
+        <Stack.Screen name="rutina/[id]/editar" options={{ title: "Editar rutina" }} />
+        <Stack.Screen name="rutina/[id]/compartir" options={{ title: "Compartir rutina" }} />
         <Stack.Screen name="rutina/[id]/dia/[dayId]" options={{ title: "" }} />
+        <Stack.Screen name="alumno/[id]" options={{ title: "" }} />
       </Stack.Protected>
+
+      {/* Vuelta del login con Google (si el sistema abre la app con el link). */}
+      <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
     </Stack>
   );
 }

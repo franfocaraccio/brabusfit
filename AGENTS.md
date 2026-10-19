@@ -20,6 +20,12 @@ Monorepo (npm workspaces + Turborepo). Cada app tiene sus propias notas:
   `supabase/setup.sql` + actualizar `packages/shared/src/database.ts`. Las
   migraciones se corren a mano en el SQL Editor de Supabase.
 
+- **Paridad web ↔ mobile:** toda funcionalidad se implementa en las dos apps,
+  salvo que se acuerde lo contrario. Después de cambiar la mobile, publicarla con
+  `npm run publish` (desde `apps/mobile`, EAS Update).
+- Para probar con usuarios reales sin tocar producción: Supabase local
+  (`npm run db:start`, `npm run local:web`, `npm run local:mobile`; ver SETUP.md).
+
 ## Verificación antes de commitear
 
 ```bash

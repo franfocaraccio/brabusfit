@@ -2,9 +2,9 @@
 
 import { redirect } from "next/navigation";
 
+import { signUp } from "@brabus/supabase";
+
 import { createClient } from "@/lib/supabase/server";
-import { parseDecimal } from "@brabus/shared";
-import { usernameError } from "@brabus/shared";
 
 export type AuthResult = { error: string } | undefined;
 
@@ -16,54 +16,32 @@ export async function signUpAction(
   _prev: AuthResult,
   formData: FormData,
 ): Promise<AuthResult> {
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-  const firstName = String(formData.get("first_name") ?? "").trim();
-  const lastName = String(formData.get("last_name") ?? "").trim();
-  const birthDate = String(formData.get("birth_date") ?? "").trim();
-  const heightCm = String(formData.get("height_cm") ?? "").trim();
-  const weightKg = String(formData.get("weight_kg") ?? "").trim();
-  const username = String(formData.get("username") ?? "")
-    .trim()
-    .toLowerCase();
-  // base-ui Checkbox puede serializar el valor como "on" o "true" cuando está
-  // marcado; ausente o "false"/"off" cuando no lo está.
-  const isCoach = ["on", "true"].includes(String(formData.get("is_coach")));
+  const field = (name: string) => String(formData.get(name) ?? "").trim();
 
-  if (!email || !password || !firstName || !lastName) {
-    return { error: "Completá nombre, apellido, email y contraseña." };
-  }
-  if (password.length < 6) {
-    return { error: "La contraseña debe tener al menos 6 caracteres." };
-  }
-  const uErr = usernameError(username);
-  if (uErr) return { error: `Nombre de usuario: ${uErr}` };
-
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${siteUrl()}/auth/callback`,
-      // El trigger handle_new_user lee estos datos para crear el profile.
-      data: {
-        first_name: firstName,
-        last_name: lastName,
-        birth_date: birthDate || null,
-        height_cm: parseDecimal(heightCm),
-        weight_kg: parseDecimal(weightKg),
-        username,
-        is_coach: isCoach,
-      },
+  const result = await signUp(
+    await createClient(),
+    {
+      email: field("email"),
+      password: String(formData.get("password") ?? ""),
+      firstName: field("first_name"),
+      lastName: field("last_name"),
+      birthDate: field("birth_date") || null,
+      heightCm: field("height_cm"),
+      weightKg: field("weight_kg"),
+      username: field("username"),
+      // base-ui Checkbox puede serializar el valor como "on" o "true" cuando
+      // está marcado; ausente o "false"/"off" cuando no lo está.
+      isCoach: ["on", "true"].includes(String(formData.get("is_coach"))),
     },
-  });
+    { emailRedirectTo: `${siteUrl()}/auth/callback` },
+  );
 
-  if (error) {
-    return { error: error.message };
+  if (!result.ok) {
+    return { error: result.error };
   }
 
   // Si las confirmaciones por email están activas, no hay sesión todavía.
-  if (!data.session) {
+  if (!result.data.hasSession) {
     redirect("/login?check_email=1");
   }
 

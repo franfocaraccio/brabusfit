@@ -189,6 +189,68 @@ export async function getRoutinesOverview(
   };
 }
 
+/** Carpetas del usuario (para elegir dónde guardar una rutina). */
+export async function getFolders(
+  client: BrabusClient,
+  userId: string,
+): Promise<FolderLite[]> {
+  const { data } = await client
+    .from("folders")
+    .select("id, name")
+    .eq("owner_id", userId)
+    .order("name");
+  return (data ?? []) as FolderLite[];
+}
+
+export type EditableExercise = { id: string; name: string; sets_reps: string };
+export type EditableDay = { id: string; name: string; exercises: EditableExercise[] };
+export type EditableRoutine = {
+  id: string;
+  name: string;
+  folderId: string | null;
+  days: EditableDay[];
+};
+
+type EditDayRow = {
+  id: string;
+  name: string;
+  position: number;
+  exercises: { id: string; name: string; sets_reps: string; position: number }[];
+};
+
+/** Rutina completa para editar. Null si no existe o el usuario no es el dueño. */
+export async function getRoutineForEdit(
+  client: BrabusClient,
+  routineId: string,
+  userId: string,
+): Promise<EditableRoutine | null> {
+  const { data: routine } = await client
+    .from("routines")
+    .select("*")
+    .eq("id", routineId)
+    .maybeSingle();
+  if (!routine || routine.owner_id !== userId) return null;
+
+  const { data: daysData } = await client
+    .from("routine_days")
+    .select("id, name, position, exercises(id, name, sets_reps, position)")
+    .eq("routine_id", routineId)
+    .order("position");
+
+  return {
+    id: routine.id,
+    name: routine.name,
+    folderId: routine.folder_id,
+    days: ((daysData ?? []) as unknown as EditDayRow[]).map((d) => ({
+      id: d.id,
+      name: d.name,
+      exercises: [...d.exercises]
+        .sort((a, b) => a.position - b.position)
+        .map((e) => ({ id: e.id, name: e.name, sets_reps: e.sets_reps })),
+    })),
+  };
+}
+
 export type RoutineDayLite = {
   id: string;
   name: string;

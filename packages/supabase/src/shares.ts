@@ -77,6 +77,35 @@ export async function shareRoutine(
   return ok({ ...result, routineName: routine.name });
 }
 
+export type ShareRow = {
+  id: string;
+  shared_with_email: string;
+  status: "pending" | "accepted";
+  student: { first_name: string; last_name: string } | null;
+};
+
+/** Con quién está compartida una rutina (solo lo ve el dueño, por RLS). */
+export async function getRoutineShares(
+  client: BrabusClient,
+  routineId: string,
+): Promise<ShareRow[]> {
+  const { data } = await client
+    .from("routine_shares")
+    .select(
+      "id, shared_with_email, status, student:profiles!routine_shares_shared_with_user_id_fkey(first_name, last_name)",
+    )
+    .eq("routine_id", routineId)
+    .order("created_at");
+  return (data ?? []) as unknown as ShareRow[];
+}
+
+/** Nombre visible de un destinatario (nombre del alumno o su email si está pendiente). */
+export function shareDisplayName(share: ShareRow): string {
+  return share.student
+    ? `${share.student.first_name} ${share.student.last_name}`.trim()
+    : share.shared_with_email;
+}
+
 export async function unshareRoutine(
   client: BrabusClient,
   shareId: string,

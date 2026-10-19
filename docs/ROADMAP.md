@@ -23,12 +23,25 @@ web; perdemos push, cámara y pasos).
   compartidas / buscador) → días → **entrenar y guardar sesión** (misma lógica
   que la web: precarga de la última sesión, completar rápido, coma decimal,
   detalle, aviso de cambios sin guardar).
+- **Paridad con la web (2026-10-18):** registro, login con Google (navegador del
+  sistema + PKCE, vuelve a `exp://u.expo.dev/...` en Expo Go), completar perfil,
+  perfil editable, inicio + pestañas (Inicio / Rutinas / Alumnos / Perfil),
+  crear/editar/eliminar rutinas, carpetas, compartir por email o usuario (con
+  validaciones en vivo, pendientes y dejar de compartir) y alumnos con su
+  historial. **Regla:** toda funcionalidad nueva va en web y mobile.
+- Entorno local con Supabase en Docker (`npm run db:start`, ver SETUP.md) para
+  probar todo sin tocar producción.
 - **EAS Update** (proyecto `@brabusfit-team/brabus-fit`): `npm run publish` desde
   `apps/mobile` publica la app para abrirla en Expo Go desde cualquier red.
 
 ### Pendiente (paso 4 — nativo)
-- **Google SSO en mobile:** requiere development build (no Expo Go), OAuth
-  clients de iOS/Android en Google Cloud y redirect `brabusfit://` en Supabase.
+- **Google SSO nativo en mobile** (selector de cuentas del sistema): requiere
+  development build, OAuth clients de iOS/Android en Google Cloud. El redirect
+  `brabusfit://**` ya está autorizado en Supabase.
+- **Emails al compartir desde mobile:** hoy los emails están apagados en las dos
+  apps (sin dominio para Resend). Cuando se activen, la mobile tiene que pedirle
+  a la web que los envíe (endpoint con el token del usuario): la API key de
+  Resend no puede vivir en el teléfono.
 - **Notificaciones push** (avisos de progresión, recordatorio del check-in).
 - **Cámara** (fotos de progreso / check-in) y **pasos** (Apple Health / Google Fit).
 - **Builds y publicación:** EAS Build + EAS Submit (cuentas Apple Developer
@@ -36,8 +49,6 @@ web; perdemos push, cámara y pasos).
   propias, cambiar `runtimeVersion` a `{"policy": "appVersion"}`. Las tiendas
   piden: ícono/capturas, URL de política de privacidad, borrado de cuenta, y
   "Sign in with Apple" si hay login con Google.
-- Pantallas de gestión en mobile (crear/editar/compartir rutinas, perfil): hoy
-  se hacen desde la web.
 
 ---
 

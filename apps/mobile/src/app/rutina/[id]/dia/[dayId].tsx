@@ -6,7 +6,6 @@ import { usePreventRemove } from "expo-router/react-navigation";
 import { useEffect, useState, useTransition } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -28,6 +27,7 @@ import {
 import { getTrainingDay, saveWorkout } from "@brabus/supabase";
 
 import { Button, Muted, TextField } from "@/components/ui";
+import { confirm, notify } from "@/lib/confirm";
 import { supabase } from "@/lib/supabase";
 import { colors, fonts, radius } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
@@ -147,18 +147,14 @@ function Trainer({
   const [leaving, setLeaving] = useState(false);
 
   usePreventRemove(dirty && !leaving, ({ data }) => {
-    Alert.alert(
-      "Los cambios no fueron guardados",
-      'Si salís ahora se pierde lo que cargaste. Para guardarlo usá "Guardar sesión".',
-      [
-        { text: "Seguir entrenando", style: "cancel" },
-        {
-          text: "Salir sin guardar",
-          style: "destructive",
-          onPress: () => navigation.dispatch(data.action),
-        },
-      ],
-    );
+    confirm({
+      title: "Los cambios no fueron guardados",
+      message: 'Si salís ahora se pierde lo que cargaste. Para guardarlo usá "Guardar sesión".',
+      cancelText: "Seguir entrenando",
+      confirmText: "Salir sin guardar",
+      destructive: true,
+      onConfirm: () => navigation.dispatch(data.action),
+    });
   });
 
   // Volver atrás recién cuando el aviso ya está desactivado.
@@ -211,7 +207,7 @@ function Trainer({
     startSaving(async () => {
       const res = await saveWorkout(supabase, routineId, dayId, logs);
       if (!res.ok) {
-        Alert.alert("No se pudo guardar", res.error);
+        notify("No se pudo guardar", res.error);
         return;
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -224,14 +220,13 @@ function Trainer({
       doSave();
       return;
     }
-    Alert.alert(
-      "Todavía no terminaste",
-      `Te quedan ${exercises.length - completedCount} ejercicios sin guardar. Se registran solo los ${completedCount} que guardaste. ¿Querés guardar la sesión igualmente?`,
-      [
-        { text: "Seguir entrenando", style: "cancel" },
-        { text: "Guardar igualmente", onPress: doSave },
-      ],
-    );
+    confirm({
+      title: "Todavía no terminaste",
+      message: `Te quedan ${exercises.length - completedCount} ejercicios sin guardar. Se registran solo los ${completedCount} que guardaste. ¿Querés guardar la sesión igualmente?`,
+      cancelText: "Seguir entrenando",
+      confirmText: "Guardar igualmente",
+      onConfirm: doSave,
+    });
   };
 
   return (

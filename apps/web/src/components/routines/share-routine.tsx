@@ -26,12 +26,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
-export type ShareRow = {
-  id: string;
-  shared_with_email: string;
-  status: "pending" | "accepted";
-  student: { first_name: string; last_name: string } | null;
-};
+export type { ShareRow } from "@brabus/supabase";
+import { shareDisplayName, type ShareRow } from "@brabus/supabase";
 
 type Mode = "email" | "username";
 
@@ -256,9 +252,7 @@ export function ShareRoutine({
             </p>
             <div className="divide-y rounded-md border">
               {shares.map((s) => {
-                const name = s.student
-                  ? `${s.student.first_name} ${s.student.last_name}`.trim()
-                  : s.shared_with_email;
+                const name = shareDisplayName(s);
                 return (
                   <div
                     key={s.id}
