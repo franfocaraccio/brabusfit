@@ -12,6 +12,9 @@ export type ExerciseLogInput = {
   note: string | null;
 };
 
+/** Largo máximo del detalle de un ejercicio. */
+export const NOTE_MAX_LENGTH = 80;
+
 export type SavedSet = {
   set_number: number;
   weight: number | null;

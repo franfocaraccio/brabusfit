@@ -18,6 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   formatShortDate,
   formatWeight,
+  NOTE_MAX_LENGTH,
   parseDecimal,
   sanitizeDecimal,
   summarizeHistory,
@@ -363,11 +364,18 @@ function Trainer({
                   />
 
                   <View style={{ gap: 6 }}>
-                    <Text style={styles.noteLabel}>Detalle (opcional)</Text>
+                    <View style={styles.noteHeader}>
+                      <Text style={styles.noteLabel}>Detalle (opcional)</Text>
+                      <Text style={styles.noteCount}>
+                        {(notes[ex.id] ?? "").length}/{NOTE_MAX_LENGTH}
+                      </Text>
+                    </View>
+                    {/* Una línea; crece sola si el texto no entra. */}
                     <TextInput
                       value={notes[ex.id] ?? ""}
                       onChangeText={(v) => setNotes((n) => ({ ...n, [ex.id]: v }))}
-                      placeholder="Ej: me costó la última serie, subir peso la próxima"
+                      maxLength={NOTE_MAX_LENGTH}
+                      placeholder="Ej: hecho en Smith"
                       placeholderTextColor={colors.mutedForeground}
                       selectionColor={colors.primary}
                       multiline
@@ -462,9 +470,11 @@ const styles = StyleSheet.create({
   historySets: { flex: 1, fontFamily: fonts.regular, fontSize: 13, color: colors.foreground },
   setRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   setLabel: { width: 54, fontFamily: fonts.regular, fontSize: 13, color: colors.mutedForeground },
+  noteHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" },
   noteLabel: { fontFamily: fonts.medium, fontSize: 13, color: colors.mutedForeground },
+  noteCount: { fontFamily: fonts.regular, fontSize: 12, color: colors.mutedForeground },
   note: {
-    minHeight: 64,
+    minHeight: 44,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.input,

@@ -1,5 +1,6 @@
 import {
   fail,
+  NOTE_MAX_LENGTH,
   ok,
   type ActionResult,
   type ExerciseLogInput,
@@ -133,7 +134,7 @@ export async function saveWorkout(
         session_id: session.id,
         exercise_id: l.exerciseId,
         completed: true,
-        note: l.note && l.note.trim() ? l.note.trim() : null,
+        note: l.note && l.note.trim() ? l.note.trim().slice(0, NOTE_MAX_LENGTH) : null,
       })),
     )
     .select("id, exercise_id");

@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import {
   formatShortDate as formatDate,
   formatWeight,
+  NOTE_MAX_LENGTH,
   parseDecimal,
   summarizeHistory,
   type SetInput,
@@ -433,21 +434,30 @@ export function DayTrainer({
 
                   {/* Detalle / comentario opcional del ejercicio */}
                   <div className="space-y-1.5">
-                    <label
-                      htmlFor={`note-${ex.id}`}
-                      className="text-muted-foreground text-xs font-medium"
-                    >
-                      Detalle (opcional)
-                    </label>
+                    <div className="flex items-baseline justify-between">
+                      <label
+                        htmlFor={`note-${ex.id}`}
+                        className="text-muted-foreground text-xs font-medium"
+                      >
+                        Detalle (opcional)
+                      </label>
+                      <span className="text-muted-foreground text-[11px] tabular-nums">
+                        {(notes[ex.id] ?? "").length}/{NOTE_MAX_LENGTH}
+                      </span>
+                    </div>
+                    {/* Una línea; crece sola si el texto no entra. */}
                     <textarea
                       id={`note-${ex.id}`}
-                      rows={2}
+                      rows={1}
+                      maxLength={NOTE_MAX_LENGTH}
                       value={notes[ex.id] ?? ""}
-                      onChange={(e) =>
-                        setNotes((n) => ({ ...n, [ex.id]: e.target.value }))
-                      }
-                      placeholder="Ej: me costó la última serie, subir peso la próxima"
-                      className="border-input bg-input/40 placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/40 w-full resize-y rounded-xl border px-3.5 py-2 text-sm outline-none transition-colors focus-visible:ring-3"
+                      onChange={(e) => {
+                        e.target.style.height = "auto";
+                        e.target.style.height = `${e.target.scrollHeight}px`;
+                        setNotes((n) => ({ ...n, [ex.id]: e.target.value }));
+                      }}
+                      placeholder="Ej: hecho en Smith"
+                      className="border-input bg-input/40 placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/40 block w-full resize-none overflow-hidden rounded-xl border px-3.5 py-2 text-sm outline-none transition-colors focus-visible:ring-3"
                     />
                   </div>
 
