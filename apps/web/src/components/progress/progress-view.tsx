@@ -115,7 +115,8 @@ function ChartCard({ spec, kind }: { spec: ChartSpec; kind: "line" | "bar" }) {
   return (
     <Card className="gap-2 p-4">
       <div>
-        <h3 className="text-sm font-semibold">{spec.title}</h3>
+        {/* font-sans: los h3 usan la fuente condensada de títulos por defecto. */}
+        <h3 className="font-sans text-sm font-semibold tracking-normal">{spec.title}</h3>
         <p className="text-muted-foreground text-xs">{spec.subtitle}</p>
       </div>
       {spec.points.length === 0 ? (
