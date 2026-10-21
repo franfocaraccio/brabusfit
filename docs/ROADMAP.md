@@ -192,11 +192,23 @@ Storage + (si hace falta) un job programado.
   Cloudflare Stream) si son muchos/largos, (c) links de YouTube/Vimeo no
   listados (costo cero).
 
-### Nutrición
-- Plantillas de alimentación del coach (plantilla → comidas → alimentos con
-  calorías/macros) asignables a alumnos. Mismo patrón que rutinas
-  (plantilla + copia por alumno + RLS por vínculo activo). Totales calculados
-  por query.
+### Nutrición — ✅ hecho (2026-10-21, migración 0013)
+- Mismo modelo que rutinas: plantillas del coach en carpetas propias
+  (`nutrition_folders`) + copia independiente por cliente (`nutrition_plans.client_id`);
+  un cliente puede tener varios planes y el coach marca uno **vigente**. El alumno
+  lo ve con la app activa y, si se corta el acceso, se queda con su copia.
+- Estructura: plan → comidas (nombre + horario) → opciones A/B → alimentos
+  (cantidad, unidad y kcal/proteínas/carbohidratos/grasas opcionales). Un único
+  día por plan. Objetivos (kcal, macros, agua) e indicaciones generales opcionales.
+- Totales: por opción; comida y día muestran un **rango** si las opciones difieren
+  (`packages/shared/src/nutrition.ts`).
+- Exportar a PDF y Excel con todo (objetivos, indicaciones, comidas y macros).
+- Mobile: la pestaña "Rutinas" pasó a **"Planes"** (Rutinas | Nutrición). Ficha
+  del cliente con pestaña Nutrición.
+- Hoy solo el coach arma/edita planes; el alumno solo los ve. Para habilitarlo:
+  `STUDENTS_CAN_EDIT_PLANS` en shared + el chequeo de `save_full_plan`.
+- Pendiente a futuro: catálogo de alimentos con macros (nivel "c"), marcar
+  comidas cumplidas (Reportes), lista de compras.
 
 ### Reportes semanales (check-in)
 - Tabla de reportes (semana, peso, pasos, notas de entrenamiento, etc.) + fotos

@@ -55,7 +55,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" options={{ title: "Inicio", tabBarIcon: icon("home-outline") }} />
       <Tabs.Screen
         name="rutinas"
-        options={{ title: "Rutinas", tabBarIcon: icon("barbell-outline") }}
+        options={{ title: "Planes", tabBarIcon: icon("clipboard-outline") }}
       />
       <Tabs.Screen
         name="progreso"

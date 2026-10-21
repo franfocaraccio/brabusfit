@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Dumbbell, MailOpen, Plus, Users } from "lucide-react";
+import { ChevronRight, Dumbbell, MailOpen, Plus, Salad, Users } from "lucide-react";
 
 import { getMyCoaches } from "@brabus/supabase";
 
@@ -27,6 +27,12 @@ export default async function DashboardPage() {
       title: "Mis rutinas",
       subtitle: "Ver y entrenar tus rutinas",
       icon: Dumbbell,
+    },
+    {
+      href: "/nutricion",
+      title: "Nutrición",
+      subtitle: profile.is_coach ? "Planes de alimentación" : "Tu plan de alimentación",
+      icon: Salad,
     },
     ...(profile.is_coach
       ? [

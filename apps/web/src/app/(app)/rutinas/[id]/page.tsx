@@ -8,7 +8,7 @@ import { LinkTile } from "@/components/app/link-tile";
 import { AccessBadge } from "@/components/clients/clients-list";
 import { DeleteRoutineButton } from "@/components/routines/delete-routine-button";
 import { AssignRoutine } from "@/components/routines/assign-routine";
-import { ExportRoutine } from "@/components/routines/export-routine";
+import { ExportButtons } from "@/components/app/export-buttons";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireProfile } from "@/lib/auth";
@@ -90,7 +90,7 @@ export default async function RutinaDetailPage({
         {canAssign && (
           <AssignRoutine routineId={id} clients={clients.filter((c) => !c.archived)} />
         )}
-        {exportData && <ExportRoutine data={exportData} />}
+        {exportData && <ExportButtons kind="routine" data={exportData} />}
         <Link
           href={`/rutinas/${id}/historial`}
           className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}

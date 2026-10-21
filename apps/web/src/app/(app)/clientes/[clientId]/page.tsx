@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Dumbbell, Pencil } from "lucide-react";
+import { Dumbbell, Pencil, Salad } from "lucide-react";
 
 import {
   ageFrom,
@@ -15,6 +15,8 @@ import {
 import {
   getClient,
   getProgressSessions,
+  getClientPlans,
+  getNutritionOverview,
   getRoutinesOverview,
   visibleLogs,
 } from "@brabus/supabase";
@@ -41,9 +43,11 @@ export default async function ClienteDetailPage({
   if (!profile.is_coach) notFound();
 
   const supabase = await createClient();
-  const [detail, overview] = await Promise.all([
+  const [detail, overview, nutrition, plans] = await Promise.all([
     getClient(supabase, userId, clientId),
     getRoutinesOverview(supabase, userId),
+    getNutritionOverview(supabase, userId),
+    getClientPlans(supabase, clientId),
   ]);
   if (!detail) notFound();
   const { name, data, sessions, routines, appAccess } = detail;
@@ -212,6 +216,39 @@ export default async function ClienteDetailPage({
                   <div className="space-y-2.5">
                     {routines.map((r) => (
                       <LinkTile key={r.id} href={`/rutinas/${r.id}`} title={r.name} icon={Dumbbell} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ),
+          },
+          {
+            id: "nutricion",
+            label: `Nutrición (${plans.length})`,
+            content: (
+              <div key="nutricion" className="space-y-3">
+                <div className="flex justify-end">
+                  <NewClientRoutine
+                    kind="nutrition"
+                    clientId={clientId}
+                    clientName={name}
+                    folders={nutrition.folders}
+                    templates={nutrition.plans}
+                  />
+                </div>
+                {plans.length === 0 ? (
+                  noApp("Todavía no le armaste planes de nutrición. Crealo desde cero o a partir de una plantilla.")
+                ) : (
+                  <div className="space-y-2.5">
+                    {plans.map((p) => (
+                      <LinkTile
+                        key={p.id}
+                        href={`/nutricion/${p.id}`}
+                        title={p.name}
+                        subtitle={p.isCurrent ? "Vigente" : undefined}
+                        icon={Salad}
+                        accent={p.isCurrent}
+                      />
                     ))}
                   </div>
                 )}

@@ -7,24 +7,33 @@ export function Segmented<T extends string>({
   value,
   onChange,
   options,
+  fill = false,
 }: {
   value: T;
   onChange: (v: T) => void;
   options: { value: T; label: string }[];
+  /** Ocupa todo el ancho con opciones del mismo tamaño (muchas opciones en un teléfono). */
+  fill?: boolean;
 }) {
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, fill && styles.wrapFill]}>
       {options.map((o) => {
         const on = o.value === value;
         return (
           <Pressable
             key={o.value}
             onPress={() => onChange(o.value)}
-            style={[styles.item, on && styles.itemOn]}
+            style={[styles.item, fill && styles.itemFill, on && styles.itemOn]}
             accessibilityRole="button"
             accessibilityState={{ selected: on }}
           >
-            <Text style={[styles.text, on && styles.textOn]}>{o.label}</Text>
+            <Text
+              style={[styles.text, fill && styles.textFill, on && styles.textOn]}
+              numberOfLines={1}
+              adjustsFontSizeToFit={fill}
+            >
+              {o.label}
+            </Text>
           </Pressable>
         );
       })}
@@ -42,6 +51,9 @@ const styles = StyleSheet.create({
   },
   item: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: radius.sm },
   itemOn: { backgroundColor: colors.card },
+  wrapFill: { alignSelf: "stretch" },
+  itemFill: { flex: 1, paddingHorizontal: 4, alignItems: "center" },
+  textFill: { fontSize: 13 },
   text: { fontFamily: fonts.medium, fontSize: 14, color: colors.mutedForeground },
   textOn: { color: colors.foreground },
 });

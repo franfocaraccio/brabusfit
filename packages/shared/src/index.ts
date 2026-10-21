@@ -4,6 +4,8 @@ export * from "./database";
 export * from "./date";
 export * from "./draft";
 export * from "./export";
+export * from "./nutrition";
+export * from "./nutrition-export";
 export * from "./decimal";
 export * from "./progress";
 export * from "./result";

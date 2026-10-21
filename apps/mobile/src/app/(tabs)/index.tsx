@@ -31,6 +31,12 @@ export default function InicioScreen() {
       subtitle: "Ver y entrenar tus rutinas",
       icon: "barbell",
     },
+    {
+      href: "/rutinas?vista=nutricion" as Href,
+      title: "Nutrición",
+      subtitle: isCoach ? "Planes de alimentación" : "Tu plan de alimentación",
+      icon: "nutrition",
+    },
     ...(isCoach
       ? [
           {

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FolderPlus } from "lucide-react";
 import { toast } from "sonner";
 
+import { createNutritionFolder } from "@/lib/actions/nutrition";
 import { createFolder } from "@/lib/actions/routines";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +19,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function NewFolderButton() {
+/** Nueva carpeta de plantillas (de rutinas o de nutrición). */
+export function NewFolderButton({ kind = "routines" }: { kind?: "routines" | "nutrition" }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -26,7 +28,8 @@ export function NewFolderButton() {
 
   const submit = () => {
     startTransition(async () => {
-      const result = await createFolder(name);
+      const result =
+        kind === "nutrition" ? await createNutritionFolder(name) : await createFolder(name);
       if (!result.ok) {
         toast.error(result.error);
         return;

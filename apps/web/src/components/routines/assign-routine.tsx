@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Copy, Dumbbell, FilePlus2, Search, UserPlus } from "lucide-react";
+import { Copy, Dumbbell, FilePlus2, Salad, Search, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { APP_ACCESS_LABEL } from "@brabus/shared";
 
 import type { ClientSummary, FolderLite, RoutineLite } from "@brabus/supabase";
 
+import { copyPlan } from "@/lib/actions/nutrition";
 import { copyRoutine } from "@/lib/actions/routines";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -23,8 +24,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-/** Copia la rutina y abre la copia nueva. */
-function useCopy() {
+type Kind = "routines" | "nutrition";
+
+const TEXT = {
+  routines: { base: "/rutinas", one: "rutina", many: "rutinas", New: "Nueva rutina", done: "Rutina", icon: Dumbbell, from: "Rutinas" },
+  nutrition: { base: "/nutricion", one: "plan", many: "planes", New: "Nuevo plan", done: "Plan", icon: Salad, from: "Nutrición" },
+} as const;
+
+/** Copia la rutina (o el plan) y abre la copia nueva. */
+function useCopy(kind: Kind) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [busy, setBusy] = useState<string | null>(null);
@@ -32,14 +40,15 @@ function useCopy() {
   const run = (key: string, routineId: string, linkId: string, success: string) => {
     setBusy(key);
     startTransition(async () => {
-      const result = await copyRoutine(routineId, linkId);
+      const result =
+        kind === "nutrition" ? await copyPlan(routineId, linkId) : await copyRoutine(routineId, linkId);
       setBusy(null);
       if (!result.ok) {
         toast.error(result.error);
         return;
       }
       toast.success(success);
-      router.push(`/rutinas/${result.data.id}`);
+      router.push(`${TEXT[kind].base}/${result.data.id}`);
     });
   };
   return { pending, busy, run };
@@ -49,12 +58,16 @@ function useCopy() {
 export function AssignRoutine({
   routineId,
   clients,
+  kind = "routines",
 }: {
+  /** Rutina o plan (según kind) que se copia. */
   routineId: string;
   /** Clientes activos (no archivados). */
   clients: ClientSummary[];
+  kind?: Kind;
 }) {
-  const { pending, busy, run } = useCopy();
+  const { pending, busy, run } = useCopy(kind);
+  const t = TEXT[kind];
 
   return (
     <Dialog>
@@ -82,7 +95,7 @@ export function AssignRoutine({
               <button
                 key={st.id}
                 type="button"
-                onClick={() => run(st.id, routineId, st.id, `Rutina asignada a ${st.name}`)}
+                onClick={() => run(st.id, routineId, st.id, `${t.done} asignado a ${st.name}`.replace("Rutina asignado", "Rutina asignada"))}
                 disabled={pending}
                 className="hover:bg-muted/50 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors disabled:opacity-60"
               >
@@ -90,7 +103,9 @@ export function AssignRoutine({
                   <span className="block truncate text-sm font-medium">{st.name}</span>
                   <span className="text-muted-foreground block truncate text-xs">
                     {APP_ACCESS_LABEL[st.appAccess]}
-                    {` · ${st.routineCount} ${st.routineCount === 1 ? "rutina" : "rutinas"}`}
+                    {kind === "routines"
+                      ? ` · ${st.routineCount} ${st.routineCount === 1 ? "rutina" : "rutinas"}`
+                      : ""}
                   </span>
                 </span>
                 {busy === st.id ? (
@@ -112,19 +127,23 @@ export function AssignRoutine({
   );
 }
 
-/** Desde el cliente: rutina nueva desde cero o copiando una plantilla. */
+/** Desde el cliente: rutina (o plan) nuevo desde cero o copiando una plantilla. */
 export function NewClientRoutine({
   clientId,
   clientName,
   folders,
   templates,
+  kind = "routines",
 }: {
   clientId: string;
   clientName: string;
   folders: FolderLite[];
   templates: RoutineLite[];
+  kind?: Kind;
 }) {
-  const { pending, busy, run } = useCopy();
+  const { pending, busy, run } = useCopy(kind);
+  const t = TEXT[kind];
+  const Icon = t.icon;
   const [query, setQuery] = useState("");
 
   const q = query.trim().toLowerCase();
@@ -150,13 +169,15 @@ export function NewClientRoutine({
       <DialogTrigger
         render={
           <Button size="sm" className="gap-1.5">
-            <FilePlus2 className="size-4" /> Nueva rutina
+            <FilePlus2 className="size-4" /> {t.New}
           </Button>
         }
       />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nueva rutina para {clientName}</DialogTitle>
+          <DialogTitle>
+            {t.New} para {clientName}
+          </DialogTitle>
           <DialogDescription>
             Armala desde cero o partí de una de tus plantillas (se crea una copia propia del
             cliente).
@@ -164,7 +185,7 @@ export function NewClientRoutine({
         </DialogHeader>
 
         <Link
-          href={`/rutinas/crear?cliente=${clientId}`}
+          href={`${t.base}/crear?cliente=${clientId}`}
           className={cn(buttonVariants({ variant: "outline" }), "w-full gap-1.5")}
         >
           <FilePlus2 className="size-4" /> Desde cero
@@ -172,7 +193,7 @@ export function NewClientRoutine({
 
         {templates.length === 0 ? (
           <p className="text-muted-foreground text-sm">
-            Todavía no tenés plantillas. Las plantillas se crean desde Rutinas.
+            Todavía no tenés plantillas. Las plantillas se crean desde {t.from}.
           </p>
         ) : (
           <div className="space-y-2">
@@ -194,21 +215,21 @@ export function NewClientRoutine({
                   <div key={g.id} className="space-y-1">
                     <p className="text-muted-foreground px-1 text-xs">{g.name}</p>
                     <div className="divide-y rounded-lg border">
-                      {g.items.map((t) => (
+                      {g.items.map((tpl) => (
                         <button
-                          key={t.id}
+                          key={tpl.id}
                           type="button"
                           onClick={() =>
-                            run(t.id, t.id, clientId, `Rutina creada para ${clientName}`)
+                            run(tpl.id, tpl.id, clientId, `${t.done} creado para ${clientName}`.replace("Rutina creado", "Rutina creada"))
                           }
                           disabled={pending}
                           className="hover:bg-muted/50 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors disabled:opacity-60"
                         >
-                          <Dumbbell className="text-muted-foreground size-4 shrink-0" />
+                          <Icon className="text-muted-foreground size-4 shrink-0" />
                           <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                            {t.name}
+                            {tpl.name}
                           </span>
-                          {busy === t.id ? (
+                          {busy === tpl.id ? (
                             <span className="text-muted-foreground text-xs">Creando…</span>
                           ) : (
                             <Copy className="text-muted-foreground size-4" />

@@ -174,10 +174,10 @@ export type ClientRoutineGroup = {
   routines: { id: string; name: string }[];
 };
 
-type Person = { first_name: string; last_name: string };
-const fullName = (p: Person | null) => (p ? `${p.first_name} ${p.last_name}`.trim() || null : null);
+export type Person = { first_name: string; last_name: string };
+export const fullName = (p: Person | null) => (p ? `${p.first_name} ${p.last_name}`.trim() || null : null);
 
-type ClientNameRow = {
+export type ClientNameRow = {
   id: string;
   first_name: string;
   last_name: string;
@@ -186,9 +186,9 @@ type ClientNameRow = {
   archived_at: string | null;
   account: Person | null;
 };
-const CLIENT_NAME_SELECT =
+export const CLIENT_NAME_SELECT =
   "id, first_name, last_name, student_email, status, archived_at, account:profiles!coach_students_student_id_fkey(first_name, last_name)";
-const clientName = (c: ClientNameRow) =>
+export const clientName = (c: ClientNameRow) =>
   fullName(c) ?? fullName(c.account) ?? c.student_email ?? "Cliente";
 
 type FromCoachRow = { id: string; name: string; owner: Person | null };
@@ -306,7 +306,7 @@ type EditDayRow = {
 };
 
 /** Nombre del cliente de una rutina (solo lo puede leer su coach). */
-async function getClientOf(
+export async function getClientOf(
   client: BrabusClient,
   clientId: string | null,
 ): Promise<ClientNameRow | null> {

@@ -7,6 +7,8 @@ App de rutinas de entrenamiento para **coaches** y **alumnos**, en **web** y
   objetivo, notas) y le arman una rutina propia, desde cero o a partir de sus
   plantillas. El cliente no necesita usar la app: la rutina se exporta a PDF o
   Excel. Si la usa, lo invitan por email o nombre de usuario.
+- También arman **planes de nutrición** (comidas, opciones, alimentos y macros)
+  con el mismo esquema de plantillas + copia por cliente.
 - Los **alumnos** usan las rutinas que les armó su coach (o las propias) y
   registran peso y repeticiones por serie; el coach ve el progreso.
 

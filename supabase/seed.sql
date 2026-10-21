@@ -196,3 +196,80 @@ begin
     end loop;
   end loop;
 end $$;
+
+-- ============================================================================
+-- Nutrición: plantilla "Volumen 2800" (carpeta Volumen), copia vigente para
+-- Andrés y un plan simple para Roberto (sin app).
+-- ============================================================================
+do $$
+declare
+  v_coach  uuid := '11111111-1111-1111-1111-111111111111';
+  v_folder uuid;
+  v_plan   uuid;
+  v_meal   uuid;
+  v_opt    uuid;
+begin
+  insert into public.nutrition_folders (owner_id, name) values (v_coach, 'Volumen')
+    returning id into v_folder;
+
+  insert into public.nutrition_plans (
+    id, owner_id, folder_id, name, guidelines, target_kcal, target_protein, target_carbs, target_fat, target_water_l
+  ) values (
+    '90000000-0000-0000-0000-000000000001', v_coach, v_folder, 'Volumen 2800',
+    E'Tomar 3 L de agua por día.\nCreatina 5 g diarios.\nEvitar ultraprocesados.',
+    2800, 160, 330, 80, 3
+  ) returning id into v_plan;
+
+  -- Desayuno con dos opciones
+  insert into public.nutrition_meals (plan_id, name, time_label, position)
+    values (v_plan, 'Desayuno', '8:00', 0) returning id into v_meal;
+  insert into public.nutrition_options (meal_id, position) values (v_meal, 0) returning id into v_opt;
+  insert into public.nutrition_items (option_id, food, amount, unit, kcal, protein, carbs, fat, position) values
+    (v_opt, 'Avena', '80', 'g', 300, 10, 54, 6, 0),
+    (v_opt, 'Leche descremada', '250', 'ml', 90, 9, 12, 0, 1),
+    (v_opt, 'Banana', '1', 'unidad', 105, 1, 27, 0, 2);
+  insert into public.nutrition_options (meal_id, position) values (v_meal, 1) returning id into v_opt;
+  insert into public.nutrition_items (option_id, food, amount, unit, kcal, protein, carbs, fat, position) values
+    (v_opt, 'Pan integral', '3', 'rebanadas', 240, 12, 42, 3, 0),
+    (v_opt, 'Huevos', '2', 'unidades', 150, 13, 1, 10, 1),
+    (v_opt, 'Café con leche', '1', 'taza', 80, 5, 8, 2, 2);
+
+  insert into public.nutrition_meals (plan_id, name, time_label, position)
+    values (v_plan, 'Almuerzo', '13:00', 1) returning id into v_meal;
+  insert into public.nutrition_options (meal_id, position) values (v_meal, 0) returning id into v_opt;
+  insert into public.nutrition_items (option_id, food, amount, unit, kcal, protein, carbs, fat, position) values
+    (v_opt, 'Pechuga de pollo', '200', 'g', 330, 62, 0, 7, 0),
+    (v_opt, 'Arroz blanco (cocido)', '250', 'g', 325, 6, 70, 1, 1),
+    (v_opt, 'Ensalada mixta', null, 'a gusto', null, null, null, null, 2),
+    (v_opt, 'Aceite de oliva', '1', 'cda', 120, 0, 0, 14, 3);
+
+  insert into public.nutrition_meals (plan_id, name, time_label, position)
+    values (v_plan, 'Merienda', '17:00', 2) returning id into v_meal;
+  insert into public.nutrition_options (meal_id, position) values (v_meal, 0) returning id into v_opt;
+  insert into public.nutrition_items (option_id, food, amount, unit, kcal, protein, carbs, fat, position) values
+    (v_opt, 'Yogur griego', '200', 'g', 190, 18, 8, 10, 0),
+    (v_opt, 'Granola', '40', 'g', 180, 4, 26, 7, 1);
+
+  insert into public.nutrition_meals (plan_id, name, time_label, position)
+    values (v_plan, 'Cena', '21:00', 3) returning id into v_meal;
+  insert into public.nutrition_options (meal_id, position) values (v_meal, 0) returning id into v_opt;
+  insert into public.nutrition_items (option_id, food, amount, unit, kcal, protein, carbs, fat, position) values
+    (v_opt, 'Carne magra', '200', 'g', 350, 52, 0, 15, 0),
+    (v_opt, 'Papa (hervida)', '300', 'g', 260, 6, 60, 0, 1),
+    (v_opt, 'Vegetales asados', null, 'a gusto', null, null, null, null, 2);
+
+  -- Copias para clientes.
+  v_plan := public._copy_plan('90000000-0000-0000-0000-000000000001', null, null,
+    'f1000000-0000-0000-0000-000000000001');
+  update public.nutrition_plans set is_current = true where id = v_plan;
+
+  insert into public.nutrition_plans (owner_id, client_id, name, guidelines, target_kcal, is_current)
+    values (v_coach, 'f1000000-0000-0000-0000-000000000003', 'Plan saludable', 'Comer despacio. Caminar 30 min después de cenar.', 1900, true)
+    returning id into v_plan;
+  insert into public.nutrition_meals (plan_id, name, time_label, position)
+    values (v_plan, 'Desayuno', '8:30', 0) returning id into v_meal;
+  insert into public.nutrition_options (meal_id, position) values (v_meal, 0) returning id into v_opt;
+  insert into public.nutrition_items (option_id, food, amount, unit, kcal, position) values
+    (v_opt, 'Té con leche', '1', 'taza', 60, 0),
+    (v_opt, 'Tostadas con queso blanco', '2', 'unidades', 220, 1);
+end $$;

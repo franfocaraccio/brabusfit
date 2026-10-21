@@ -42,7 +42,7 @@ export default async function RutinasPage() {
         isCoach={profile.is_coach}
         folders={folders}
         routines={routines}
-        clients={clients}
+        clients={clients.map((c) => ({ ...c, items: c.routines }))}
         fromCoaches={fromCoaches}
       />
     </div>

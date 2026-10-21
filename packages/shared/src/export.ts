@@ -15,8 +15,16 @@ const fmtDate = (iso: string) => {
   return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
 };
 
+/** Encabezado común de los archivos exportados (rutinas y dietas). */
+export type ExportHeader = {
+  name: string;
+  clientName: string | null;
+  coachName: string | null;
+  date: string;
+};
+
 /** Líneas de encabezado: "Cliente: …", "Coach: …", "Fecha: …". */
-export function exportMeta(r: RoutineExport): string[] {
+export function exportMeta(r: ExportHeader): string[] {
   return [
     r.clientName ? `Cliente: ${r.clientName}` : null,
     r.coachName ? `Coach: ${r.coachName}` : null,
@@ -25,9 +33,13 @@ export function exportMeta(r: RoutineExport): string[] {
 }
 
 /** Nombre de archivo sin caracteres problemáticos: "Rutina - Fuerza - Andrés.pdf". */
-export function exportFileName(r: RoutineExport, ext: "pdf" | "xlsx"): string {
+export function exportFileName(
+  r: ExportHeader,
+  ext: "pdf" | "xlsx",
+  prefix: "Rutina" | "Dieta" = "Rutina",
+): string {
   const clean = (s: string) => s.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
-  return `${["Rutina", clean(r.name), r.clientName ? clean(r.clientName) : null]
+  return `${[prefix, clean(r.name), r.clientName ? clean(r.clientName) : null]
     .filter(Boolean)
     .join(" - ")}.${ext}`;
 }
@@ -55,7 +67,7 @@ export function routineXlsx(r: RoutineExport): Uint8Array {
   );
 }
 
-const html = (s: string) =>
+export const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 /** HTML imprimible (A4) para generar el PDF en mobile (expo-print). */
@@ -64,13 +76,13 @@ export function routineHtml(r: RoutineExport): string {
     .map(
       (day, d) => `
       <section>
-        <h2><span class="n">${d + 1}</span>${html(day.name)}</h2>
+        <h2><span class="n">${d + 1}</span>${escapeHtml(day.name)}</h2>
         <table>
           <thead><tr><th class="num">N°</th><th>Ejercicio</th><th class="sets">Series x reps</th></tr></thead>
           <tbody>${day.exercises
             .map(
               (e, i) =>
-                `<tr><td class="num">${i + 1}</td><td>${html(e.name)}</td><td class="sets">${html(e.setsReps)}</td></tr>`,
+                `<tr><td class="num">${i + 1}</td><td>${escapeHtml(e.name)}</td><td class="sets">${escapeHtml(e.setsReps)}</td></tr>`,
             )
             .join("")}</tbody>
         </table>
@@ -96,8 +108,8 @@ export function routineHtml(r: RoutineExport): string {
   </style></head><body>
   <header>
     <div class="brand">BRABUS FIT</div>
-    <h1>${html(r.name)}</h1>
-    <div class="meta">${exportMeta(r).map(html).join(" &nbsp;·&nbsp; ")}</div>
+    <h1>${escapeHtml(r.name)}</h1>
+    <div class="meta">${exportMeta(r).map(escapeHtml).join(" &nbsp;·&nbsp; ")}</div>
   </header>
   ${days || "<p>Esta rutina no tiene días.</p>"}
   </body></html>`;

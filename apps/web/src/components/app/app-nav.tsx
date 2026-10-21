@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Dumbbell, Home, TrendingUp, User, Users } from "lucide-react";
+import { Dumbbell, Home, Salad, TrendingUp, User, Users } from "lucide-react";
 
 import { Logo } from "@/components/app/logo";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,7 @@ export function AppNav({
   const items: NavItem[] = [
     { href: "/dashboard", label: "Inicio", icon: Home },
     { href: "/rutinas", label: "Rutinas", icon: Dumbbell },
+    { href: "/nutricion", label: "Nutrición", icon: Salad },
     { href: "/progreso", label: "Progreso", icon: TrendingUp },
     ...(isCoach
       ? [{ href: "/clientes", label: "Clientes", icon: Users }]

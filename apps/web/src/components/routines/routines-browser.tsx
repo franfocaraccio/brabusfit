@@ -7,6 +7,7 @@ import {
   Dumbbell,
   Folder as FolderIcon,
   Plus,
+  Salad,
   Search,
   User,
   UserCheck,
@@ -20,14 +21,51 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-import type {
-  ClientRoutineGroup,
-  CoachRoutineLite,
-  FolderLite,
-  RoutineLite,
-} from "@brabus/supabase";
+import type { FolderLite } from "@brabus/supabase";
 
 const ROOT_GROUP = "__root__";
+
+type Item = { id: string; name: string; isCurrent?: boolean };
+/** Rutinas o planes de un cliente (ficha). */
+export type BrowserClientGroup = {
+  clientId: string;
+  name: string;
+  archived: boolean;
+  items: Item[];
+};
+type OwnItem = Item & { folder_id: string | null };
+type FromCoach = Item & { coachName: string | null };
+
+const TEXT = {
+  routines: {
+    base: "/rutinas",
+    icon: Dumbbell,
+    one: "rutina",
+    many: "rutinas",
+    search: "Buscar cliente, carpeta o rutina…",
+    searchOwn: "Buscar rutina…",
+    empty: "Todavía no tenés rutinas.",
+    firstOwn: "Crear mi primera rutina",
+    clients: "Rutinas de clientes",
+    clientsEmpty:
+      "Todavía no armaste rutinas para clientes. Entrá a una plantilla y tocá «Asignar a cliente», o creala desde Clientes.",
+    mine: "Mis rutinas",
+  },
+  nutrition: {
+    base: "/nutricion",
+    icon: Salad,
+    one: "plan",
+    many: "planes",
+    search: "Buscar cliente, carpeta o plan…",
+    searchOwn: "Buscar plan…",
+    empty: "Todavía no tenés planes de nutrición.",
+    firstOwn: null,
+    clients: "Planes de clientes",
+    clientsEmpty:
+      "Todavía no armaste planes para clientes. Entrá a una plantilla y tocá «Asignar a cliente», o crealo desde Clientes.",
+    mine: "Mis planes",
+  },
+} as const;
 
 type Group = {
   id: string;
@@ -36,27 +74,40 @@ type Group = {
   icon: typeof FolderIcon;
   badge?: { text: string; tone: "pending" | "muted" };
   deletable: boolean;
-  items: { id: string; name: string }[];
+  items: Item[];
 };
 
-const countLabel = (n: number) => `${n} ${n === 1 ? "rutina" : "rutinas"}`;
-
+/** Plantillas en carpetas + rutinas/planes por cliente (coach), o lo del alumno. */
 export function RoutinesBrowser({
+  kind = "routines",
   isCoach,
   folders,
   routines,
   clients,
   fromCoaches,
 }: {
+  kind?: "routines" | "nutrition";
   isCoach: boolean;
   folders: FolderLite[];
-  /** Plantillas (coach) o rutinas propias (alumno). */
-  routines: RoutineLite[];
-  /** Coach: rutinas de sus clientes, agrupadas por ficha. */
-  clients: ClientRoutineGroup[];
-  /** Alumno: rutinas que le armaron sus coaches. */
-  fromCoaches: CoachRoutineLite[];
+  /** Plantillas (coach) o rutinas/planes propios (alumno). */
+  routines: OwnItem[];
+  /** Coach: lo de sus clientes, agrupado por ficha. */
+  clients: BrowserClientGroup[];
+  /** Alumno: lo que le armaron sus coaches. */
+  fromCoaches: FromCoach[];
 }) {
+  const t = TEXT[kind];
+  const countLabel = (n: number) => `${n} ${n === 1 ? t.one : t.many}`;
+  const tile = (r: Item, extra?: { subtitle?: string; accent?: boolean }) => (
+    <LinkTile
+      key={r.id}
+      href={`${t.base}/${r.id}`}
+      title={r.name}
+      subtitle={extra?.subtitle ?? (r.isCurrent ? "Vigente" : undefined)}
+      icon={t.icon}
+      accent={extra?.accent ?? r.isCurrent}
+    />
+  );
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -84,11 +135,11 @@ export function RoutinesBrowser({
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={isCoach ? "Buscar cliente, carpeta o rutina…" : "Buscar rutina…"}
+          placeholder={isCoach ? t.search : t.searchOwn}
           className="pl-9"
         />
       </div>
-      {isCoach && <NewFolderButton />}
+      {isCoach && <NewFolderButton kind={kind} />}
     </div>
   );
 
@@ -96,10 +147,20 @@ export function RoutinesBrowser({
   if (hasNothing) {
     return (
       <Card className="p-8 text-center">
-        <p className="text-muted-foreground text-sm">Todavía no tenés rutinas.</p>
-        <Link href="/rutinas/crear" className={cn(buttonVariants(), "mt-4")}>
-          <Plus className="size-4" /> {isCoach ? "Crear mi primera plantilla" : "Crear mi primera rutina"}
-        </Link>
+        <p className="text-muted-foreground text-sm">{t.empty}</p>
+        {isCoach || t.firstOwn ? (
+          <Link
+            href={`${t.base}/crear`}
+            className={cn(buttonVariants(), "mt-4")}
+          >
+            <Plus className="size-4" />{" "}
+            {isCoach ? "Crear mi primera plantilla" : t.firstOwn}
+          </Link>
+        ) : (
+          <p className="text-muted-foreground mt-1 text-sm">
+            Tu coach te los va a armar acá.
+          </p>
+        )}
       </Card>
     );
   }
@@ -107,7 +168,8 @@ export function RoutinesBrowser({
   // ============================ ALUMNO ============================
   if (!isCoach) {
     const coachList = fromCoaches.filter(
-      (r) => !q || matches(r.name) || (r.coachName ? matches(r.coachName) : false),
+      (r) =>
+        !q || matches(r.name) || (r.coachName ? matches(r.coachName) : false),
     );
     const list = routines.filter((r) => !q || matches(r.name));
     return (
@@ -119,31 +181,32 @@ export function RoutinesBrowser({
               <UserCheck className="size-4" /> De mis coaches
             </h2>
             <div className="stagger space-y-2.5">
-              {coachList.map((r) => (
-                <LinkTile
-                  key={r.id}
-                  href={`/rutinas/${r.id}`}
-                  title={r.name}
-                  subtitle={r.coachName ? `Coach: ${r.coachName}` : "De tu coach"}
-                  icon={Dumbbell}
-                  accent
-                />
-              ))}
+              {coachList.map((r) =>
+                tile(r, {
+                  subtitle: `${r.isCurrent ? "Vigente · " : ""}${r.coachName ? `Coach: ${r.coachName}` : "De tu coach"}`,
+                  accent: true,
+                }),
+              )}
             </div>
           </section>
         )}
-        <section className="space-y-2.5">
-          <h2 className="text-muted-foreground text-sm font-semibold">Mis rutinas</h2>
-          {list.length > 0 ? (
-            <div className="stagger space-y-2.5">
-              {list.map((r) => (
-                <LinkTile key={r.id} href={`/rutinas/${r.id}`} title={r.name} icon={Dumbbell} />
-              ))}
-            </div>
-          ) : (
-            <NoResults hasQuery={q !== ""} />
-          )}
-        </section>
+        {(list.length > 0 || kind === "routines" || coachList.length === 0) && (
+          <section className="space-y-2.5">
+            <h2 className="text-muted-foreground text-sm font-semibold">
+              {t.mine}
+            </h2>
+            {list.length > 0 ? (
+              <div className="stagger space-y-2.5">
+                {list.map((r) => tile(r))}
+              </div>
+            ) : (
+              <NoResults
+                hasQuery={q !== ""}
+                text={`Todavía no hay ${t.many} acá.`}
+              />
+            )}
+          </section>
+        )}
       </div>
     );
   }
@@ -152,11 +215,11 @@ export function RoutinesBrowser({
   const clientGroups: Group[] = clients.map((c) => ({
     id: `client:${c.clientId}`,
     name: c.name,
-    subtitle: countLabel(c.routines.length),
+    subtitle: countLabel(c.items.length),
     icon: User,
     badge: c.archived ? { text: "Archivado", tone: "muted" } : undefined,
     deletable: false,
-    items: c.routines,
+    items: c.items,
   }));
 
   const rootRoutines = routines.filter((r) => !r.folder_id);
@@ -184,7 +247,9 @@ export function RoutinesBrowser({
   ];
 
   const visible = (groups: Group[]) =>
-    groups.filter((g) => !q || matches(g.name) || g.items.some((r) => matches(r.name)));
+    groups.filter(
+      (g) => !q || matches(g.name) || g.items.some((r) => matches(r.name)),
+    );
 
   const renderGroups = (groups: Group[], empty: string) => {
     const list = visible(groups);
@@ -199,7 +264,9 @@ export function RoutinesBrowser({
     }
     return list.map((group) => {
       const nameMatch = !q || matches(group.name);
-      const displayItems = nameMatch ? group.items : group.items.filter((r) => matches(r.name));
+      const displayItems = nameMatch
+        ? group.items
+        : group.items.filter((r) => matches(r.name));
       const isOpen = q ? true : expanded.has(group.id);
       const Icon = group.icon;
 
@@ -229,7 +296,9 @@ export function RoutinesBrowser({
                     </span>
                   ) : null}
                 </span>
-                <span className="text-muted-foreground text-xs">{group.subtitle}</span>
+                <span className="text-muted-foreground text-xs">
+                  {group.subtitle}
+                </span>
               </span>
               <ChevronDown
                 className={cn(
@@ -238,17 +307,23 @@ export function RoutinesBrowser({
                 )}
               />
             </button>
-            {group.deletable && <FolderActions folderId={group.id} folderName={group.name} />}
+            {group.deletable && (
+              <FolderActions
+                folderId={group.id}
+                folderName={group.name}
+                kind={kind}
+              />
+            )}
           </div>
 
           {isOpen && (
             <div className="stagger space-y-2 pl-3">
               {displayItems.length > 0 ? (
-                displayItems.map((r) => (
-                  <LinkTile key={r.id} href={`/rutinas/${r.id}`} title={r.name} icon={Dumbbell} />
-                ))
+                displayItems.map((r) => tile(r))
               ) : (
-                <p className="text-muted-foreground px-1 text-sm">Carpeta vacía.</p>
+                <p className="text-muted-foreground px-1 text-sm">
+                  Carpeta vacía.
+                </p>
               )}
             </div>
           )}
@@ -262,26 +337,33 @@ export function RoutinesBrowser({
       {searchBar}
 
       <section className="space-y-3">
-        <h2 className="text-muted-foreground text-sm font-semibold">Rutinas de clientes</h2>
-        {renderGroups(
-          clientGroups,
-          "Todavía no armaste rutinas para clientes. Entrá a una plantilla y tocá «Asignar a cliente», o creala desde Clientes.",
-        )}
+        <h2 className="text-muted-foreground text-sm font-semibold">
+          {t.clients}
+        </h2>
+        {renderGroups(clientGroups, t.clientsEmpty)}
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-muted-foreground text-sm font-semibold">Plantillas</h2>
+        <h2 className="text-muted-foreground text-sm font-semibold">
+          Plantillas
+        </h2>
         {renderGroups(templateGroups, "Todavía no tenés plantillas.")}
       </section>
     </div>
   );
 }
 
-function NoResults({ hasQuery }: { hasQuery: boolean }) {
+function NoResults({
+  hasQuery,
+  text = "Todavía no hay nada acá.",
+}: {
+  hasQuery: boolean;
+  text?: string;
+}) {
   return (
     <Card className="p-6 text-center">
       <p className="text-muted-foreground text-sm">
-        {hasQuery ? "No se encontraron resultados." : "Todavía no hay rutinas acá."}
+        {hasQuery ? "No se encontraron resultados." : text}
       </p>
     </Card>
   );

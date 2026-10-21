@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { deleteNutritionFolder } from "@/lib/actions/nutrition";
 import { deleteFolder } from "@/lib/actions/routines";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,9 +21,11 @@ import {
 export function FolderActions({
   folderId,
   folderName,
+  kind = "routines",
 }: {
   folderId: string;
   folderName: string;
+  kind?: "routines" | "nutrition";
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -30,7 +33,8 @@ export function FolderActions({
 
   const remove = () => {
     startTransition(async () => {
-      const result = await deleteFolder(folderId);
+      const result =
+        kind === "nutrition" ? await deleteNutritionFolder(folderId) : await deleteFolder(folderId);
       if (!result.ok) {
         toast.error(result.error);
         return;
@@ -58,7 +62,7 @@ export function FolderActions({
         <DialogHeader>
           <DialogTitle>Eliminar carpeta</DialogTitle>
           <DialogDescription>
-            Se eliminará la carpeta «{folderName}». Las rutinas que contiene no
+            Se eliminará la carpeta «{folderName}». {kind === "nutrition" ? "Los planes" : "Las rutinas"} que contiene no
             se borran: pasan a la raíz.
           </DialogDescription>
         </DialogHeader>

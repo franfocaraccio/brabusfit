@@ -83,6 +83,10 @@ function RootNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
         <Stack.Screen name="rutina/[id]/dia/[dayId]" options={{ title: "" }} />
         <Stack.Screen name="rutina/[id]/historial" options={{ title: "Historial" }} />
         <Stack.Screen name="sesion/[id]" options={{ title: "Sesión" }} />
+        <Stack.Screen name="nutricion/crear" options={{ title: "Crear plan" }} />
+        <Stack.Screen name="nutricion/[id]/index" options={{ title: "" }} />
+        <Stack.Screen name="nutricion/[id]/editar" options={{ title: "Editar plan" }} />
+        <Stack.Screen name="nutricion/[id]/asignar" options={{ title: "Asignar a cliente" }} />
         <Stack.Screen name="cliente/nuevo" options={{ title: "Nuevo cliente" }} />
         <Stack.Screen name="cliente/[id]/index" options={{ title: "" }} />
         <Stack.Screen name="cliente/[id]/editar" options={{ title: "Editar ficha" }} />

@@ -1,4 +1,5 @@
 import type { ClientInput } from "./clients";
+import type { PlanInput } from "./nutrition";
 
 /**
  * Tipos de la base de datos. Mantener en sync con supabase/migrations.
@@ -212,6 +213,65 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["exercise_catalog"]["Insert"]>;
         Relationships: [];
       };
+      nutrition_folders: {
+        Row: { id: string; owner_id: string; name: string; created_at: string };
+        Insert: { id?: string; owner_id: string; name: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["nutrition_folders"]["Insert"]>;
+        Relationships: [];
+      };
+      nutrition_plans: {
+        Row: {
+          id: string;
+          owner_id: string;
+          folder_id: string | null;
+          /** Cliente al que el coach le armó el plan (null = plantilla o plan propio). */
+          client_id: string | null;
+          name: string;
+          guidelines: string | null;
+          target_kcal: number | null;
+          target_protein: number | null;
+          target_carbs: number | null;
+          target_fat: number | null;
+          target_water_l: number | null;
+          /** Plan vigente del cliente (uno por ficha). */
+          is_current: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        // Altas por RPC (save_full_plan / copy_nutrition_plan).
+        Insert: { owner_id: string; name: string };
+        Update: { name?: string; folder_id?: string | null };
+        Relationships: [];
+      };
+      nutrition_meals: {
+        Row: { id: string; plan_id: string; name: string; time_label: string | null; position: number };
+        Insert: { plan_id: string; name: string };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      nutrition_options: {
+        Row: { id: string; meal_id: string; position: number };
+        Insert: { meal_id: string };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      nutrition_items: {
+        Row: {
+          id: string;
+          option_id: string;
+          food: string;
+          amount: string | null;
+          unit: string | null;
+          kcal: number | null;
+          protein: number | null;
+          carbs: number | null;
+          fat: number | null;
+          position: number;
+        };
+        Insert: { option_id: string; food: string };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
       coach_students: {
         Row: {
           id: string;
@@ -366,6 +426,19 @@ export type Database = {
         Args: { p_client_id: string };
         Returns: undefined;
       };
+      save_full_plan: {
+        Args: { p_plan_id: string | null; p_data: PlanInput };
+        Returns: string;
+      };
+      copy_nutrition_plan: {
+        /** Sin p_client_id: copia como plantilla nueva. */
+        Args: { p_plan_id: string; p_client_id?: string | null };
+        Returns: string;
+      };
+      set_current_plan: {
+        Args: { p_plan_id: string };
+        Returns: undefined;
+      };
       get_my_coaches: {
         Args: Record<string, never>;
         Returns: { link_id: string; coach_id: string; status: LinkStatus; created_at: string }[];
@@ -393,6 +466,7 @@ export type Tables<T extends keyof Database["public"]["Tables"]> =
 export type Profile = Tables<"profiles">;
 export type Folder = Tables<"folders">;
 export type Routine = Tables<"routines">;
+export type NutritionPlan = Tables<"nutrition_plans">;
 export type RoutineDay = Tables<"routine_days">;
 export type Exercise = Tables<"exercises">;
 export type WorkoutSession = Tables<"workout_sessions">;

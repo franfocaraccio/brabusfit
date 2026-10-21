@@ -15,9 +15,12 @@ import {
   type ProgressSession,
 } from "@brabus/shared";
 import {
+  copyPlan,
   copyRoutine,
   deleteClient,
   getClient,
+  getClientPlans,
+  getNutritionOverview,
   getProgressSessions,
   getRoutinesOverview,
   removeClientAccess,
@@ -40,7 +43,10 @@ import { supabase } from "@/lib/supabase";
 import { colors, fonts, radius } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
 
-type Tab = "ficha" | "rutinas" | "progreso" | "entrenamientos";
+type Tab = "ficha" | "rutinas" | "nutricion" | "progreso" | "entrenamientos";
+type Kind = "routines" | "nutrition";
+type Templates = { folders: FolderLite[]; items: RoutineLite[] };
+const NO_TEMPLATES: Templates = { folders: [], items: [] };
 
 /** Ficha del cliente: datos, rutinas, progreso y entrenamientos (igual que /clientes/[id]). */
 export default function ClienteScreen() {
@@ -49,22 +55,30 @@ export default function ClienteScreen() {
   const [tab, setTab] = useState<Tab>("ficha");
   const [detail, setDetail] = useState<ClientDetail | null | undefined>(undefined);
   const [progress, setProgress] = useState<ProgressSession[]>([]);
-  const [templates, setTemplates] = useState<{ folders: FolderLite[]; routines: RoutineLite[] }>({
-    folders: [],
-    routines: [],
+  const [templates, setTemplates] = useState<Record<Kind, Templates>>({
+    routines: NO_TEMPLATES,
+    nutrition: NO_TEMPLATES,
   });
+  const [plans, setPlans] = useState<{ id: string; name: string; isCurrent: boolean }[]>([]);
   const [inviting, setInviting] = useState(false);
-  const [newSheet, setNewSheet] = useState(false);
+  // Hoja "Nueva rutina" / "Nuevo plan" (null = cerrada).
+  const [newSheet, setNewSheet] = useState<Kind | null>(null);
   const [copying, setCopying] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!session) return;
-    const [d, o] = await Promise.all([
+    const [d, o, nu, p] = await Promise.all([
       getClient(supabase, session.user.id, id),
       getRoutinesOverview(supabase, session.user.id),
+      getNutritionOverview(supabase, session.user.id),
+      getClientPlans(supabase, id),
     ]);
     setDetail(d);
-    setTemplates({ folders: o.folders, routines: o.routines });
+    setPlans(p);
+    setTemplates({
+      routines: { folders: o.folders, items: o.routines },
+      nutrition: { folders: nu.folders, items: nu.plans },
+    });
     setProgress(
       d?.appAccess === "active" && d.studentId ? await getProgressSessions(supabase, d.studentId) : [],
     );
@@ -127,21 +141,27 @@ export default function ClienteScreen() {
     });
 
   const fromTemplate = async (templateId: string) => {
+    if (!newSheet) return;
     setCopying(templateId);
-    const result = await copyRoutine(supabase, templateId, id);
+    const result =
+      newSheet === "nutrition"
+        ? await copyPlan(supabase, templateId, id)
+        : await copyRoutine(supabase, templateId, id);
     setCopying(null);
     if (!result.ok) return notify("No se pudo crear", result.error);
-    setNewSheet(false);
-    router.push(`/rutina/${result.data.id}`);
+    const kind = newSheet;
+    setNewSheet(null);
+    router.push(kind === "nutrition" ? `/nutricion/${result.data.id}` : `/rutina/${result.data.id}`);
   };
 
+  const sheetTemplates = templates[newSheet ?? "routines"];
   const templateGroups = [
-    ...templates.folders.map((f) => ({
+    ...sheetTemplates.folders.map((f) => ({
       id: f.id,
       name: f.name,
-      items: templates.routines.filter((r) => r.folder_id === f.id),
+      items: sheetTemplates.items.filter((r) => r.folder_id === f.id),
     })),
-    { id: "__root__", name: "Sin carpeta", items: templates.routines.filter((r) => !r.folder_id) },
+    { id: "__root__", name: "Sin carpeta", items: sheetTemplates.items.filter((r) => !r.folder_id) },
   ].filter((g) => g.items.length > 0);
 
   const age = ageFrom(data.birth_date);
@@ -218,11 +238,13 @@ export default function ClienteScreen() {
       ) : null}
 
       <Segmented
+        fill
         value={tab}
         onChange={setTab}
         options={[
           { value: "ficha", label: "Ficha" },
-          { value: "rutinas", label: `Rutinas (${n})` },
+          { value: "rutinas", label: "Rutinas" },
+          { value: "nutricion", label: "Nutrición" },
           { value: "progreso", label: "Progreso" },
           { value: "entrenamientos", label: "Entren." },
         ]}
@@ -271,7 +293,7 @@ export default function ClienteScreen() {
         <>
           <Button
             title="Nueva rutina"
-            onPress={() => setNewSheet(true)}
+            onPress={() => setNewSheet("routines")}
             icon={<Ionicons name="add" size={18} color={colors.primaryForeground} />}
           />
           {n === 0
@@ -282,6 +304,26 @@ export default function ClienteScreen() {
                   title={r.name}
                   icon="barbell"
                   onPress={() => router.push(`/rutina/${r.id}`)}
+                />
+              ))}
+        </>
+      ) : tab === "nutricion" ? (
+        <>
+          <Button
+            title="Nuevo plan"
+            onPress={() => setNewSheet("nutrition")}
+            icon={<Ionicons name="add" size={18} color={colors.primaryForeground} />}
+          />
+          {plans.length === 0
+            ? empty("Todavía no le armaste planes de nutrición. Crealo desde cero o a partir de una plantilla.")
+            : plans.map((p) => (
+                <Tile
+                  key={p.id}
+                  title={p.name}
+                  subtitle={p.isCurrent ? "Vigente" : undefined}
+                  icon="nutrition-outline"
+                  accent={p.isCurrent}
+                  onPress={() => router.push(`/nutricion/${p.id}`)}
                 />
               ))}
         </>
@@ -356,23 +398,26 @@ export default function ClienteScreen() {
       />
 
       <Sheet
-        visible={newSheet}
-        onClose={() => setNewSheet(false)}
-        title={`Nueva rutina para ${name}`}
+        visible={newSheet !== null}
+        onClose={() => setNewSheet(null)}
+        title={`${newSheet === "nutrition" ? "Nuevo plan" : "Nueva rutina"} para ${name}`}
         description="Armala desde cero o partí de una de tus plantillas (se crea una copia propia del cliente)."
       >
         <Button
           title="Desde cero"
           variant="outline"
           onPress={() => {
-            setNewSheet(false);
-            router.push(`/rutina/crear?cliente=${id}`);
+            const kind = newSheet;
+            setNewSheet(null);
+            router.push(
+              kind === "nutrition" ? `/nutricion/crear?cliente=${id}` : `/rutina/crear?cliente=${id}`,
+            );
           }}
           icon={<Ionicons name="create-outline" size={18} color={colors.foreground} />}
         />
         {templateGroups.length === 0 ? (
           <Muted style={{ fontSize: 13 }}>
-            Todavía no tenés plantillas. Las plantillas se crean desde Rutinas.
+            Todavía no tenés plantillas. Las plantillas se crean desde Planes.
           </Muted>
         ) : (
           <ScrollView style={{ maxHeight: 360 }} contentContainerStyle={{ gap: 12 }}>
@@ -389,7 +434,11 @@ export default function ClienteScreen() {
                       style={[styles.templateRow, i > 0 && styles.templateBorder]}
                       accessibilityRole="button"
                     >
-                      <Ionicons name="barbell-outline" size={18} color={colors.mutedForeground} />
+                      <Ionicons
+                        name={newSheet === "nutrition" ? "nutrition-outline" : "barbell-outline"}
+                        size={18}
+                        color={colors.mutedForeground}
+                      />
                       <Text style={styles.templateName} numberOfLines={1}>
                         {t.name}
                       </Text>
