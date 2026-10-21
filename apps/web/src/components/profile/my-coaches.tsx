@@ -87,9 +87,9 @@ export function MyCoaches({ coaches }: { coaches: MyCoach[] }) {
           <DialogHeader>
             <DialogTitle>Desvincularte de {leaving?.name}</DialogTitle>
             <DialogDescription>
-              Vas a dejar de ver todo lo que {leaving?.name} te compartió (rutinas y lo que
-              agregue más adelante) y no va a poder seguir tu progreso. Tus entrenamientos
-              guardados siguen siendo tuyos.
+              {leaving?.name} ya no va a poder seguir tu progreso ni armarte cosas nuevas. Las
+              rutinas que te armó pasan a ser tuyas (en Mis rutinas), con todos tus
+              entrenamientos.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

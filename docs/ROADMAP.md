@@ -158,13 +158,17 @@ Storage + (si hace falta) un job programado.
   afecta a nadie más. Las rutinas del coach sin alumno son **plantillas** (en
   carpetas, nadie más las ve): "Asignar a alumno" o "Nueva rutina" desde el
   alumno crea una **copia independiente** (`copy_routine`). Rutinas → "Rutinas de
-  alumnos" (agrupadas por alumno) + "Plantillas". Si se desvinculan (lo haga
-  quien lo haga) el alumno deja de verlas y al coach le quedan guardadas; si se
-  vuelven a vincular, el alumno las recupera. El alumno conserva su historial y
-  progreso (ve los ejercicios que entrenó). Migración de datos: cada alumno que
+  alumnos" (agrupadas por alumno) + "Plantillas".
+- ✅ **Al desvincularse el alumno se queda con sus rutinas** (2026-10-21,
+  migración 0011): con el vínculo activo, lo corte quien lo corte, el alumno
+  recibe una copia propia de cada rutina (a "Mis rutinas", editable) con sus
+  entrenamientos mudados; los ejercicios propios del coach se le copian como
+  propios. El coach conserva la suya (bajo el alumno, "Desvinculado"). Cancelar o
+  rechazar una invitación no le deja nada. Migración de datos: cada alumno que
   tenía una rutina compartida recibió su copia con sus entrenamientos; la
   original quedó como plantilla. **Mismo patrón para Nutrición y Reportes**:
-  plantillas del coach + una copia por alumno, visible con vínculo activo.
+  plantillas del coach + una copia por alumno, visible con vínculo activo, y al
+  desvincular el alumno se queda con una copia propia.
 - Ideas siguientes: reordenar ejercicios/días (el ícono de "arrastrar" del editor
   web hoy es decorativo), duplicar plantilla (`copy_routine` sin alumno ya existe).
 - **Alertas de progresión:** regla en SQL (ej. mismo peso N semanas y reps en el

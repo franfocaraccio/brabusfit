@@ -137,7 +137,8 @@ export function AddStudentSheet({
 
 /**
  * Desvincular un alumno o cancelar su invitación (igual que la web). Las rutinas
- * que el coach le armó le quedan guardadas; el alumno deja de verlas.
+ * que el coach le armó: el alumno se queda con una copia propia (si el vínculo
+ * estaba activo) y el coach conserva la suya.
  */
 export function UnlinkStudentSheet({
   visible,
@@ -172,9 +173,13 @@ export function UnlinkStudentSheet({
   const routinesText =
     routineCount === 0
       ? ""
-      : routineCount === 1
-        ? " La rutina que le armaste te queda guardada, pero el alumno deja de verla."
-        : ` Las ${routineCount} rutinas que le armaste te quedan guardadas, pero el alumno deja de verlas.`;
+      : pending
+        ? routineCount === 1
+          ? " La rutina que le armaste te queda guardada."
+          : ` Las ${routineCount} rutinas que le armaste te quedan guardadas.`
+        : routineCount === 1
+          ? " Se queda con una copia propia de la rutina que le armaste, y vos conservás la tuya."
+          : ` Se queda con una copia propia de las ${routineCount} rutinas que le armaste, y vos conservás las tuyas.`;
 
   return (
     <Sheet

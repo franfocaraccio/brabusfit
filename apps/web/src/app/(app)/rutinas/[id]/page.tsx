@@ -70,7 +70,7 @@ export default async function RutinaDetailPage({
               </span>
             ) : student.linkStatus === null ? (
               <span className="bg-muted rounded px-1.5 text-[10px] font-semibold">
-                Desvinculado · no la ve
+                Desvinculado
               </span>
             ) : null}
           </p>

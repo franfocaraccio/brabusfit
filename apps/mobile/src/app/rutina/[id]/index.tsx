@@ -79,7 +79,7 @@ export default function RutinaScreen() {
             {student.linkStatus === "pending" ? (
               <Text style={[styles.badge, styles.badgePending]}>Invitación pendiente</Text>
             ) : student.linkStatus === null ? (
-              <Text style={styles.badge}>Desvinculado · no la ve</Text>
+              <Text style={styles.badge}>Desvinculado</Text>
             ) : null}
           </View>
         ) : null}

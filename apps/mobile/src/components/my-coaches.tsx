@@ -25,7 +25,7 @@ export function MyCoaches() {
   const onLeave = (c: MyCoach) =>
     confirm({
       title: `Desvincularte de ${c.name}`,
-      message: `Vas a dejar de ver todo lo que ${c.name} te compartió y no va a poder seguir tu progreso. Tus entrenamientos guardados siguen siendo tuyos.`,
+      message: `${c.name} ya no va a poder seguir tu progreso ni armarte cosas nuevas. Las rutinas que te armó pasan a ser tuyas (en Mis rutinas), con todos tus entrenamientos.`,
       confirmText: "Desvincularme",
       destructive: true,
       onConfirm: () => run(c, () => leaveCoach(supabase, c.linkId)),

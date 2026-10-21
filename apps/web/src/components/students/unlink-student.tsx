@@ -16,8 +16,8 @@ import {
 } from "@/components/ui/dialog";
 
 /**
- * Desvincular un alumno (o cancelar su invitación). Las rutinas que el coach
- * le armó le quedan guardadas al coach; el alumno deja de verlas.
+ * Desvincular un alumno (o cancelar su invitación). Con el vínculo activo, el
+ * alumno se queda con una copia propia de sus rutinas y el coach conserva la suya.
  */
 export function UnlinkStudent({
   linkId,
@@ -55,9 +55,13 @@ export function UnlinkStudent({
   const routinesText =
     routineCount === 0
       ? null
-      : routineCount === 1
-        ? "La rutina que le armaste te queda guardada, pero el alumno deja de verla."
-        : `Las ${routineCount} rutinas que le armaste te quedan guardadas, pero el alumno deja de verlas.`;
+      : isPending
+        ? routineCount === 1
+          ? "La rutina que le armaste te queda guardada."
+          : `Las ${routineCount} rutinas que le armaste te quedan guardadas.`
+        : routineCount === 1
+          ? "Se queda con una copia propia de la rutina que le armaste, y vos conservás la tuya."
+          : `Se queda con una copia propia de las ${routineCount} rutinas que le armaste, y vos conservás las tuyas.`;
 
   return (
     <>
