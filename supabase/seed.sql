@@ -217,41 +217,55 @@ begin
   ) values (
     '90000000-0000-0000-0000-000000000001', v_coach, v_folder, 'Volumen 2800',
     E'Tomar 3 L de agua por día.\nCreatina 5 g diarios.\nEvitar ultraprocesados.',
-    2800, 160, 330, 80, 3
+    2800, 205, 320, 80, 3
   ) returning id into v_plan;
 
-  -- Desayuno con dos opciones
+  -- Desayuno con dos opciones (~660 kcal cada una)
   insert into public.nutrition_meals (plan_id, name, time_label, position)
     values (v_plan, 'Desayuno', '8:00', 0) returning id into v_meal;
   insert into public.nutrition_options (meal_id, position) values (v_meal, 0) returning id into v_opt;
   insert into public.nutrition_items (option_id, food, amount, unit, kcal, protein, carbs, fat, position) values
-    (v_opt, 'Avena', '80', 'g', 300, 10, 54, 6, 0),
+    (v_opt, 'Avena', '100', 'g', 375, 13, 66, 7, 0),
     (v_opt, 'Leche descremada', '250', 'ml', 90, 9, 12, 0, 1),
-    (v_opt, 'Banana', '1', 'unidad', 105, 1, 27, 0, 2);
+    (v_opt, 'Banana', '1', 'unidad', 105, 1, 27, 0, 2),
+    (v_opt, 'Mantequilla de maní', '1', 'cda', 95, 4, 3, 8, 3);
   insert into public.nutrition_options (meal_id, position) values (v_meal, 1) returning id into v_opt;
   insert into public.nutrition_items (option_id, food, amount, unit, kcal, protein, carbs, fat, position) values
-    (v_opt, 'Pan integral', '3', 'rebanadas', 240, 12, 42, 3, 0),
-    (v_opt, 'Huevos', '2', 'unidades', 150, 13, 1, 10, 1),
-    (v_opt, 'Café con leche', '1', 'taza', 80, 5, 8, 2, 2);
+    (v_opt, 'Pan integral', '3', 'rebanada', 240, 12, 42, 3, 0),
+    (v_opt, 'Huevos', '3', 'unidades', 225, 19, 1, 15, 1),
+    (v_opt, 'Palta', '50', 'g', 80, 1, 4, 7, 2),
+    (v_opt, 'Jugo de naranja', '250', 'ml', 110, 2, 26, 0, 3);
 
+  -- Almuerzo (~840 kcal)
   insert into public.nutrition_meals (plan_id, name, time_label, position)
     values (v_plan, 'Almuerzo', '13:00', 1) returning id into v_meal;
   insert into public.nutrition_options (meal_id, position) values (v_meal, 0) returning id into v_opt;
   insert into public.nutrition_items (option_id, food, amount, unit, kcal, protein, carbs, fat, position) values
     (v_opt, 'Pechuga de pollo', '200', 'g', 330, 62, 0, 7, 0),
-    (v_opt, 'Arroz blanco (cocido)', '250', 'g', 325, 6, 70, 1, 1),
+    (v_opt, 'Arroz blanco (cocido)', '300', 'g', 390, 8, 84, 1, 1),
     (v_opt, 'Ensalada mixta', null, 'a gusto', null, null, null, null, 2),
     (v_opt, 'Aceite de oliva', '1', 'cda', 120, 0, 0, 14, 3);
 
+  -- Merienda (~450 kcal)
   insert into public.nutrition_meals (plan_id, name, time_label, position)
     values (v_plan, 'Merienda', '17:00', 2) returning id into v_meal;
   insert into public.nutrition_options (meal_id, position) values (v_meal, 0) returning id into v_opt;
   insert into public.nutrition_items (option_id, food, amount, unit, kcal, protein, carbs, fat, position) values
     (v_opt, 'Yogur griego', '200', 'g', 190, 18, 8, 10, 0),
-    (v_opt, 'Granola', '40', 'g', 180, 4, 26, 7, 1);
+    (v_opt, 'Granola', '50', 'g', 225, 5, 32, 9, 1),
+    (v_opt, 'Frutillas', '100', 'g', 32, 1, 8, 0, 2);
 
+  -- Post-entreno (~225 kcal)
   insert into public.nutrition_meals (plan_id, name, time_label, position)
-    values (v_plan, 'Cena', '21:00', 3) returning id into v_meal;
+    values (v_plan, 'Post-entreno', '19:30', 3) returning id into v_meal;
+  insert into public.nutrition_options (meal_id, position) values (v_meal, 0) returning id into v_opt;
+  insert into public.nutrition_items (option_id, food, amount, unit, kcal, protein, carbs, fat, position) values
+    (v_opt, 'Proteína whey', '30', 'g', 120, 24, 3, 2, 0),
+    (v_opt, 'Banana', '1', 'unidad', 105, 1, 27, 0, 1);
+
+  -- Cena (~610 kcal)
+  insert into public.nutrition_meals (plan_id, name, time_label, position)
+    values (v_plan, 'Cena', '21:30', 4) returning id into v_meal;
   insert into public.nutrition_options (meal_id, position) values (v_meal, 0) returning id into v_opt;
   insert into public.nutrition_items (option_id, food, amount, unit, kcal, protein, carbs, fat, position) values
     (v_opt, 'Carne magra', '200', 'g', 350, 52, 0, 15, 0),
@@ -269,7 +283,42 @@ begin
   insert into public.nutrition_meals (plan_id, name, time_label, position)
     values (v_plan, 'Desayuno', '8:30', 0) returning id into v_meal;
   insert into public.nutrition_options (meal_id, position) values (v_meal, 0) returning id into v_opt;
-  insert into public.nutrition_items (option_id, food, amount, unit, kcal, position) values
-    (v_opt, 'Té con leche', '1', 'taza', 60, 0),
-    (v_opt, 'Tostadas con queso blanco', '2', 'unidades', 220, 1);
+  insert into public.nutrition_items (option_id, food, amount, unit, kcal, protein, carbs, fat, position) values
+    (v_opt, 'Té con leche', '1', 'taza', 60, 3, 6, 2, 0),
+    (v_opt, 'Tostadas integrales', '2', 'unidades', 140, 6, 26, 2, 1),
+    (v_opt, 'Queso blanco', '2', 'cda', 60, 6, 2, 3, 2),
+    (v_opt, 'Huevo', '1', 'unidad', 75, 6, 0, 5, 3);
+
+  insert into public.nutrition_meals (plan_id, name, time_label, position)
+    values (v_plan, 'Media mañana', '11:00', 1) returning id into v_meal;
+  insert into public.nutrition_options (meal_id, position) values (v_meal, 0) returning id into v_opt;
+  insert into public.nutrition_items (option_id, food, amount, unit, kcal, protein, carbs, fat, position) values
+    (v_opt, 'Manzana', '1', 'unidad', 80, 0, 21, 0, 0),
+    (v_opt, 'Almendras', '15', 'g', 90, 3, 3, 8, 1);
+
+  insert into public.nutrition_meals (plan_id, name, time_label, position)
+    values (v_plan, 'Almuerzo', '13:30', 2) returning id into v_meal;
+  insert into public.nutrition_options (meal_id, position) values (v_meal, 0) returning id into v_opt;
+  insert into public.nutrition_items (option_id, food, amount, unit, kcal, protein, carbs, fat, position) values
+    (v_opt, 'Merluza', '200', 'g', 180, 36, 0, 3, 0),
+    (v_opt, 'Arroz integral (cocido)', '200', 'g', 220, 5, 46, 1, 1),
+    (v_opt, 'Puré de calabaza', '250', 'g', 100, 2, 22, 1, 2),
+    (v_opt, 'Aceite de oliva', '1', 'cdita', 40, 0, 0, 5, 3);
+
+  insert into public.nutrition_meals (plan_id, name, time_label, position)
+    values (v_plan, 'Merienda', '17:30', 3) returning id into v_meal;
+  insert into public.nutrition_options (meal_id, position) values (v_meal, 0) returning id into v_opt;
+  insert into public.nutrition_items (option_id, food, amount, unit, kcal, protein, carbs, fat, position) values
+    (v_opt, 'Yogur descremado', '200', 'g', 90, 8, 12, 0, 0),
+    (v_opt, 'Avena', '30', 'g', 115, 4, 20, 2, 1),
+    (v_opt, 'Nueces', '15', 'g', 100, 2, 2, 10, 2);
+
+  insert into public.nutrition_meals (plan_id, name, time_label, position)
+    values (v_plan, 'Cena', '21:00', 4) returning id into v_meal;
+  insert into public.nutrition_options (meal_id, position) values (v_meal, 0) returning id into v_opt;
+  insert into public.nutrition_items (option_id, food, amount, unit, kcal, protein, carbs, fat, position) values
+    (v_opt, 'Pollo (pechuga)', '150', 'g', 250, 46, 0, 5, 0),
+    (v_opt, 'Verduras salteadas', '200', 'g', 70, 3, 12, 1, 1),
+    (v_opt, 'Aceite de oliva', '1', 'cda', 120, 0, 0, 14, 2),
+    (v_opt, 'Pan integral', '1', 'rebanada', 80, 4, 14, 1, 3);
 end $$;
