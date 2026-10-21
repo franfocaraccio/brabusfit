@@ -13,7 +13,14 @@ type NavItem = {
   icon: React.ComponentType<{ className?: string }>;
 };
 
-export function AppNav({ isCoach }: { isCoach: boolean }) {
+export function AppNav({
+  isCoach,
+  pendingInvitations = 0,
+}: {
+  isCoach: boolean;
+  /** Invitaciones de coaches sin responder: globito en "Perfil". */
+  pendingInvitations?: number;
+}) {
   const pathname = usePathname();
 
   const items: NavItem[] = [
@@ -50,6 +57,9 @@ export function AppNav({ isCoach }: { isCoach: boolean }) {
             >
               <Icon className="size-4" />
               {label}
+              {href === "/perfil" && pendingInvitations > 0 ? (
+                <Badge count={pendingInvitations} className="ml-auto" />
+              ) : null}
             </Link>
           ))}
         </nav>
@@ -68,11 +78,30 @@ export function AppNav({ isCoach }: { isCoach: boolean }) {
                 : "text-muted-foreground",
             )}
           >
-            <Icon className="size-5" />
+            <span className="relative">
+              <Icon className="size-5" />
+              {href === "/perfil" && pendingInvitations > 0 ? (
+                <Badge count={pendingInvitations} className="absolute -top-1.5 -right-2.5" />
+              ) : null}
+            </span>
             {label}
           </Link>
         ))}
       </nav>
     </>
+  );
+}
+
+function Badge({ count, className }: { count: number; className?: string }) {
+  return (
+    <span
+      aria-label={`${count} invitación(es) pendiente(s)`}
+      className={cn(
+        "bg-primary text-primary-foreground flex size-4 items-center justify-center rounded-full text-[10px] font-bold",
+        className,
+      )}
+    >
+      {count}
+    </span>
   );
 }

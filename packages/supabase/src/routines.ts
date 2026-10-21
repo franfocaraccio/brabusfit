@@ -288,13 +288,17 @@ type DayRow = {
 export async function getRoutineDetail(
   client: BrabusClient,
   routineId: string,
-): Promise<{ routine: Routine; days: RoutineDayLite[] } | null> {
-  const { data: routine } = await client
+): Promise<{ routine: Routine; ownerName: string | null; days: RoutineDayLite[] } | null> {
+  const { data: row } = await client
     .from("routines")
-    .select("*")
+    .select("*, owner:profiles!routines_owner_id_fkey(first_name, last_name)")
     .eq("id", routineId)
     .maybeSingle();
-  if (!routine) return null;
+  if (!row) return null;
+  const { owner, ...routine } = row as unknown as Routine & {
+    owner: { first_name: string; last_name: string } | null;
+  };
+  const ownerName = owner ? `${owner.first_name} ${owner.last_name}`.trim() || null : null;
 
   const { data: daysData } = await client
     .from("routine_days")
@@ -309,5 +313,5 @@ export async function getRoutineDetail(
     exerciseCount: d.exercises[0]?.count ?? 0,
   }));
 
-  return { routine, days };
+  return { routine, ownerName, days };
 }

@@ -13,6 +13,7 @@ import { displayDateError, formatDisplayDate, parseDisplayDate } from "@brabus/s
 import { updateProfile } from "@brabus/supabase";
 
 import { Col, DateField, DecimalField, ErrorText, FieldHint, Row } from "@/components/forms";
+import { MyCoaches } from "@/components/my-coaches";
 import { Button, Card, Muted, SectionLabel, TextField } from "@/components/ui";
 import { confirm } from "@/lib/confirm";
 import { supabase } from "@/lib/supabase";
@@ -76,6 +77,8 @@ export default function PerfilScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
+        {!profile?.is_coach ? <MyCoaches /> : null}
+
         <Card style={styles.card}>
           <SectionLabel>Datos personales</SectionLabel>
           <Row>

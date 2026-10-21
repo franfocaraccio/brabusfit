@@ -1,18 +1,26 @@
+import { getMyCoaches } from "@brabus/supabase";
+
 import { AppNav } from "@/components/app/app-nav";
+import { InvitationsGate } from "@/components/app/invitations-gate";
 import { Logo } from "@/components/app/logo";
 import { LogoutButton } from "@/components/app/logout-button";
 import { requireProfile } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { profile } = await requireProfile();
+  const { userId, profile } = await requireProfile();
+  // Invitaciones de coaches pendientes (los coaches no son alumnos).
+  const invitations = profile.is_coach
+    ? []
+    : (await getMyCoaches(await createClient(), userId)).filter((c) => c.status === "pending");
 
   return (
     <div className="flex min-h-dvh">
-      <AppNav isCoach={profile.is_coach} />
+      <AppNav isCoach={profile.is_coach} pendingInvitations={invitations.length} />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="bg-background/80 sticky top-0 z-30 flex h-14 items-center justify-between border-b px-4 backdrop-blur md:px-6">
@@ -31,6 +39,8 @@ export default async function AppLayout({
           {children}
         </main>
       </div>
+
+      <InvitationsGate invitations={invitations} />
     </div>
   );
 }

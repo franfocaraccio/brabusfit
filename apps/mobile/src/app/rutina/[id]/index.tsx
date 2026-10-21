@@ -1,13 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import type { Routine } from "@brabus/shared";
 import {
   deleteRoutine,
   getRoutineDetail,
-  getRoutineShares,
+  getShareTargets,
   type RoutineDayLite,
 } from "@brabus/supabase";
 
@@ -16,10 +16,15 @@ import { Tile } from "@/components/tile";
 import { Button, Card, Muted, SectionLabel, Title } from "@/components/ui";
 import { confirm, notify } from "@/lib/confirm";
 import { supabase } from "@/lib/supabase";
-import { colors } from "@/lib/theme";
+import { colors, fonts } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
 
-type Detail = { routine: Routine; days: RoutineDayLite[]; shareCount: number };
+type Detail = {
+  routine: Routine;
+  ownerName: string | null;
+  days: RoutineDayLite[];
+  shareCount: number;
+};
 
 export default function RutinaScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -32,9 +37,9 @@ export default function RutinaScreen() {
       (async () => {
         const d = await getRoutineDetail(supabase, id);
         if (!d) return setDetail(null);
-        const canShare = d.routine.owner_id === session?.user.id && profile?.is_coach;
-        const shares = canShare ? await getRoutineShares(supabase, id) : [];
-        setDetail({ ...d, shareCount: shares.length });
+        const canShare = session && d.routine.owner_id === session.user.id && profile?.is_coach;
+        const targets = canShare ? await getShareTargets(supabase, session.user.id, id) : [];
+        setDetail({ ...d, shareCount: targets.filter((t) => t.shared).length });
       })();
     }, [id, session, profile?.is_coach]),
   );
@@ -66,7 +71,14 @@ export default function RutinaScreen() {
       <Stack.Screen options={{ title: "" }} />
       <View style={{ gap: 4 }}>
         <Title>{routine.name}</Title>
-        {!isOwner ? <Muted>Rutina compartida por tu coach.</Muted> : null}
+        {!isOwner ? (
+          <Muted>
+            Compartida por:{" "}
+            <Text style={{ color: colors.foreground, fontFamily: fonts.medium }}>
+              {detail.ownerName ?? "tu coach"}
+            </Text>
+          </Muted>
+        ) : null}
       </View>
 
       <View style={styles.actions}>

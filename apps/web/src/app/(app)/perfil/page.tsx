@@ -1,5 +1,9 @@
+import { getMyCoaches } from "@brabus/supabase";
+
 import { EditProfileForm } from "@/components/profile/edit-profile-form";
+import { MyCoaches } from "@/components/profile/my-coaches";
 import { requireProfile } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -12,11 +16,23 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 export default async function PerfilPage() {
-  const { profile, email } = await requireProfile();
+  const { userId, profile, email } = await requireProfile();
+  const coaches = profile.is_coach ? [] : await getMyCoaches(await createClient(), userId);
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold tracking-tight">Mi perfil</h1>
+
+      {!profile.is_coach && (
+        <Card id="coaches">
+          <CardHeader>
+            <CardTitle className="text-base">Mis coaches</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MyCoaches coaches={coaches} />
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

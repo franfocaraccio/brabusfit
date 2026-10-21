@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { History, Pencil } from "lucide-react";
 
-import { getRoutineDetail, getRoutineShares } from "@brabus/supabase";
+import { getRoutineDetail, getShareTargets } from "@brabus/supabase";
 
 import { LinkTile } from "@/components/app/link-tile";
 import { DeleteRoutineButton } from "@/components/routines/delete-routine-button";
@@ -24,13 +24,13 @@ export default async function RutinaDetailPage({
 
   const detail = await getRoutineDetail(supabase, id);
   if (!detail) notFound();
-  const { routine, days } = detail;
+  const { routine, ownerName, days } = detail;
 
   const isOwner = routine.owner_id === userId;
   const canShare = isOwner && profile.is_coach;
 
-  // Panel de compartir: solo el coach dueño.
-  const shares = canShare ? await getRoutineShares(supabase, id) : [];
+  // Panel de compartir: solo el coach dueño (elige entre sus alumnos).
+  const targets = canShare ? await getShareTargets(supabase, userId, id) : [];
 
   return (
     <div className="space-y-6">
@@ -46,7 +46,8 @@ export default async function RutinaDetailPage({
         </div>
         {!isOwner && (
           <p className="text-muted-foreground text-sm">
-            Rutina compartida por tu coach.
+            Compartida por:{" "}
+            <span className="text-foreground font-medium">{ownerName ?? "tu coach"}</span>
           </p>
         )}
       </div>
@@ -60,7 +61,7 @@ export default async function RutinaDetailPage({
             <Pencil className="size-4" /> Editar
           </Link>
         )}
-        {canShare && <ShareRoutine routineId={id} shares={shares} />}
+        {canShare && <ShareRoutine routineId={id} targets={targets} />}
         <Link
           href={`/rutinas/${id}/historial`}
           className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}

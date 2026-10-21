@@ -147,6 +147,16 @@ Storage + (si hace falta) un job programado.
   catálogo; `exercises.name` queda como etiqueta calculada por trigger
   ("Nombre (variante)"). Los gráficos de Progreso agrupan por ejercicio del
   catálogo. Pendiente a futuro: borrar `exercises.name` cuando ya no haga falta.
+- ✅ **Relación coach ↔ alumno explícita** (2026-10-21, migración 0009): tabla
+  `coach_students` (muchos a muchos, `pending` / `active`). El coach agrega
+  alumnos por usuario o email (invitación); puede compartirles cosas mientras
+  está pendiente, pero el alumno las ve recién al aceptar (popup al abrir la app
+  + globito en Perfil + aviso en Inicio). "Compartir" elige entre los alumnos.
+  Desvincular desde el coach permite conservar las rutinas
+  (`routine_shares.kept`); si el alumno se desvincula o rechaza, pierde todo lo
+  de ese coach. El coach solo ve entrenamientos con vínculo activo. **Base para
+  los módulos Nutrición y Reportes**: cada módulo nuevo debe respetar el mismo
+  acceso (vínculo activo o "conservado") y sumar su tilde al desvincular.
 - Ideas siguientes: reordenar ejercicios/días (el ícono de "arrastrar" del editor
   web hoy es decorativo), duplicar rutina.
 - **Alertas de progresión:** regla en SQL (ej. mismo peso N semanas y reps en el

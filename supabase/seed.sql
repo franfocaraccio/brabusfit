@@ -5,7 +5,8 @@
 -- Usuarios (contraseña de todos: brabus-test-123):
 --   coach@brabus.test    coach_test   coach
 --   coach2@brabus.test   coach_dos    coach (para probar "no se comparte a coaches")
---   alumno@brabus.test   alumno_test  alumno con rutina compartida + entrenamientos
+--   alumno@brabus.test   alumno_test  alumno de coach_test (activo) con rutina compartida
+--                                     + ~6 meses de entrenamientos
 --   alumno2@brabus.test  alumno_dos   alumno sin rutinas
 -- ============================================================================
 
@@ -68,6 +69,12 @@ insert into public.exercises (id, day_id, name, sets_reps, position) values
   ('d0000000-0000-0000-0000-000000000007', 'c0000000-0000-0000-0000-000000000003', 'Peso muerto rumano', '3x10', 1),
   ('d0000000-0000-0000-0000-000000000008', 'c0000000-0000-0000-0000-000000000004', 'Press inclinado', '4x10', 0);
 
+-- Vínculos coach ↔ alumno: Andrés ya aceptó; invitado@ todavía no tiene cuenta.
+insert into public.coach_students (coach_id, student_id, student_email, status, accepted_at) values
+  ('11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333',
+   'alumno@brabus.test', 'active', now()),
+  ('11111111-1111-1111-1111-111111111111', null, 'invitado@brabus.test', 'pending', null);
+
 insert into public.routine_shares (routine_id, shared_by, shared_with_email, shared_with_user_id, status, accepted_at) values
   ('b0000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111',
    'alumno@brabus.test', '33333333-3333-3333-3333-333333333333', 'accepted', now()),
@@ -105,3 +112,70 @@ insert into public.set_logs (exercise_log_id, set_number, weight, reps) values
   ('f0000000-0000-0000-0000-000000000002', 3, 62.5, 6),
   ('f0000000-0000-0000-0000-000000000003', 1, 35, 8),
   ('f0000000-0000-0000-0000-000000000003', 2, 35, 8);
+
+-- ============================================================================
+-- ~6 meses de entrenamientos de alumno@brabus.test (para ver los gráficos de
+-- Progreso con datos): lunes Día 1, miércoles Día 2, viernes Día 3, con
+-- algunas faltas y progresión de cargas.
+-- ============================================================================
+do $$
+declare
+  v_user    uuid := '33333333-3333-3333-3333-333333333333';
+  v_routine uuid := 'b0000000-0000-0000-0000-000000000001';
+  v_day     date;
+  v_week    int;
+  v_dow     int;
+  v_day_id  uuid;
+  v_session uuid;
+  v_log     uuid;
+  v_ex      record;
+  v_w       numeric;
+  v_reps    int;
+  v_sets    int;
+  v_t       numeric;
+begin
+  perform setseed(0.42);  -- mismos datos en cada reset
+  for v_day in select d::date from generate_series(current_date - 180, current_date - 4, interval '1 day') d loop
+    v_dow  := extract(isodow from v_day);
+    v_week := (v_day - (current_date - 180)) / 7;
+    v_day_id := case v_dow
+      when 1 then 'c0000000-0000-0000-0000-000000000001'::uuid
+      when 3 then 'c0000000-0000-0000-0000-000000000002'::uuid
+      when 5 then 'c0000000-0000-0000-0000-000000000003'::uuid
+      else null end;
+    continue when v_day_id is null;
+    continue when v_week in (9, 10) or random() < 0.15;
+
+    v_t := v_week / 25.0;
+    insert into public.workout_sessions (user_id, routine_id, day_id, started_at, finished_at, status)
+      values (v_user, v_routine, v_day_id, v_day + time '18:30', v_day + time '19:35', 'finished')
+      returning id into v_session;
+
+    for v_ex in
+      select e.id, e.position, e.name from public.exercises e where e.day_id = v_day_id order by e.position
+    loop
+      insert into public.exercise_logs (session_id, exercise_id, completed, note)
+        values (v_session, v_ex.id, true,
+                case when random() < 0.08 then (array['Última serie costó', 'Buena técnica', 'Hecho en Smith', 'Subir peso la próxima'])[1 + floor(random() * 4)::int] end)
+        returning id into v_log;
+
+      v_sets := case when v_ex.position = 0 then 4 else 3 end;
+      for s in 1..v_sets loop
+        v_w := case v_ex.name
+          when 'Press banca'        then 50 + 20 * v_t
+          when 'Press militar'      then 30 + 12.5 * v_t
+          when 'Remo con barra'     then 50 + 22.5 * v_t
+          when 'Sentadilla'         then 70 + 40 * v_t
+          when 'Peso muerto rumano' then 60 + 35 * v_t
+          else null end;
+        if v_w is not null then
+          v_w := round((v_w + (random() - 0.5) * 4) / 2.5) * 2.5;
+          v_reps := greatest(4, 10 - s + floor(random() * 3)::int);
+        else
+          v_reps := greatest(3, round(6 + 7 * v_t + (random() - 0.5) * 3 - (s - 1))::int);
+        end if;
+        insert into public.set_logs (exercise_log_id, set_number, weight, reps) values (v_log, s, v_w, v_reps);
+      end loop;
+    end loop;
+  end loop;
+end $$;

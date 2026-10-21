@@ -43,6 +43,20 @@ export type RoutineDayInput = {
   exercises: ExerciseInput[];
 };
 
+/** Vínculo coach ↔ alumno: invitación pendiente o activo. */
+export type LinkStatus = "pending" | "active";
+
+/** Validación en vivo al agregar un alumno. */
+export type AddStudentStatus =
+  | "forbidden"
+  | "invalid"
+  | "not_found"
+  | "self"
+  | "coach"
+  | "already"
+  | "existing"
+  | "new";
+
 export type MuscleGroup =
   | "pecho"
   | "espalda"
@@ -210,6 +224,8 @@ export type Database = {
           status: ShareStatus;
           created_at: string;
           accepted_at: string | null;
+          /** El alumno la conserva aunque el coach lo desvinculó. */
+          kept: boolean;
         };
         Insert: {
           id?: string;
@@ -224,6 +240,22 @@ export type Database = {
         Update: Partial<
           Database["public"]["Tables"]["routine_shares"]["Insert"]
         >;
+        Relationships: [];
+      };
+      coach_students: {
+        Row: {
+          id: string;
+          coach_id: string;
+          /** null mientras el email invitado no tiene cuenta. */
+          student_id: string | null;
+          student_email: string;
+          status: LinkStatus;
+          created_at: string;
+          accepted_at: string | null;
+        };
+        // Altas y cambios solo por RPC (add_student, respond_invitation, ...).
+        Insert: { coach_id: string; student_email: string };
+        Update: Record<string, never>;
         Relationships: [];
       };
       workout_sessions: {
@@ -332,6 +364,30 @@ export type Database = {
       };
       update_session_logs: {
         Args: { p_session_id: string; p_logs: SessionLogUpdate[] };
+        Returns: undefined;
+      };
+      validate_add_student: {
+        Args: { p_mode: "email" | "username"; p_value: string };
+        Returns: AddStudentStatus;
+      };
+      add_student: {
+        Args: { p_mode: "email" | "username"; p_value: string };
+        Returns: { id: string; existed: boolean; email: string };
+      };
+      respond_invitation: {
+        Args: { p_link_id: string; p_accept: boolean };
+        Returns: undefined;
+      };
+      unlink_student: {
+        Args: { p_link_id: string; p_keep_routines: boolean };
+        Returns: undefined;
+      };
+      leave_coach: {
+        Args: { p_link_id: string };
+        Returns: undefined;
+      };
+      set_routine_share: {
+        Args: { p_routine_id: string; p_link_id: string; p_shared: boolean };
         Returns: undefined;
       };
     };

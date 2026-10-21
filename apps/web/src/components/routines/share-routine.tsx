@@ -1,19 +1,15 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Clock, Share2, Trash2, UserCheck } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Check, Share2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
-import {
-  checkShareEmail,
-  checkShareUsername,
-  shareRoutine,
-  shareRoutineByUsername,
-  unshareRoutine,
-} from "@/lib/actions/shares";
-import { usernameError } from "@brabus/shared";
-import { Button } from "@/components/ui/button";
+import type { ShareTarget } from "@brabus/supabase";
+
+import { setRoutineShare } from "@/lib/actions/students";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -22,166 +18,44 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
-export type { ShareRow } from "@brabus/supabase";
-import { shareDisplayName, type ShareRow } from "@brabus/supabase";
-
-type Mode = "email" | "username";
-
+/** Compartir una rutina eligiendo entre los alumnos del coach. */
 export function ShareRoutine({
   routineId,
-  shares,
+  targets,
 }: {
   routineId: string;
-  shares: ShareRow[];
+  targets: ShareTarget[];
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<Mode>("email");
-  const [value, setValue] = useState("");
-  const [status, setStatus] = useState<string | null>(null);
-  const [checking, setChecking] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [busy, setBusy] = useState<string | null>(null);
+  const sharedCount = targets.filter((t) => t.shared).length;
 
-  const looksValid = (v: string) =>
-    mode === "email" ? /.+@.+\..+/.test(v.trim()) : !usernameError(v.trim());
-
-  // Validación en vivo (debounced) según el modo.
-  useEffect(() => {
-    const v = value.trim();
-    if (!v || !looksValid(v)) return;
-    let cancelled = false;
-    const t = setTimeout(async () => {
-      const result =
-        mode === "email"
-          ? await checkShareEmail(routineId, v)
-          : await checkShareUsername(routineId, v);
-      if (!cancelled) {
-        setStatus(result);
-        setChecking(false);
-      }
-    }, 400);
-    return () => {
-      cancelled = true;
-      clearTimeout(t);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, mode, routineId]);
-
-  const onChange = (raw: string) => {
-    const v = mode === "username" ? raw.toLowerCase() : raw;
-    setValue(v);
-    setStatus(null);
-    setChecking(v.trim() !== "" && looksValid(v));
-  };
-
-  const switchMode = (m: Mode) => {
-    setMode(m);
-    setValue("");
-    setStatus(null);
-    setChecking(false);
-  };
-
-  // El botón se habilita SOLO cuando el destino es realmente compartible.
-  const canShare =
-    !pending &&
-    !checking &&
-    (mode === "email"
-      ? status === "existing" || status === "new"
-      : status === "existing");
-
-  const submit = () => {
-    const v = value.trim();
-    if (!canShare || !v) return;
+  const toggle = (t: ShareTarget) => {
+    setBusy(t.linkId);
     startTransition(async () => {
-      const result =
-        mode === "email"
-          ? await shareRoutine(routineId, v)
-          : await shareRoutineByUsername(routineId, v);
+      const result = await setRoutineShare(routineId, t.linkId, !t.shared);
+      setBusy(null);
       if (!result.ok) {
         toast.error(result.error);
         return;
       }
-      toast.success(
-        result.data.existed
-          ? "Rutina compartida. Le avisamos por email."
-          : "Invitación enviada. Se vinculará cuando cree su cuenta.",
-      );
-      setValue("");
-      setStatus(null);
-      setChecking(false);
+      toast.success(t.shared ? `Se dejó de compartir con ${t.name}` : `Compartida con ${t.name}`);
       router.refresh();
     });
   };
-
-  const remove = (shareId: string) => {
-    startTransition(async () => {
-      const result = await unshareRoutine(shareId, routineId);
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success("Se dejó de compartir");
-      router.refresh();
-    });
-  };
-
-  const feedback = ((): { text: string; cls: string } | null => {
-    const v = value.trim();
-    if (checking) return { text: "Verificando…", cls: "text-muted-foreground" };
-    if (v && !looksValid(v)) {
-      return mode === "username"
-        ? { text: usernameError(v) ?? "", cls: "text-destructive" }
-        : { text: "Email inválido.", cls: "text-destructive" };
-    }
-    switch (status) {
-      case "self":
-        return {
-          text: mode === "email" ? "Ese es tu propio email." : "Ese sos vos.",
-          cls: "text-destructive",
-        };
-      case "coach":
-        return {
-          text: "No podés compartir una rutina con un coach.",
-          cls: "text-destructive",
-        };
-      case "not_found":
-        return {
-          text: "No existe un usuario con ese nombre.",
-          cls: "text-destructive",
-        };
-      case "already":
-        return {
-          text: "Ya está compartida con ese destinatario.",
-          cls: "text-amber-500",
-        };
-      case "existing":
-        return {
-          text: "Usuario encontrado — le llega al instante.",
-          cls: "text-emerald-500",
-        };
-      case "new":
-        return {
-          text: "Se le enviará una invitación para crear su cuenta.",
-          cls: "text-muted-foreground",
-        };
-      default:
-        return null;
-    }
-  })();
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog>
       <DialogTrigger
         render={
           <Button variant="outline" size="sm" className="gap-1.5">
             <Share2 className="size-4" /> Compartir
-            {shares.length > 0 ? (
+            {sharedCount > 0 ? (
               <span className="bg-primary text-primary-foreground ml-1 rounded-full px-1.5 text-xs">
-                {shares.length}
+                {sharedCount}
               </span>
             ) : null}
           </Button>
@@ -191,101 +65,52 @@ export function ShareRoutine({
         <DialogHeader>
           <DialogTitle>Compartir rutina</DialogTitle>
           <DialogDescription>
-            Compartí con tu alumno por email o por nombre de usuario.
+            Elegí con cuáles de tus alumnos compartirla. Los que tienen la invitación pendiente la
+            van a ver cuando la acepten.
           </DialogDescription>
         </DialogHeader>
 
-        {/* Selector de modo */}
-        <div className="bg-muted inline-flex w-fit rounded-lg p-0.5">
-          {(["email", "username"] as Mode[]).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => switchMode(m)}
-              className={cn(
-                "rounded-md px-3 py-1 text-sm font-medium transition-colors",
-                mode === m
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {m === "email" ? "Email" : "Usuario"}
-            </button>
-          ))}
-        </div>
-
-        <div className="space-y-1.5">
-          <div className="flex items-end gap-2">
-            <div className="flex-1 space-y-2">
-              <Label htmlFor="share-input">
-                {mode === "email" ? "Email del alumno" : "Nombre de usuario"}
-              </Label>
-              <Input
-                id="share-input"
-                type={mode === "email" ? "email" : "text"}
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                placeholder={
-                  mode === "email" ? "alumno@email.com" : "juan.perez"
-                }
-                autoCapitalize="none"
-                autoComplete="off"
-                aria-invalid={Boolean(feedback && feedback.cls.includes("destructive"))}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") submit();
-                }}
-              />
-            </div>
-            <Button onClick={submit} disabled={!canShare}>
-              Compartir
-            </Button>
-          </div>
-          {feedback ? (
-            <p className={`text-xs ${feedback.cls}`}>{feedback.text}</p>
-          ) : null}
-        </div>
-
-        {shares.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-muted-foreground text-xs font-semibold">
-              Compartida con
-            </p>
-            <div className="divide-y rounded-md border">
-              {shares.map((s) => {
-                const name = shareDisplayName(s);
-                return (
-                  <div
-                    key={s.id}
-                    className="flex items-center gap-2 px-3 py-2.5 text-sm"
-                  >
-                    {s.status === "accepted" ? (
-                      <UserCheck className="size-4 shrink-0 text-emerald-600" />
-                    ) : (
-                      <Clock className="text-muted-foreground size-4 shrink-0" />
-                    )}
-                    <span className="min-w-0 flex-1 truncate">
-                      <span className="block truncate font-medium">{name}</span>
-                      <span className="text-muted-foreground text-xs">
-                        {s.status === "accepted"
-                          ? s.shared_with_email
-                          : `${s.shared_with_email} · Pendiente`}
-                      </span>
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label="Dejar de compartir"
-                      onClick={() => remove(s.id)}
-                      disabled={pending}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
+        {targets.length === 0 ? (
+          <p className="text-muted-foreground text-sm">Todavía no tenés alumnos.</p>
+        ) : (
+          <div className="max-h-[50vh] divide-y overflow-y-auto rounded-lg border">
+            {targets.map((t) => (
+              <button
+                key={t.linkId}
+                type="button"
+                onClick={() => toggle(t)}
+                disabled={pending}
+                className="hover:bg-muted/50 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors disabled:opacity-60"
+              >
+                <span
+                  className={cn(
+                    "flex size-5 shrink-0 items-center justify-center rounded border",
+                    t.shared && "border-primary bg-primary text-primary-foreground",
+                  )}
+                >
+                  {t.shared ? <Check className="size-3.5" /> : null}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">{t.name}</span>
+                  <span className="text-muted-foreground block truncate text-xs">
+                    {t.username ? `@${t.username}` : t.email}
+                    {t.status === "pending" ? " · Invitación pendiente" : ""}
+                  </span>
+                </span>
+                {busy === t.linkId ? (
+                  <span className="text-muted-foreground text-xs">…</span>
+                ) : null}
+              </button>
+            ))}
           </div>
         )}
+
+        <Link
+          href="/alumnos?agregar=1"
+          className={cn(buttonVariants({ variant: "outline" }), "w-full gap-1.5")}
+        >
+          <UserPlus className="size-4" /> Agregar alumno
+        </Link>
       </DialogContent>
     </Dialog>
   );

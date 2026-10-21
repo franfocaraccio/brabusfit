@@ -53,6 +53,21 @@ export async function sendRoutineSharedEmail(params: {
   );
 }
 
+/** Un coach agregó como alumno a alguien que todavía no tiene cuenta. */
+export async function sendCoachInviteEmail(params: { to: string; coachName: string }) {
+  const { to, coachName } = params;
+  await send(
+    to,
+    `${coachName} te invitó a Brabus Fit`,
+    shell(
+      "Te invitaron a un grupo de entrenamiento",
+      `<strong>${coachName}</strong> te agregó a su grupo de entrenamiento en Brabus Fit. Creá tu cuenta con este email y aceptá la invitación al ingresar.`,
+      "Crear mi cuenta",
+      `${siteUrl}/signup`,
+    ),
+  );
+}
+
 /** Invitación a alguien que todavía no tiene cuenta. */
 export async function sendRoutineInviteEmail(params: {
   to: string;

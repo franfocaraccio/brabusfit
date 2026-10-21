@@ -16,6 +16,7 @@ import { useEffect } from "react";
 
 import { colors, fonts } from "@/lib/theme";
 import { AuthProvider, useAuth } from "@/providers/auth";
+import { CoachesProvider } from "@/providers/coaches";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -31,8 +32,10 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <StatusBar style="light" />
-      <RootNavigator fontsLoaded={fontsLoaded} />
+      <CoachesProvider>
+        <StatusBar style="light" />
+        <RootNavigator fontsLoaded={fontsLoaded} />
+      </CoachesProvider>
     </AuthProvider>
   );
 }

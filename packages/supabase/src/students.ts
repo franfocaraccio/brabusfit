@@ -1,69 +1,129 @@
+import {
+  fail,
+  ok,
+  type ActionResult,
+  type AddStudentStatus,
+  type LinkStatus,
+} from "@brabus/shared";
+
 import type { BrabusClient } from "./client";
 
+// ---------------------------------------------------------------------------
+// Coach: sus alumnos
+// ---------------------------------------------------------------------------
+
 export type StudentSummary = {
-  id: string;
+  /** Id del vínculo coach ↔ alumno (para compartir / desvincular). */
+  linkId: string;
+  /** null mientras el email invitado no tiene cuenta. */
+  studentId: string | null;
   name: string;
   email: string;
-  routines: string[];
-  /** ISO de su último entrenamiento finalizado, o null. */
+  username: string | null;
+  status: LinkStatus;
+  /** Rutinas que el coach le compartió. */
+  routineCount: number;
+  /** ISO de su último entrenamiento finalizado (solo con vínculo activo), o null. */
   lastActivity: string | null;
 };
 
-type StudentShareRow = {
-  shared_with_user_id: string | null;
-  shared_with_email: string;
-  student: { first_name: string; last_name: string } | null;
-  routine: { id: string; name: string } | null;
+type LinkRow = {
+  id: string;
+  student_id: string | null;
+  student_email: string;
+  status: LinkStatus;
+  student: { first_name: string; last_name: string; username: string | null } | null;
 };
 
-/**
- * Alumnos del coach: usuarios con al menos una rutina compartida aceptada.
- * RLS limita las filas a las rutinas del coach y a las sesiones visibles.
- */
-export async function getStudents(client: BrabusClient): Promise<StudentSummary[]> {
-  const [sharesRes, sessionsRes] = await Promise.all([
+const personName = (p: { first_name: string; last_name: string } | null, fallback: string) =>
+  p ? `${p.first_name} ${p.last_name}`.trim() || fallback : fallback;
+
+/** Alumnos del coach (activos y con invitación pendiente). */
+export async function getStudents(
+  client: BrabusClient,
+  coachId: string,
+): Promise<StudentSummary[]> {
+  const [linksRes, sharesRes, sessionsRes] = await Promise.all([
     client
-      .from("routine_shares")
+      .from("coach_students")
       .select(
-        "shared_with_user_id, shared_with_email, student:profiles!routine_shares_shared_with_user_id_fkey(first_name, last_name), routine:routines(id, name)",
+        "id, student_id, student_email, status, student:profiles!coach_students_student_id_fkey(first_name, last_name, username)",
       )
-      .eq("status", "accepted"),
+      .eq("coach_id", coachId)
+      .order("created_at", { ascending: false }),
+    client.from("routine_shares").select("shared_with_email").eq("shared_by", coachId),
     client
       .from("workout_sessions")
       .select("user_id, finished_at")
       .eq("status", "finished")
+      .neq("user_id", coachId)
       .order("finished_at", { ascending: false }),
   ]);
 
-  const shares = (sharesRes.data ?? []) as unknown as StudentShareRow[];
-  const sessions = (sessionsRes.data ?? []) as { user_id: string; finished_at: string | null }[];
-
+  const routinesByEmail = new Map<string, number>();
+  for (const s of sharesRes.data ?? []) {
+    const k = s.shared_with_email.toLowerCase();
+    routinesByEmail.set(k, (routinesByEmail.get(k) ?? 0) + 1);
+  }
   const lastByUser = new Map<string, string>();
-  for (const s of sessions) {
+  for (const s of sessionsRes.data ?? []) {
     if (s.finished_at && !lastByUser.has(s.user_id)) lastByUser.set(s.user_id, s.finished_at);
   }
 
-  const groups = new Map<string, StudentSummary>();
-  for (const s of shares) {
-    if (!s.shared_with_user_id) continue;
-    const routineName = s.routine?.name;
-    const existing = groups.get(s.shared_with_user_id);
-    if (existing) {
-      if (routineName) existing.routines.push(routineName);
-      continue;
-    }
-    groups.set(s.shared_with_user_id, {
-      id: s.shared_with_user_id,
-      name: s.student
-        ? `${s.student.first_name} ${s.student.last_name}`.trim()
-        : s.shared_with_email,
-      email: s.shared_with_email,
-      routines: routineName ? [routineName] : [],
-      lastActivity: lastByUser.get(s.shared_with_user_id) ?? null,
-    });
-  }
-  return [...groups.values()];
+  return ((linksRes.data ?? []) as unknown as LinkRow[]).map((l) => ({
+    linkId: l.id,
+    studentId: l.student_id,
+    name: personName(l.student, l.student_email),
+    email: l.student_email,
+    username: l.student?.username ?? null,
+    status: l.status,
+    routineCount: routinesByEmail.get(l.student_email.toLowerCase()) ?? 0,
+    lastActivity: l.student_id ? (lastByUser.get(l.student_id) ?? null) : null,
+  }));
 }
+
+/** Validación en vivo al escribir el usuario o email del alumno a agregar. */
+export async function checkAddStudent(
+  client: BrabusClient,
+  mode: "email" | "username",
+  value: string,
+): Promise<AddStudentStatus | null> {
+  const { data, error } = await client.rpc("validate_add_student", {
+    p_mode: mode,
+    p_value: value,
+  });
+  if (error) return null;
+  return data as AddStudentStatus;
+}
+
+/** Agrega un alumno: queda con invitación pendiente hasta que la acepte. */
+export async function addStudent(
+  client: BrabusClient,
+  mode: "email" | "username",
+  value: string,
+): Promise<ActionResult<{ id: string; existed: boolean; email: string }>> {
+  const { data, error } = await client.rpc("add_student", { p_mode: mode, p_value: value });
+  if (error) return fail(error.message);
+  return ok(data as { id: string; existed: boolean; email: string });
+}
+
+/** Desvincula un alumno. Con keepRoutines, el alumno conserva las rutinas compartidas. */
+export async function unlinkStudent(
+  client: BrabusClient,
+  linkId: string,
+  options: { keepRoutines: boolean },
+): Promise<ActionResult> {
+  const { error } = await client.rpc("unlink_student", {
+    p_link_id: linkId,
+    p_keep_routines: options.keepRoutines,
+  });
+  if (error) return fail(error.message);
+  return ok(undefined);
+}
+
+// ---------------------------------------------------------------------------
+// Coach: detalle de un alumno
+// ---------------------------------------------------------------------------
 
 export type StudentSetLog = { set_number: number; weight: number | null; reps: number | null };
 export type StudentExerciseLog = {
@@ -81,35 +141,167 @@ export type StudentSession = {
   exercise_logs: StudentExerciseLog[];
 };
 
-/** Datos del alumno + sus últimos 20 entrenamientos. Null si no existe o no hay acceso. */
+export type StudentDetail = {
+  name: string;
+  email: string;
+  username: string | null;
+  link: { id: string; status: LinkStatus };
+  /** Rutinas que el coach le compartió. */
+  routines: { id: string; name: string }[];
+  /** Últimos 20 entrenamientos (solo con vínculo activo). */
+  sessions: StudentSession[];
+};
+
+/** Alumno vinculado al coach. Null si no es su alumno. */
 export async function getStudentDetail(
   client: BrabusClient,
+  coachId: string,
   studentId: string,
-): Promise<{ name: string; sessions: StudentSession[] } | null> {
-  const { data: student } = await client
-    .from("profiles")
-    .select("first_name, last_name")
-    .eq("id", studentId)
-    .maybeSingle();
-  if (!student) return null;
-
-  const { data } = await client
-    .from("workout_sessions")
+): Promise<StudentDetail | null> {
+  const { data: link } = await client
+    .from("coach_students")
     .select(
-      "id, finished_at, started_at, day:routine_days(name), routine:routines(name), exercise_logs(completed, note, exercise:exercises(name), set_logs(set_number, weight, reps))",
+      "id, status, student_email, student:profiles!coach_students_student_id_fkey(first_name, last_name, username)",
     )
-    .eq("user_id", studentId)
-    .eq("status", "finished")
-    .order("finished_at", { ascending: false })
-    .limit(20);
+    .eq("coach_id", coachId)
+    .eq("student_id", studentId)
+    .maybeSingle();
+  if (!link) return null;
+  const l = link as unknown as {
+    id: string;
+    status: LinkStatus;
+    student_email: string;
+    student: { first_name: string; last_name: string; username: string | null } | null;
+  };
+
+  const [sharesRes, sessionsRes] = await Promise.all([
+    client
+      .from("routine_shares")
+      .select("routine:routines(id, name)")
+      .eq("shared_by", coachId)
+      .eq("shared_with_user_id", studentId),
+    client
+      .from("workout_sessions")
+      .select(
+        "id, finished_at, started_at, day:routine_days(name), routine:routines(name), exercise_logs(completed, note, exercise:exercises(name), set_logs(set_number, weight, reps))",
+      )
+      .eq("user_id", studentId)
+      .eq("status", "finished")
+      .order("finished_at", { ascending: false })
+      .limit(20),
+  ]);
 
   return {
-    name: `${student.first_name} ${student.last_name}`.trim(),
-    sessions: (data ?? []) as unknown as StudentSession[],
+    name: personName(l.student, l.student_email),
+    email: l.student_email,
+    username: l.student?.username ?? null,
+    link: { id: l.id, status: l.status },
+    routines: ((sharesRes.data ?? []) as unknown as { routine: { id: string; name: string } | null }[])
+      .map((s) => s.routine)
+      .filter((r): r is { id: string; name: string } => r !== null)
+      .sort((a, b) => a.name.localeCompare(b.name, "es")),
+    sessions: (sessionsRes.data ?? []) as unknown as StudentSession[],
   };
 }
 
 /** Logs con algo para mostrar (series o detalle). */
 export function visibleLogs(session: StudentSession): StudentExerciseLog[] {
   return session.exercise_logs.filter((l) => l.set_logs.length > 0 || l.note);
+}
+
+// ---------------------------------------------------------------------------
+// Compartir una rutina con alumnos
+// ---------------------------------------------------------------------------
+
+export type ShareTarget = StudentSummary & { shared: boolean };
+
+/** Alumnos del coach indicando a cuáles ya les compartió esta rutina. */
+export async function getShareTargets(
+  client: BrabusClient,
+  coachId: string,
+  routineId: string,
+): Promise<ShareTarget[]> {
+  const [students, sharesRes] = await Promise.all([
+    getStudents(client, coachId),
+    client.from("routine_shares").select("shared_with_email").eq("routine_id", routineId),
+  ]);
+  const shared = new Set((sharesRes.data ?? []).map((s) => s.shared_with_email.toLowerCase()));
+  return students.map((s) => ({ ...s, shared: shared.has(s.email.toLowerCase()) }));
+}
+
+export async function setRoutineShare(
+  client: BrabusClient,
+  routineId: string,
+  linkId: string,
+  shared: boolean,
+): Promise<ActionResult> {
+  const { error } = await client.rpc("set_routine_share", {
+    p_routine_id: routineId,
+    p_link_id: linkId,
+    p_shared: shared,
+  });
+  if (error) return fail(error.message);
+  return ok(undefined);
+}
+
+// ---------------------------------------------------------------------------
+// Alumno: sus coaches e invitaciones
+// ---------------------------------------------------------------------------
+
+export type MyCoach = {
+  linkId: string;
+  coachId: string;
+  name: string;
+  username: string | null;
+  status: LinkStatus;
+  createdAt: string;
+};
+
+/** Coaches del alumno: activos e invitaciones pendientes. */
+export async function getMyCoaches(client: BrabusClient, studentId: string): Promise<MyCoach[]> {
+  const { data } = await client
+    .from("coach_students")
+    .select(
+      "id, coach_id, status, created_at, coach:profiles!coach_students_coach_id_fkey(first_name, last_name, username)",
+    )
+    .eq("student_id", studentId)
+    .order("created_at", { ascending: false });
+
+  return (
+    (data ?? []) as unknown as {
+      id: string;
+      coach_id: string;
+      status: LinkStatus;
+      created_at: string;
+      coach: { first_name: string; last_name: string; username: string | null } | null;
+    }[]
+  ).map((c) => ({
+    linkId: c.id,
+    coachId: c.coach_id,
+    name: personName(c.coach, "Coach"),
+    username: c.coach?.username ?? null,
+    status: c.status,
+    createdAt: c.created_at,
+  }));
+}
+
+/** Aceptar o rechazar una invitación. Rechazar borra lo que el coach le había compartido. */
+export async function respondInvitation(
+  client: BrabusClient,
+  linkId: string,
+  accept: boolean,
+): Promise<ActionResult> {
+  const { error } = await client.rpc("respond_invitation", {
+    p_link_id: linkId,
+    p_accept: accept,
+  });
+  if (error) return fail(error.message);
+  return ok(undefined);
+}
+
+/** El alumno se desvincula de un coach y pierde todo lo que ese coach le compartía. */
+export async function leaveCoach(client: BrabusClient, linkId: string): Promise<ActionResult> {
+  const { error } = await client.rpc("leave_coach", { p_link_id: linkId });
+  if (error) return fail(error.message);
+  return ok(undefined);
 }
