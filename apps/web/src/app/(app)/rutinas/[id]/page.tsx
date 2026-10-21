@@ -2,11 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { History, Pencil } from "lucide-react";
 
-import { getRoutineDetail, getStudents } from "@brabus/supabase";
+import { getClients, getRoutineDetail, getRoutineExport } from "@brabus/supabase";
 
 import { LinkTile } from "@/components/app/link-tile";
+import { AccessBadge } from "@/components/clients/clients-list";
 import { DeleteRoutineButton } from "@/components/routines/delete-routine-button";
 import { AssignRoutine } from "@/components/routines/assign-routine";
+import { ExportRoutine } from "@/components/routines/export-routine";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireProfile } from "@/lib/auth";
@@ -24,21 +26,24 @@ export default async function RutinaDetailPage({
 
   const detail = await getRoutineDetail(supabase, id);
   if (!detail) notFound();
-  const { routine, ownerName, student, days } = detail;
+  const { routine, ownerName, client, days } = detail;
 
   const isOwner = routine.owner_id === userId;
-  // Plantilla del coach: se asigna a un alumno creándole una copia propia.
-  const canAssign = isOwner && profile.is_coach && !student;
-  const students = canAssign ? await getStudents(supabase, userId) : [];
+  // Plantilla del coach: se asigna a un cliente creándole una copia propia.
+  const canAssign = isOwner && profile.is_coach && !routine.client_id;
+  const [clients, exportData] = await Promise.all([
+    canAssign ? getClients(supabase, userId) : Promise.resolve([]),
+    getRoutineExport(supabase, id, detail),
+  ]);
 
   return (
     <div className="space-y-6">
       <div>
         <Link
-          href="/rutinas"
+          href={client ? `/clientes/${client.id}` : "/rutinas"}
           className="text-muted-foreground hover:text-foreground text-sm"
         >
-          ← Rutinas
+          ← {client ? client.name : "Rutinas"}
         </Link>
         <div className="mt-1 flex items-start justify-between gap-2">
           <h1 className="text-2xl font-bold tracking-tight">{routine.name}</h1>
@@ -49,35 +54,26 @@ export default async function RutinaDetailPage({
             <span className="text-foreground font-medium">{ownerName ?? "tu coach"}</span>
           </p>
         )}
-        {isOwner && student && (
+        {isOwner && client && (
           <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-sm">
             <span>
               Rutina de:{" "}
-              {student.id && student.linkStatus ? (
-                <Link
-                  href={`/alumnos/${student.id}`}
-                  className="text-foreground font-medium hover:underline"
-                >
-                  {student.name}
-                </Link>
-              ) : (
-                <span className="text-foreground font-medium">{student.name}</span>
-              )}
+              <Link
+                href={`/clientes/${client.id}`}
+                className="text-foreground font-medium hover:underline"
+              >
+                {client.name}
+              </Link>
             </span>
-            {student.linkStatus === "pending" ? (
-              <span className="rounded bg-amber-500/15 px-1.5 text-[10px] font-semibold text-amber-500">
-                Invitación pendiente
-              </span>
-            ) : student.linkStatus === null ? (
-              <span className="bg-muted rounded px-1.5 text-[10px] font-semibold">
-                Desvinculado
-              </span>
+            <AccessBadge access={client.appAccess} />
+            {client.archived ? (
+              <span className="bg-muted rounded px-1.5 text-[10px] font-semibold">Archivado</span>
             ) : null}
           </p>
         )}
         {canAssign && (
           <p className="text-muted-foreground text-sm">
-            Plantilla: asignala a un alumno para crearle su propia copia.
+            Plantilla: asignala a un cliente para crearle su propia copia.
           </p>
         )}
       </div>
@@ -91,7 +87,10 @@ export default async function RutinaDetailPage({
             <Pencil className="size-4" /> Editar
           </Link>
         )}
-        {canAssign && <AssignRoutine routineId={id} students={students} />}
+        {canAssign && (
+          <AssignRoutine routineId={id} clients={clients.filter((c) => !c.archived)} />
+        )}
+        {exportData && <ExportRoutine data={exportData} />}
         <Link
           href={`/rutinas/${id}/historial`}
           className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}
@@ -103,7 +102,7 @@ export default async function RutinaDetailPage({
 
       <section className="space-y-2.5">
         <h2 className="text-muted-foreground text-sm font-semibold">
-          Elegí un día para entrenar
+          {client ? "Días" : "Elegí un día para entrenar"}
         </h2>
         {days.length > 0 ? (
           <div className="stagger space-y-2.5">

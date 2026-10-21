@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { formatSessionDate, summarizeHistory } from "@brabus/shared";
-import { getSessionDetail } from "@brabus/supabase";
+import { getClientIdForStudent, getSessionDetail } from "@brabus/supabase";
 
 import { SessionEditor } from "@/components/history/session-editor";
 import { Card } from "@/components/ui/card";
@@ -17,14 +17,18 @@ export default async function SesionPage({
   const { sessionId } = await params;
   const { userId } = await requireProfile();
 
-  const session = await getSessionDetail(await createClient(), sessionId);
+  const supabase = await createClient();
+  const session = await getSessionDetail(supabase, sessionId);
   if (!session) notFound();
 
   // Solo quien entrenó edita; el coach (dueño de la rutina) la ve en solo lectura.
   const isOwner = session.userId === userId;
+  const clientId = isOwner ? null : await getClientIdForStudent(supabase, userId, session.userId);
   const back = isOwner
     ? { href: `/rutinas/${session.routineId}/historial`, label: "Historial" }
-    : { href: `/alumnos/${session.userId}`, label: "Alumno" };
+    : clientId
+      ? { href: `/clientes/${clientId}`, label: "Cliente" }
+      : { href: "/clientes", label: "Clientes" };
 
   return (
     <div className="space-y-6">

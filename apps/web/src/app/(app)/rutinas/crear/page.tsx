@@ -1,4 +1,4 @@
-import { getCatalog, getFolders, getStudents } from "@brabus/supabase";
+import { getCatalog, getClients, getFolders } from "@brabus/supabase";
 
 import { RoutineBuilder } from "@/components/routines/routine-builder";
 import { requireProfile } from "@/lib/auth";
@@ -7,15 +7,15 @@ import { createClient } from "@/lib/supabase/server";
 export default async function CrearRutinaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ alumno?: string }>;
+  searchParams: Promise<{ cliente?: string }>;
 }) {
   const { userId, profile } = await requireProfile();
-  const { alumno } = await searchParams;
+  const { cliente } = await searchParams;
   const supabase = await createClient();
-  const [folders, catalog, students] = await Promise.all([
+  const [folders, catalog, clients] = await Promise.all([
     getFolders(supabase, userId),
     getCatalog(supabase, userId),
-    profile.is_coach ? getStudents(supabase, userId) : Promise.resolve([]),
+    profile.is_coach ? getClients(supabase, userId) : Promise.resolve([]),
   ]);
 
   return (
@@ -25,8 +25,8 @@ export default async function CrearRutinaPage({
         folders={folders}
         catalog={catalog}
         isCoach={profile.is_coach}
-        students={students}
-        initialStudentLinkId={alumno}
+        clients={clients.filter((c) => !c.archived)}
+        initialClientId={cliente}
       />
     </div>
   );

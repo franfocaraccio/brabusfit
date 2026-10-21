@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { createRoutine, updateRoutine } from "@/lib/actions/routines";
 import type { CatalogEntry, RoutineDayInput } from "@brabus/shared";
-import type { FolderLite, StudentSummary } from "@brabus/supabase";
+import type { ClientSummary, FolderLite } from "@brabus/supabase";
 import { ExercisePicker } from "@/components/routines/exercise-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,7 +31,7 @@ type ExerciseDraft = {
 type DayDraft = { key: string; id?: string; name: string; exercises: ExerciseDraft[] };
 
 const NEW_FOLDER = "__new__";
-/** Destino "plantilla" (en vez de un alumno). */
+/** Destino "plantilla" (en vez de un cliente). */
 const TEMPLATE = "__template__";
 const newKey = () => crypto.randomUUID();
 
@@ -46,8 +46,8 @@ export type RoutineBuilderInitial = {
   id: string;
   name: string;
   folderId: string | null;
-  /** Rutina asignada a un alumno: no usa carpeta. */
-  studentName: string | null;
+  /** Rutina de un cliente: no usa carpeta. */
+  clientName: string | null;
   days: DayDraft[];
 };
 
@@ -56,18 +56,18 @@ export function RoutineBuilder({
   catalog,
   isCoach,
   initial,
-  students = [],
-  initialStudentLinkId,
+  clients = [],
+  initialClientId,
 }: {
   folders: FolderLite[];
   /** Catálogo de ejercicios disponible (general + propios). */
   catalog: CatalogEntry[];
   isCoach: boolean;
   initial?: RoutineBuilderInitial;
-  /** Coach, al crear: alumnos a los que se le puede armar la rutina. */
-  students?: StudentSummary[];
+  /** Coach, al crear: clientes a los que se le puede armar la rutina. */
+  clients?: ClientSummary[];
   /** Alumno elegido de entrada (viene de su página). */
-  initialStudentLinkId?: string;
+  initialClientId?: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -78,10 +78,10 @@ export function RoutineBuilder({
     initial?.folderId ?? null,
   );
   const [newFolderName, setNewFolderName] = useState("");
-  // Coach al crear: plantilla (con carpeta) o rutina para un alumno.
+  // Coach al crear: plantilla (con carpeta) o rutina para un cliente.
   const [target, setTarget] = useState<string>(
-    initialStudentLinkId && students.some((s) => s.linkId === initialStudentLinkId)
-      ? initialStudentLinkId
+    initialClientId && clients.some((c) => c.id === initialClientId)
+      ? initialClientId
       : TEMPLATE,
   );
   const [days, setDays] = useState<DayDraft[]>(initial?.days ?? [emptyDay()]);
@@ -89,12 +89,12 @@ export function RoutineBuilder({
   const [catalogList, setCatalogList] = useState<CatalogEntry[]>(catalog);
 
   const isEdit = Boolean(initial);
-  const forStudent = isEdit ? Boolean(initial?.studentName) : target !== TEMPLATE;
-  const usesFolder = isCoach && !forStudent;
+  const forClient = isEdit ? Boolean(initial?.clientName) : target !== TEMPLATE;
+  const usesFolder = isCoach && !forClient;
 
   const targetItems: Record<string, string> = {
     [TEMPLATE]: "Plantilla (en una carpeta)",
-    ...Object.fromEntries(students.map((s) => [s.linkId, s.name])),
+    ...Object.fromEntries(clients.map((c) => [c.id, c.name])),
   };
 
   // Carpetas existentes + opción para crear una nueva en el momento.
@@ -182,7 +182,7 @@ export function RoutineBuilder({
       name: name.trim(),
       folderId: folderIdPayload,
       newFolderName: newFolderNamePayload,
-      studentLinkId: !isEdit && forStudent ? target : null,
+      clientId: !isEdit && forClient ? target : null,
       days: payloadDays,
     };
 
@@ -223,25 +223,24 @@ export function RoutineBuilder({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={TEMPLATE}>Plantilla (en una carpeta)</SelectItem>
-                {students.map((s) => (
-                  <SelectItem key={s.linkId} value={s.linkId}>
-                    {s.name}
-                    {s.status === "pending" ? " · pendiente" : ""}
+                {clients.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <p className="text-muted-foreground text-xs">
-              {forStudent
-                ? "Es solo de este alumno: cambiarla no afecta a nadie más."
-                : "Las plantillas no las ve nadie: sirven para armarles rutinas a tus alumnos."}
+              {forClient
+                ? "Es solo de este cliente: cambiarla no afecta a nadie más."
+                : "Las plantillas no las ve nadie: sirven para armarles rutinas a tus clientes."}
             </p>
           </div>
         )}
 
-        {isCoach && isEdit && initial?.studentName && (
+        {isCoach && isEdit && initial?.clientName && (
           <p className="text-muted-foreground text-sm">
-            Rutina de: <span className="text-foreground font-medium">{initial.studentName}</span>
+            Rutina de: <span className="text-foreground font-medium">{initial.clientName}</span>
           </p>
         )}
 

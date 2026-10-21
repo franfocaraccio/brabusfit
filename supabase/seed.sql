@@ -8,6 +8,9 @@
 --   alumno@brabus.test   alumno_test  alumno de coach_test (activo) con su rutina asignada
 --                                     + ~6 meses de entrenamientos
 --   alumno2@brabus.test  alumno_dos   alumno sin rutinas
+--
+-- Clientes de coach_test: Andrés (con app), invitado@ (invitación pendiente,
+-- sin cuenta) y Roberto (sin app: solo ficha + rutina para exportar).
 -- ============================================================================
 
 create or replace function pg_temp.seed_user(
@@ -42,22 +45,33 @@ select pg_temp.seed_user('33333333-3333-3333-3333-333333333333', 'alumno@brabus.
 select pg_temp.seed_user('44444444-4444-4444-4444-444444444444', 'alumno2@brabus.test',
   '{"first_name":"Belén","last_name":"Alumna","username":"alumno_dos","is_coach":false}');
 
--- Vínculos coach ↔ alumno: Andrés ya aceptó; invitado@ todavía no tiene cuenta.
-insert into public.coach_students (coach_id, student_id, student_email, status, accepted_at) values
-  ('11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333',
-   'alumno@brabus.test', 'active', now()),
-  ('11111111-1111-1111-1111-111111111111', null, 'invitado@brabus.test', 'pending', null);
+-- Fichas de clientes del coach ------------------------------------------------
+insert into public.coach_students (
+  id, coach_id, student_id, student_email, status, accepted_at,
+  first_name, last_name, phone, birth_date, sex, height_cm, initial_weight_kg, goal, level, injuries, notes
+) values
+  ('f1000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111',
+   '33333333-3333-3333-3333-333333333333', 'alumno@brabus.test', 'active', now(),
+   'Andrés', 'Alumno', '+54 9 11 5555-0001', '1998-02-20', 'masculino', 180, 78.5,
+   'ganar_masa', 'intermedio', null, 'Entrena a la tarde. Quiere llegar a 85 kg.'),
+  ('f1000000-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111',
+   null, 'invitado@brabus.test', 'pending', null,
+   'Valeria', 'Invitada', null, null, 'femenino', null, null, 'tonificar', 'principiante', null, null),
+  ('f1000000-0000-0000-0000-000000000003', '11111111-1111-1111-1111-111111111111',
+   null, null, 'none', null,
+   'Roberto', 'Sin App', '+54 9 11 5555-0003', '1958-07-03', 'masculino', 172, 91,
+   'salud', 'principiante', 'Prótesis de rodilla derecha', 'No usa celular: imprimirle la rutina.');
 
 -- Rutinas del coach: la de Andrés (asignada) y una plantilla en carpeta -------
 insert into public.folders (id, owner_id, name) values
   ('a0000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'Fuerza'),
   ('a0000000-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', 'Hipertrofia');
 
-insert into public.routines (id, owner_id, folder_id, name, student_id, student_email) values
+insert into public.routines (id, owner_id, folder_id, name, client_id) values
   ('b0000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111',
-   null, 'Fuerza 3 días', '33333333-3333-3333-3333-333333333333', 'alumno@brabus.test'),
+   null, 'Fuerza 3 días', 'f1000000-0000-0000-0000-000000000001'),
   ('b0000000-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111',
-   'a0000000-0000-0000-0000-000000000002', 'Torso / Pierna', null, null);
+   'a0000000-0000-0000-0000-000000000002', 'Torso / Pierna', null);
 
 insert into public.routine_days (id, routine_id, name, position) values
   ('c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'Día 1 - Empuje', 0),
@@ -75,12 +89,14 @@ insert into public.exercises (id, day_id, name, sets_reps, position) values
   ('d0000000-0000-0000-0000-000000000007', 'c0000000-0000-0000-0000-000000000003', 'Peso muerto rumano', '3x10', 1),
   ('d0000000-0000-0000-0000-000000000008', 'c0000000-0000-0000-0000-000000000004', 'Press inclinado', '4x10', 0);
 
--- Plantilla "Fuerza 3 días" (copia en la carpeta Fuerza) y una rutina ya
--- asignada a invitado@ (la ve cuando se registre y acepte).
+-- Plantilla "Fuerza 3 días" (copia en la carpeta Fuerza) y copias asignadas a
+-- Valeria (la ve cuando se registre y acepte) y a Roberto (sin app).
 select public._copy_routine('b0000000-0000-0000-0000-000000000001', null,
-  'a0000000-0000-0000-0000-000000000001', null, null);
+  'a0000000-0000-0000-0000-000000000001', null);
 select public._copy_routine('b0000000-0000-0000-0000-000000000002', null,
-  null, null, 'invitado@brabus.test');
+  null, 'f1000000-0000-0000-0000-000000000002');
+select public._copy_routine('b0000000-0000-0000-0000-000000000002', 'Movilidad y fuerza',
+  null, 'f1000000-0000-0000-0000-000000000003');
 
 -- Rutina propia del alumno (sin carpeta) -------------------------------------
 insert into public.routines (id, owner_id, folder_id, name) values

@@ -62,9 +62,9 @@ export default function TabsLayout() {
         options={{ title: "Progreso", tabBarIcon: icon("trending-up-outline") }}
       />
       <Tabs.Screen
-        name="alumnos"
+        name="clientes"
         options={{
-          title: "Alumnos",
+          title: "Clientes",
           tabBarIcon: icon("people-outline"),
           href: isCoach ? undefined : null,
         }}

@@ -31,9 +31,9 @@ export default async function DashboardPage() {
     ...(profile.is_coach
       ? [
           {
-            href: "/alumnos",
-            title: "Alumnos",
-            subtitle: "Seguí el progreso de tus alumnos",
+            href: "/clientes",
+            title: "Clientes",
+            subtitle: "Fichas, rutinas y progreso de tus clientes",
             icon: Users,
           },
         ]
@@ -48,7 +48,7 @@ export default async function DashboardPage() {
         </h1>
         <p className="text-muted-foreground text-sm">
           {profile.is_coach
-            ? "Armales rutinas a tus alumnos."
+            ? "Armales rutinas a tus clientes."
             : "Elegí una rutina y empezá a entrenar."}
         </p>
       </div>

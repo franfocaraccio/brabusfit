@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import type { CatalogEntry } from "@brabus/shared";
 import {
   getCatalog,
+  getClients,
   getFolders,
-  getStudents,
+  type ClientSummary,
   type FolderLite,
-  type StudentSummary,
 } from "@brabus/supabase";
 
 import { Loading } from "@/components/loading";
@@ -16,24 +16,26 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/providers/auth";
 
 export default function CrearRutinaScreen() {
-  // ?alumno=<linkId>: viene de la pantalla del alumno ("Nueva rutina" → desde cero).
-  const { alumno } = useLocalSearchParams<{ alumno?: string }>();
+  // ?cliente=<id>: viene de la ficha del cliente ("Nueva rutina" → desde cero).
+  const { cliente } = useLocalSearchParams<{ cliente?: string }>();
   const { session, profile } = useAuth();
   const isCoach = profile?.is_coach ?? false;
   const [data, setData] = useState<{
     folders: FolderLite[];
     catalog: CatalogEntry[];
-    students: StudentSummary[];
+    clients: ClientSummary[];
   } | null>(null);
 
   useEffect(() => {
-    // Espera al perfil: el builder toma alumnos y rol solo al montarse.
+    // Espera al perfil: el builder toma clientes y rol solo al montarse.
     if (!session || !profile) return;
     Promise.all([
       getFolders(supabase, session.user.id),
       getCatalog(supabase, session.user.id),
-      isCoach ? getStudents(supabase, session.user.id) : Promise.resolve([]),
-    ]).then(([folders, catalog, students]) => setData({ folders, catalog, students }));
+      isCoach ? getClients(supabase, session.user.id) : Promise.resolve([]),
+    ]).then(([folders, catalog, clients]) =>
+      setData({ folders, catalog, clients: clients.filter((c) => !c.archived) }),
+    );
   }, [session, profile, isCoach]);
 
   if (!data) return <Loading />;
@@ -42,8 +44,8 @@ export default function CrearRutinaScreen() {
       folders={data.folders}
       catalog={data.catalog}
       isCoach={isCoach}
-      students={data.students}
-      initialStudentLinkId={alumno}
+      clients={data.clients}
+      initialClientId={cliente}
     />
   );
 }

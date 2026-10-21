@@ -79,11 +79,13 @@ function RootNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
         <Stack.Screen name="rutina/crear" options={{ title: "Crear rutina" }} />
         <Stack.Screen name="rutina/[id]/index" options={{ title: "" }} />
         <Stack.Screen name="rutina/[id]/editar" options={{ title: "Editar rutina" }} />
-        <Stack.Screen name="rutina/[id]/asignar" options={{ title: "Asignar a alumno" }} />
+        <Stack.Screen name="rutina/[id]/asignar" options={{ title: "Asignar a cliente" }} />
         <Stack.Screen name="rutina/[id]/dia/[dayId]" options={{ title: "" }} />
         <Stack.Screen name="rutina/[id]/historial" options={{ title: "Historial" }} />
         <Stack.Screen name="sesion/[id]" options={{ title: "Sesión" }} />
-        <Stack.Screen name="alumno/[id]" options={{ title: "" }} />
+        <Stack.Screen name="cliente/nuevo" options={{ title: "Nuevo cliente" }} />
+        <Stack.Screen name="cliente/[id]/index" options={{ title: "" }} />
+        <Stack.Screen name="cliente/[id]/editar" options={{ title: "Editar ficha" }} />
       </Stack.Protected>
 
       {/* Vuelta del login con Google (si el sistema abre la app con el link). */}

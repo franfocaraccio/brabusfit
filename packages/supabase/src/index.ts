@@ -4,5 +4,5 @@ export * from "./client";
 export * from "./history";
 export * from "./profile";
 export * from "./routines";
-export * from "./students";
+export * from "./clients";
 export * from "./training";

@@ -28,7 +28,7 @@ export function AppNav({
     { href: "/rutinas", label: "Rutinas", icon: Dumbbell },
     { href: "/progreso", label: "Progreso", icon: TrendingUp },
     ...(isCoach
-      ? [{ href: "/alumnos", label: "Alumnos", icon: Users }]
+      ? [{ href: "/clientes", label: "Clientes", icon: Users }]
       : []),
     { href: "/perfil", label: "Perfil", icon: User },
   ];

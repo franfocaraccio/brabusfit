@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import type { MyCoach } from "@brabus/supabase";
 
-import { respondInvitation } from "@/lib/actions/students";
+import { respondInvitation } from "@/lib/actions/clients";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

@@ -34,9 +34,9 @@ export default function InicioScreen() {
     ...(isCoach
       ? [
           {
-            href: "/alumnos" as Href,
-            title: "Alumnos",
-            subtitle: "Seguí el progreso de tus alumnos",
+            href: "/clientes" as Href,
+            title: "Clientes",
+            subtitle: "Fichas, rutinas y progreso de tus clientes",
             icon: "people" as IconName,
           },
         ]
@@ -49,7 +49,7 @@ export default function InicioScreen() {
         <Text style={styles.greeting}>Hola, {profile?.first_name}</Text>
         <Muted>
           {isCoach
-            ? "Armales rutinas a tus alumnos."
+            ? "Armales rutinas a tus clientes."
             : "Elegí una rutina y empezá a entrenar."}
         </Muted>
       </View>

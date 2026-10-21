@@ -1,3 +1,5 @@
+import type { ClientInput } from "./clients";
+
 /**
  * Tipos de la base de datos. Mantener en sync con supabase/migrations.
  * (Se puede regenerar con `supabase gen types typescript` cuando se use el CLI.)
@@ -23,11 +25,24 @@ export type RoutineDayInput = {
   exercises: ExerciseInput[];
 };
 
-/** Vínculo coach ↔ alumno: invitación pendiente o activo. */
+/** Invitación del coach vista por el alumno: pendiente o aceptada. */
 export type LinkStatus = "pending" | "active";
 
-/** Validación en vivo al agregar un alumno. */
-export type AddStudentStatus =
+/** Acceso a la app de un cliente: sin app, invitado o usándola. */
+export type AppAccess = "none" | LinkStatus;
+
+export type ClientSex = "femenino" | "masculino" | "otro";
+export type ClientGoal =
+  | "bajar_peso"
+  | "ganar_masa"
+  | "tonificar"
+  | "rendimiento"
+  | "salud"
+  | "otro";
+export type ClientLevel = "principiante" | "intermedio" | "avanzado";
+
+/** Validación en vivo al invitar un cliente a la app. */
+export type InviteStatus =
   | "forbidden"
   | "invalid"
   | "not_found"
@@ -117,10 +132,8 @@ export type Database = {
           owner_id: string;
           folder_id: string | null;
           name: string;
-          /** Alumno al que el coach le asignó la rutina (null = plantilla o rutina propia). */
-          student_id: string | null;
-          /** Email del alumno asignado (también mientras no tiene cuenta). */
-          student_email: string | null;
+          /** Cliente al que el coach le armó la rutina (null = plantilla o rutina propia). */
+          client_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -129,8 +142,7 @@ export type Database = {
           owner_id: string;
           folder_id?: string | null;
           name: string;
-          student_id?: string | null;
-          student_email?: string | null;
+          client_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -204,15 +216,30 @@ export type Database = {
         Row: {
           id: string;
           coach_id: string;
-          /** null mientras el email invitado no tiene cuenta. */
+          /** Cuenta vinculada (null sin app o mientras el invitado no tiene cuenta). */
           student_id: string | null;
-          student_email: string;
-          status: LinkStatus;
+          /** Email del cliente (con la app, el de su cuenta). */
+          student_email: string | null;
+          status: AppAccess;
           created_at: string;
           accepted_at: string | null;
+          first_name: string;
+          last_name: string;
+          phone: string | null;
+          birth_date: string | null;
+          sex: ClientSex | null;
+          height_cm: number | null;
+          initial_weight_kg: number | null;
+          goal: ClientGoal | null;
+          level: ClientLevel | null;
+          injuries: string | null;
+          /** Privadas del coach. */
+          notes: string | null;
+          archived_at: string | null;
+          updated_at: string;
         };
-        // Altas y cambios solo por RPC (add_student, respond_invitation, ...).
-        Insert: { coach_id: string; student_email: string };
+        // Solo lo lee el coach. Altas y cambios por RPC (save_client, invite_client, ...).
+        Insert: { coach_id: string };
         Update: Record<string, never>;
         Relationships: [];
       };
@@ -315,20 +342,36 @@ export type Database = {
         Args: { p_session_id: string; p_logs: SessionLogUpdate[] };
         Returns: undefined;
       };
-      validate_add_student: {
-        Args: { p_mode: "email" | "username"; p_value: string };
-        Returns: AddStudentStatus;
+      save_client: {
+        Args: { p_id: string | null; p_data: ClientInput };
+        Returns: string;
       };
-      add_student: {
-        Args: { p_mode: "email" | "username"; p_value: string };
-        Returns: { id: string; existed: boolean; email: string };
+      validate_invite_client: {
+        Args: { p_client_id: string; p_mode: "email" | "username"; p_value: string };
+        Returns: InviteStatus;
+      };
+      invite_client: {
+        Args: { p_client_id: string; p_mode: "email" | "username"; p_value: string };
+        Returns: { existed: boolean; email: string };
+      };
+      remove_client_access: {
+        Args: { p_client_id: string };
+        Returns: undefined;
+      };
+      set_client_archived: {
+        Args: { p_client_id: string; p_archived: boolean };
+        Returns: undefined;
+      };
+      delete_client: {
+        Args: { p_client_id: string };
+        Returns: undefined;
+      };
+      get_my_coaches: {
+        Args: Record<string, never>;
+        Returns: { link_id: string; coach_id: string; status: LinkStatus; created_at: string }[];
       };
       respond_invitation: {
         Args: { p_link_id: string; p_accept: boolean };
-        Returns: undefined;
-      };
-      unlink_student: {
-        Args: { p_link_id: string };
         Returns: undefined;
       };
       leave_coach: {

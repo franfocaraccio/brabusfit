@@ -16,10 +16,10 @@ import {
   createFolder,
   deleteFolder,
   getRoutinesOverview,
+  type ClientRoutineGroup,
   type CoachRoutineLite,
   type FolderLite,
   type RoutineLite,
-  type StudentRoutineGroup,
 } from "@brabus/supabase";
 
 import { ErrorText } from "@/components/forms";
@@ -36,7 +36,7 @@ const ROOT_GROUP = "__root__";
 type Overview = {
   folders: FolderLite[];
   routines: RoutineLite[];
-  students: StudentRoutineGroup[];
+  clients: ClientRoutineGroup[];
   fromCoaches: CoachRoutineLite[];
 };
 
@@ -133,28 +133,23 @@ export default function RutinasScreen() {
     );
   }
 
-  const { folders, routines, students, fromCoaches } = data;
+  const { folders, routines, clients, fromCoaches } = data;
   const coachList = fromCoaches.filter(
     (s) => !q || matches(s.name) || (s.coachName ? matches(s.coachName) : false),
   );
 
-  // Coach: rutinas por alumno + plantillas en carpetas. Alumno: lista plana.
+  // Coach: rutinas por cliente + plantillas en carpetas. Alumno: lista plana.
   const visible = (groups: Group[]) =>
     groups.filter((g) => !q || matches(g.name) || g.items.some((r) => matches(r.name)));
 
-  const studentGroups = visible(
-    students.map((st) => ({
-      id: `student:${st.key}`,
-      name: st.name,
+  const clientGroups = visible(
+    clients.map((c) => ({
+      id: `client:${c.clientId}`,
+      name: c.name,
       icon: "person-outline" as const,
-      badge:
-        st.linkStatus === "pending"
-          ? { text: "Pendiente", pending: true }
-          : st.linkStatus === null
-            ? { text: "Desvinculado", pending: false }
-            : undefined,
+      badge: c.archived ? { text: "Archivado", pending: false } : undefined,
       deletable: false,
-      items: st.routines,
+      items: c.routines,
     })),
   );
 
@@ -184,7 +179,7 @@ export default function RutinasScreen() {
   const hasNothing =
     routines.length === 0 &&
     folders.length === 0 &&
-    students.length === 0 &&
+    clients.length === 0 &&
     fromCoaches.length === 0;
 
   const renderGroups = (groups: Group[], empty: string) =>
@@ -290,7 +285,7 @@ export default function RutinasScreen() {
               <TextInput
                 value={query}
                 onChangeText={setQuery}
-                placeholder={isCoach ? "Buscar alumno, carpeta o rutina…" : "Buscar rutina…"}
+                placeholder={isCoach ? "Buscar cliente, carpeta o rutina…" : "Buscar rutina…"}
                 placeholderTextColor={colors.mutedForeground}
                 selectionColor={colors.primary}
                 style={styles.searchInput}
@@ -330,10 +325,10 @@ export default function RutinasScreen() {
           {isCoach ? (
             <>
               <View style={styles.section}>
-                <SectionLabel>Rutinas de alumnos</SectionLabel>
+                <SectionLabel>Rutinas de clientes</SectionLabel>
                 {renderGroups(
-                  studentGroups,
-                  "Todavía no armaste rutinas para alumnos. Entrá a una plantilla y tocá «Asignar a alumno», o creala desde Alumnos.",
+                  clientGroups,
+                  "Todavía no armaste rutinas para clientes. Entrá a una plantilla y tocá «Asignar a cliente», o creala desde Clientes.",
                 )}
               </View>
               <View style={styles.section}>

@@ -86,7 +86,7 @@ export function SignupForm() {
         <div className="grid gap-1 leading-none">
           <Label htmlFor="is_coach">Soy coach</Label>
           <p className="text-muted-foreground text-xs">
-            Vas a poder armarles rutinas a tus alumnos.
+            Vas a poder cargar a tus clientes y armarles rutinas.
           </p>
         </div>
       </div>

@@ -6,7 +6,9 @@ import { useState, useTransition } from "react";
 import { Copy, Dumbbell, FilePlus2, Search, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
-import type { FolderLite, RoutineLite, StudentSummary } from "@brabus/supabase";
+import { APP_ACCESS_LABEL } from "@brabus/shared";
+
+import type { ClientSummary, FolderLite, RoutineLite } from "@brabus/supabase";
 
 import { copyRoutine } from "@/lib/actions/routines";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -43,13 +45,14 @@ function useCopy() {
   return { pending, busy, run };
 }
 
-/** Desde una plantilla: elegir el alumno al que se le crea una copia. */
+/** Desde una plantilla: elegir el cliente al que se le crea una copia. */
 export function AssignRoutine({
   routineId,
-  students,
+  clients,
 }: {
   routineId: string;
-  students: StudentSummary[];
+  /** Clientes activos (no archivados). */
+  clients: ClientSummary[];
 }) {
   const { pending, busy, run } = useCopy();
 
@@ -58,40 +61,39 @@ export function AssignRoutine({
       <DialogTrigger
         render={
           <Button variant="outline" size="sm" className="gap-1.5">
-            <UserPlus className="size-4" /> Asignar a alumno
+            <UserPlus className="size-4" /> Asignar a cliente
           </Button>
         }
       />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Asignar a un alumno</DialogTitle>
+          <DialogTitle>Asignar a un cliente</DialogTitle>
           <DialogDescription>
             Se le crea una copia propia de esta plantilla. Después podés ajustarla solo para ese
-            alumno: los cambios no afectan a la plantilla ni a otros alumnos.
+            cliente: los cambios no afectan a la plantilla ni a otros clientes.
           </DialogDescription>
         </DialogHeader>
 
-        {students.length === 0 ? (
-          <p className="text-muted-foreground text-sm">Todavía no tenés alumnos.</p>
+        {clients.length === 0 ? (
+          <p className="text-muted-foreground text-sm">Todavía no tenés clientes.</p>
         ) : (
           <div className="max-h-[50vh] divide-y overflow-y-auto rounded-lg border">
-            {students.map((st) => (
+            {clients.map((st) => (
               <button
-                key={st.linkId}
+                key={st.id}
                 type="button"
-                onClick={() => run(st.linkId, routineId, st.linkId, `Rutina asignada a ${st.name}`)}
+                onClick={() => run(st.id, routineId, st.id, `Rutina asignada a ${st.name}`)}
                 disabled={pending}
                 className="hover:bg-muted/50 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors disabled:opacity-60"
               >
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{st.name}</span>
                   <span className="text-muted-foreground block truncate text-xs">
-                    {st.username ? `@${st.username}` : st.email}
-                    {st.status === "pending" ? " · Invitación pendiente" : ""}
+                    {APP_ACCESS_LABEL[st.appAccess]}
                     {` · ${st.routineCount} ${st.routineCount === 1 ? "rutina" : "rutinas"}`}
                   </span>
                 </span>
-                {busy === st.linkId ? (
+                {busy === st.id ? (
                   <span className="text-muted-foreground text-xs">Creando…</span>
                 ) : null}
               </button>
@@ -100,25 +102,25 @@ export function AssignRoutine({
         )}
 
         <Link
-          href="/alumnos?agregar=1"
+          href="/clientes/nuevo"
           className={cn(buttonVariants({ variant: "outline" }), "w-full gap-1.5")}
         >
-          <UserPlus className="size-4" /> Agregar alumno
+          <UserPlus className="size-4" /> Nuevo cliente
         </Link>
       </DialogContent>
     </Dialog>
   );
 }
 
-/** Desde el alumno: rutina nueva desde cero o copiando una plantilla. */
-export function NewStudentRoutine({
-  linkId,
-  studentName,
+/** Desde el cliente: rutina nueva desde cero o copiando una plantilla. */
+export function NewClientRoutine({
+  clientId,
+  clientName,
   folders,
   templates,
 }: {
-  linkId: string;
-  studentName: string;
+  clientId: string;
+  clientName: string;
   folders: FolderLite[];
   templates: RoutineLite[];
 }) {
@@ -154,15 +156,15 @@ export function NewStudentRoutine({
       />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nueva rutina para {studentName}</DialogTitle>
+          <DialogTitle>Nueva rutina para {clientName}</DialogTitle>
           <DialogDescription>
             Armala desde cero o partí de una de tus plantillas (se crea una copia propia del
-            alumno).
+            cliente).
           </DialogDescription>
         </DialogHeader>
 
         <Link
-          href={`/rutinas/crear?alumno=${linkId}`}
+          href={`/rutinas/crear?cliente=${clientId}`}
           className={cn(buttonVariants({ variant: "outline" }), "w-full gap-1.5")}
         >
           <FilePlus2 className="size-4" /> Desde cero
@@ -197,7 +199,7 @@ export function NewStudentRoutine({
                           key={t.id}
                           type="button"
                           onClick={() =>
-                            run(t.id, t.id, linkId, `Rutina creada para ${studentName}`)
+                            run(t.id, t.id, clientId, `Rutina creada para ${clientName}`)
                           }
                           disabled={pending}
                           className="hover:bg-muted/50 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors disabled:opacity-60"

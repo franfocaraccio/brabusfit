@@ -19,7 +19,7 @@ import {
   updateRoutine,
   type EditableRoutine,
   type FolderLite,
-  type StudentSummary,
+  type ClientSummary,
 } from "@brabus/supabase";
 
 import { ExercisePicker } from "@/components/exercise-picker";
@@ -39,7 +39,7 @@ type ExerciseDraft = {
 type DayDraft = { key: string; id?: string; name: string; exercises: ExerciseDraft[] };
 
 const NEW_FOLDER = "__new__";
-/** Destino "plantilla" (en vez de un alumno). */
+/** Destino "plantilla" (en vez de un cliente). */
 const TEMPLATE = "__template__";
 let keySeq = 0;
 const newKey = () => `k${Date.now().toString(36)}${(keySeq++).toString(36)}`;
@@ -54,7 +54,7 @@ const emptyDay = (): DayDraft => ({ key: newKey(), name: "", exercises: [emptyEx
 
 /**
  * Crear / editar rutina (mismo comportamiento que RoutineBuilder de la web):
- * nombre, destino del coach (plantilla en una carpeta o rutina de un alumno),
+ * nombre, destino del coach (plantilla en una carpeta o rutina de un cliente),
  * días y ejercicios.
  */
 export function RoutineBuilder({
@@ -62,18 +62,18 @@ export function RoutineBuilder({
   catalog,
   isCoach,
   initial,
-  students = [],
-  initialStudentLinkId,
+  clients = [],
+  initialClientId,
 }: {
   folders: FolderLite[];
   /** Catálogo de ejercicios disponible (general + propios). */
   catalog: CatalogEntry[];
   isCoach: boolean;
   initial?: EditableRoutine;
-  /** Coach, al crear: alumnos a los que se le puede armar la rutina. */
-  students?: StudentSummary[];
+  /** Coach, al crear: clientes a los que se le puede armar la rutina. */
+  clients?: ClientSummary[];
   /** Alumno elegido de entrada (viene de su pantalla). */
-  initialStudentLinkId?: string;
+  initialClientId?: string;
 }) {
   const insets = useSafeAreaInsets();
   const isEdit = Boolean(initial);
@@ -83,17 +83,17 @@ export function RoutineBuilder({
   const [newFolderName, setNewFolderName] = useState("");
   const [folderSheet, setFolderSheet] = useState(false);
   const [target, setTarget] = useState<string>(
-    initialStudentLinkId && students.some((s) => s.linkId === initialStudentLinkId)
-      ? initialStudentLinkId
+    initialClientId && clients.some((c) => c.id === initialClientId)
+      ? initialClientId
       : TEMPLATE,
   );
   const [targetSheet, setTargetSheet] = useState(false);
-  const forStudent = isEdit ? Boolean(initial?.studentName) : target !== TEMPLATE;
-  const usesFolder = isCoach && !forStudent;
+  const forClient = isEdit ? Boolean(initial?.clientName) : target !== TEMPLATE;
+  const usesFolder = isCoach && !forClient;
   const targetLabel =
     target === TEMPLATE
       ? "Plantilla (en una carpeta)"
-      : (students.find((s) => s.linkId === target)?.name ?? "Alumno");
+      : (clients.find((c) => c.id === target)?.name ?? "Cliente");
   const [days, setDays] = useState<DayDraft[]>(
     initial
       ? initial.days.map((d) => ({
@@ -184,7 +184,7 @@ export function RoutineBuilder({
       name: name.trim(),
       folderId: folderIdPayload,
       newFolderName: newFolderNamePayload,
-      studentLinkId: !isEdit && forStudent ? target : null,
+      clientId: !isEdit && forClient ? target : null,
       days: payloadDays,
     };
 
@@ -230,7 +230,7 @@ export function RoutineBuilder({
               accessibilityRole="button"
             >
               <Ionicons
-                name={forStudent ? "person-outline" : "albums-outline"}
+                name={forClient ? "person-outline" : "albums-outline"}
                 size={18}
                 color={colors.mutedForeground}
               />
@@ -240,18 +240,18 @@ export function RoutineBuilder({
               <Ionicons name="chevron-down" size={18} color={colors.mutedForeground} />
             </Pressable>
             <Text style={styles.hint}>
-              {forStudent
-                ? "Es solo de este alumno: cambiarla no afecta a nadie más."
-                : "Las plantillas no las ve nadie: sirven para armarles rutinas a tus alumnos."}
+              {forClient
+                ? "Es solo de este cliente: cambiarla no afecta a nadie más."
+                : "Las plantillas no las ve nadie: sirven para armarles rutinas a tus clientes."}
             </Text>
           </View>
         ) : null}
 
-        {isCoach && isEdit && initial?.studentName ? (
+        {isCoach && isEdit && initial?.clientName ? (
           <Text style={styles.hint}>
             Rutina de:{" "}
             <Text style={{ color: colors.foreground, fontFamily: fonts.medium }}>
-              {initial.studentName}
+              {initial.clientName}
             </Text>
           </Text>
         ) : null}
@@ -372,9 +372,9 @@ export function RoutineBuilder({
             value={target}
             options={[
               { value: TEMPLATE, label: "Plantilla (en una carpeta)", icon: "albums-outline" as const },
-              ...students.map((s) => ({
-                value: s.linkId,
-                label: s.status === "pending" ? `${s.name} · pendiente` : s.name,
+              ...clients.map((c) => ({
+                value: c.id,
+                label: c.name,
                 icon: "person-outline" as const,
               })),
             ]}

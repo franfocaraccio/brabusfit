@@ -3,8 +3,10 @@
 App de rutinas de entrenamiento para **coaches** y **alumnos**, en **web** y
 **mobile (iOS + Android)**.
 
-- Los **coaches** agregan alumnos (por email o nombre de usuario) y les arman
-  una rutina propia a cada uno, desde cero o a partir de sus plantillas.
+- Los **coaches** llevan la ficha de cada cliente (datos personales, físicos,
+  objetivo, notas) y le arman una rutina propia, desde cero o a partir de sus
+  plantillas. El cliente no necesita usar la app: la rutina se exporta a PDF o
+  Excel. Si la usa, lo invitan por email o nombre de usuario.
 - Los **alumnos** usan las rutinas que les armó su coach (o las propias) y
   registran peso y repeticiones por serie; el coach ve el progreso.
 

@@ -169,6 +169,19 @@ Storage + (si hace falta) un job programado.
   original quedó como plantilla. **Mismo patrón para Nutrición y Reportes**:
   plantillas del coach + una copia por alumno, visible con vínculo activo, y al
   desvincular el alumno se queda con una copia propia.
+- ✅ **Clientes (CRM del coach)** (2026-10-21, migración 0012): "Alumnos" pasó a
+  "Clientes". `coach_students` es la **ficha** del cliente (nombre, contacto,
+  nacimiento/edad, sexo, estatura, peso inicial, objetivo, nivel, lesiones, notas
+  privadas, archivado), creada por el coach aunque la persona nunca use la app.
+  El acceso a la app es opcional en la misma fila (`status`: none / pending /
+  active): "Invitar a la app" por usuario o email; "Quitar acceso", archivar o
+  que el alumno se desvincule le deja su copia de las rutinas y la ficha queda
+  "sin app". Las rutinas se asignan a la ficha (`routines.client_id`). El alumno
+  ya no lee `coach_students` (notas privadas): usa `get_my_coaches()`.
+  **Exportar rutinas** a PDF y Excel (solo ejercicios): web con jsPDF, mobile
+  con expo-print + expo-sharing; el .xlsx lo arma `packages/shared/src/xlsx.ts`
+  (sin dependencias). Sin app no se registran entrenamientos. Pendiente: pagos /
+  cuotas de clientes; evolución de peso va en Reportes.
 - Ideas siguientes: reordenar ejercicios/días (el ícono de "arrastrar" del editor
   web hoy es decorativo), duplicar plantilla (`copy_routine` sin alumno ya existe).
 - **Alertas de progresión:** regla en SQL (ej. mismo peso N semanas y reps en el

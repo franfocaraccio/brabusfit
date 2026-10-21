@@ -5,8 +5,9 @@ import {
   type ActionResult,
   type CatalogEntry,
   type Folder,
-  type LinkStatus,
+  type AppAccess,
   type Routine,
+  type RoutineExport,
   type RoutinePayload,
 } from "@brabus/shared";
 
@@ -57,8 +58,8 @@ export async function createRoutine(
   const invalid = validateRoutine(payload);
   if (invalid) return fail(invalid);
 
-  // Rutina para un alumno: no va en carpeta.
-  const resolved = payload.studentLinkId
+  // Rutina de un cliente: no va en carpeta.
+  const resolved = payload.clientId
     ? { folderId: null }
     : await resolveFolderId(client, payload);
   if ("error" in resolved) return fail(resolved.error);
@@ -67,7 +68,7 @@ export async function createRoutine(
     p_name: payload.name.trim(),
     p_folder_id: resolved.folderId,
     p_days: payload.days,
-    p_link_id: payload.studentLinkId ?? null,
+    p_link_id: payload.clientId ?? null,
   });
   if (error) return fail(error.message);
   return ok({ id: data as string });
@@ -83,10 +84,10 @@ export async function updateRoutine(
 
   const { data: current } = await client
     .from("routines")
-    .select("student_email")
+    .select("client_id")
     .eq("id", routineId)
     .maybeSingle();
-  const resolved = current?.student_email
+  const resolved = current?.client_id
     ? { folderId: null }
     : await resolveFolderId(client, payload);
   if ("error" in resolved) return fail(resolved.error);
@@ -164,40 +165,39 @@ export type RoutineLite = Pick<Routine, "id" | "name" | "folder_id">;
 /** Alumno: rutina que le armó un coach. */
 export type CoachRoutineLite = { id: string; name: string; coachName: string | null };
 
-/** Coach: rutinas asignadas a un alumno (o a un ex alumno: le quedan guardadas). */
-export type StudentRoutineGroup = {
-  /** Email del alumno (identifica el grupo también si todavía no tiene cuenta). */
-  key: string;
+/** Coach: rutinas que le armó a un cliente. */
+export type ClientRoutineGroup = {
+  clientId: string;
   name: string;
-  studentId: string | null;
-  /** null si ya no está vinculado (el alumno no las ve). */
-  linkStatus: LinkStatus | null;
+  appAccess: AppAccess;
+  archived: boolean;
   routines: { id: string; name: string }[];
 };
 
-const fullName = (p: { first_name: string; last_name: string } | null) =>
-  p ? `${p.first_name} ${p.last_name}`.trim() || null : null;
+type Person = { first_name: string; last_name: string };
+const fullName = (p: Person | null) => (p ? `${p.first_name} ${p.last_name}`.trim() || null : null);
 
-type OwnRow = {
+type ClientNameRow = {
   id: string;
-  name: string;
-  folder_id: string | null;
-  student_id: string | null;
+  first_name: string;
+  last_name: string;
   student_email: string | null;
-  student: { first_name: string; last_name: string } | null;
+  status: AppAccess;
+  archived_at: string | null;
+  account: Person | null;
 };
+const CLIENT_NAME_SELECT =
+  "id, first_name, last_name, student_email, status, archived_at, account:profiles!coach_students_student_id_fkey(first_name, last_name)";
+const clientName = (c: ClientNameRow) =>
+  fullName(c) ?? fullName(c.account) ?? c.student_email ?? "Cliente";
 
-type FromCoachRow = {
-  id: string;
-  name: string;
-  owner: { first_name: string; last_name: string } | null;
-};
+type FromCoachRow = { id: string; name: string; owner: Person | null };
 
 /**
  * Lo que muestra la sección Rutinas:
  * - folders / routines: plantillas del coach (o rutinas propias del alumno).
- * - students: rutinas que el coach asignó, agrupadas por alumno.
- * - fromCoaches: rutinas que los coaches le asignaron al alumno.
+ * - clients: rutinas que el coach les armó a sus clientes, agrupadas por ficha.
+ * - fromCoaches: rutinas que los coaches le armaron al alumno.
  */
 export async function getRoutinesOverview(
   client: BrabusClient,
@@ -205,59 +205,44 @@ export async function getRoutinesOverview(
 ): Promise<{
   folders: FolderLite[];
   routines: RoutineLite[];
-  students: StudentRoutineGroup[];
+  clients: ClientRoutineGroup[];
   fromCoaches: CoachRoutineLite[];
 }> {
-  const [foldersRes, ownRes, linksRes, fromCoachesRes] = await Promise.all([
+  const [foldersRes, ownRes, clientsRes, fromCoachesRes] = await Promise.all([
     client.from("folders").select("id, name").eq("owner_id", userId).order("name"),
     client
       .from("routines")
-      .select(
-        "id, name, folder_id, student_id, student_email, student:profiles!routines_student_id_fkey(first_name, last_name)",
-      )
+      .select("id, name, folder_id, client_id")
       .eq("owner_id", userId)
       .order("created_at", { ascending: false }),
-    client
-      .from("coach_students")
-      .select(
-        "student_email, status, student:profiles!coach_students_student_id_fkey(first_name, last_name)",
-      )
-      .eq("coach_id", userId),
-    // RLS: solo las de coaches con vínculo activo.
+    client.from("coach_students").select(CLIENT_NAME_SELECT).eq("coach_id", userId),
+    // RLS: solo las de coaches con acceso activo.
     client
       .from("routines")
       .select("id, name, owner:profiles!routines_owner_id_fkey(first_name, last_name)")
-      .eq("student_id", userId)
       .neq("owner_id", userId)
       .order("created_at", { ascending: false }),
   ]);
 
-  const own = (ownRes.data ?? []) as unknown as OwnRow[];
-  const links = new Map(
-    (
-      (linksRes.data ?? []) as unknown as {
-        student_email: string;
-        status: LinkStatus;
-        student: { first_name: string; last_name: string } | null;
-      }[]
-    ).map((l) => [l.student_email.toLowerCase(), l]),
+  const own = ownRes.data ?? [];
+  const clients = new Map(
+    ((clientsRes.data ?? []) as unknown as ClientNameRow[]).map((c) => [c.id, c]),
   );
 
-  const groups = new Map<string, StudentRoutineGroup>();
+  const groups = new Map<string, ClientRoutineGroup>();
   for (const r of own) {
-    if (!r.student_email) continue;
-    const key = r.student_email.toLowerCase();
-    const link = links.get(key);
-    let group = groups.get(key);
+    const c = r.client_id ? clients.get(r.client_id) : undefined;
+    if (!c) continue;
+    let group = groups.get(c.id);
     if (!group) {
       group = {
-        key,
-        name: fullName(r.student) ?? fullName(link?.student ?? null) ?? key,
-        studentId: r.student_id,
-        linkStatus: link?.status ?? null,
+        clientId: c.id,
+        name: clientName(c),
+        appAccess: c.status,
+        archived: c.archived_at !== null,
         routines: [],
       };
-      groups.set(key, group);
+      groups.set(c.id, group);
     }
     group.routines.push({ id: r.id, name: r.name });
   }
@@ -265,12 +250,10 @@ export async function getRoutinesOverview(
   return {
     folders: (foldersRes.data ?? []) as FolderLite[],
     routines: own
-      .filter((r) => !r.student_email)
+      .filter((r) => !r.client_id)
       .map((r) => ({ id: r.id, name: r.name, folder_id: r.folder_id })),
-    students: [...groups.values()].sort(
-      (a, b) =>
-        Number(a.linkStatus === null) - Number(b.linkStatus === null) ||
-        a.name.localeCompare(b.name, "es"),
+    clients: [...groups.values()].sort(
+      (a, b) => Number(a.archived) - Number(b.archived) || a.name.localeCompare(b.name, "es"),
     ),
     fromCoaches: ((fromCoachesRes.data ?? []) as unknown as FromCoachRow[]).map((r) => ({
       id: r.id,
@@ -304,8 +287,8 @@ export type EditableRoutine = {
   id: string;
   name: string;
   folderId: string | null;
-  /** Nombre del alumno si es una rutina asignada (no usa carpeta). */
-  studentName: string | null;
+  /** Nombre del cliente si es una rutina de cliente (no usa carpeta). */
+  clientName: string | null;
   days: EditableDay[];
 };
 
@@ -322,6 +305,20 @@ type EditDayRow = {
   }[];
 };
 
+/** Nombre del cliente de una rutina (solo lo puede leer su coach). */
+async function getClientOf(
+  client: BrabusClient,
+  clientId: string | null,
+): Promise<ClientNameRow | null> {
+  if (!clientId) return null;
+  const { data } = await client
+    .from("coach_students")
+    .select(CLIENT_NAME_SELECT)
+    .eq("id", clientId)
+    .maybeSingle();
+  return (data as unknown as ClientNameRow | null) ?? null;
+}
+
 /** Rutina completa para editar. Null si no existe o el usuario no es el dueño. */
 export async function getRoutineForEdit(
   client: BrabusClient,
@@ -330,26 +327,27 @@ export async function getRoutineForEdit(
 ): Promise<EditableRoutine | null> {
   const { data: routine } = await client
     .from("routines")
-    .select("*, student:profiles!routines_student_id_fkey(first_name, last_name)")
+    .select("*")
     .eq("id", routineId)
     .maybeSingle();
   if (!routine || routine.owner_id !== userId) return null;
-  const student = (routine as unknown as { student: { first_name: string; last_name: string } | null })
-    .student;
 
-  const { data: daysData } = await client
-    .from("routine_days")
-    .select(
-      "id, name, position, exercises(id, variant, sets_reps, position, catalog:exercise_catalog(id, name, muscle_group, owner_id))",
-    )
-    .eq("routine_id", routineId)
-    .order("position");
+  const [owner, { data: daysData }] = await Promise.all([
+    getClientOf(client, routine.client_id),
+    client
+      .from("routine_days")
+      .select(
+        "id, name, position, exercises(id, variant, sets_reps, position, catalog:exercise_catalog(id, name, muscle_group, owner_id))",
+      )
+      .eq("routine_id", routineId)
+      .order("position"),
+  ]);
 
   return {
     id: routine.id,
     name: routine.name,
     folderId: routine.folder_id,
-    studentName: routine.student_email ? (fullName(student) ?? routine.student_email) : null,
+    clientName: routine.client_id ? (owner ? clientName(owner) : "Cliente") : null,
     days: ((daysData ?? []) as unknown as EditDayRow[]).map((d) => ({
       id: d.id,
       name: d.name,
@@ -382,8 +380,8 @@ type DayRow = {
 export type RoutineDetail = {
   routine: Routine;
   ownerName: string | null;
-  /** Alumno asignado (rutina de alumno), o null si es plantilla / rutina propia. */
-  student: { id: string | null; name: string; linkStatus: LinkStatus | null } | null;
+  /** Cliente de la rutina (solo para su coach), o null si es plantilla / rutina propia. */
+  client: { id: string; name: string; appAccess: AppAccess; archived: boolean } | null;
   days: RoutineDayLite[];
 };
 
@@ -394,37 +392,20 @@ export async function getRoutineDetail(
 ): Promise<RoutineDetail | null> {
   const { data: row } = await client
     .from("routines")
-    .select(
-      "*, owner:profiles!routines_owner_id_fkey(first_name, last_name), student:profiles!routines_student_id_fkey(first_name, last_name)",
-    )
+    .select("*, owner:profiles!routines_owner_id_fkey(first_name, last_name)")
     .eq("id", routineId)
     .maybeSingle();
   if (!row) return null;
-  const { owner, student: studentProfile, ...routine } = row as unknown as Routine & {
-    owner: { first_name: string; last_name: string } | null;
-    student: { first_name: string; last_name: string } | null;
-  };
+  const { owner, ...routine } = row as unknown as Routine & { owner: Person | null };
 
-  let student: RoutineDetail["student"] = null;
-  if (routine.student_email) {
-    const { data: link } = await client
-      .from("coach_students")
-      .select("status")
-      .eq("coach_id", routine.owner_id)
-      .eq("student_email", routine.student_email)
-      .maybeSingle();
-    student = {
-      id: routine.student_id,
-      name: fullName(studentProfile) ?? routine.student_email,
-      linkStatus: (link?.status as LinkStatus | undefined) ?? null,
-    };
-  }
-
-  const { data: daysData } = await client
-    .from("routine_days")
-    .select("id, name, position, exercises(count)")
-    .eq("routine_id", routineId)
-    .order("position");
+  const [c, { data: daysData }] = await Promise.all([
+    getClientOf(client, routine.client_id),
+    client
+      .from("routine_days")
+      .select("id, name, position, exercises(count)")
+      .eq("routine_id", routineId)
+      .order("position"),
+  ]);
 
   const days = ((daysData ?? []) as unknown as DayRow[]).map((d) => ({
     id: d.id,
@@ -433,5 +414,47 @@ export async function getRoutineDetail(
     exerciseCount: d.exercises[0]?.count ?? 0,
   }));
 
-  return { routine, ownerName: fullName(owner), student, days };
+  return {
+    routine,
+    ownerName: fullName(owner),
+    client: c
+      ? { id: c.id, name: clientName(c), appAccess: c.status, archived: c.archived_at !== null }
+      : null,
+    days,
+  };
+}
+
+type ExportDayRow = {
+  name: string;
+  position: number;
+  exercises: { name: string; sets_reps: string; position: number }[];
+};
+
+/** Rutina para exportar a PDF / Excel (solo ejercicios). Null si no hay acceso. */
+export async function getRoutineExport(
+  client: BrabusClient,
+  routineId: string,
+  /** Si ya se cargó el detalle, se reusa. */
+  loaded?: RoutineDetail,
+): Promise<RoutineExport | null> {
+  const detail = loaded ?? (await getRoutineDetail(client, routineId));
+  if (!detail) return null;
+  const { data: daysData } = await client
+    .from("routine_days")
+    .select("name, position, exercises(name, sets_reps, position)")
+    .eq("routine_id", routineId)
+    .order("position");
+
+  return {
+    name: detail.routine.name,
+    clientName: detail.client?.name ?? null,
+    coachName: detail.ownerName,
+    date: new Date().toISOString(),
+    days: ((daysData ?? []) as unknown as ExportDayRow[]).map((d) => ({
+      name: d.name,
+      exercises: [...d.exercises]
+        .sort((a, b) => a.position - b.position)
+        .map((e) => ({ name: e.name, setsReps: e.sets_reps })),
+    })),
+  };
 }

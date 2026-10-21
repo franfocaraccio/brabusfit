@@ -21,10 +21,10 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 import type {
+  ClientRoutineGroup,
   CoachRoutineLite,
   FolderLite,
   RoutineLite,
-  StudentRoutineGroup,
 } from "@brabus/supabase";
 
 const ROOT_GROUP = "__root__";
@@ -45,15 +45,15 @@ export function RoutinesBrowser({
   isCoach,
   folders,
   routines,
-  students,
+  clients,
   fromCoaches,
 }: {
   isCoach: boolean;
   folders: FolderLite[];
   /** Plantillas (coach) o rutinas propias (alumno). */
   routines: RoutineLite[];
-  /** Coach: rutinas asignadas, agrupadas por alumno. */
-  students: StudentRoutineGroup[];
+  /** Coach: rutinas de sus clientes, agrupadas por ficha. */
+  clients: ClientRoutineGroup[];
   /** Alumno: rutinas que le armaron sus coaches. */
   fromCoaches: CoachRoutineLite[];
 }) {
@@ -74,7 +74,7 @@ export function RoutinesBrowser({
   const hasNothing =
     routines.length === 0 &&
     folders.length === 0 &&
-    students.length === 0 &&
+    clients.length === 0 &&
     fromCoaches.length === 0;
 
   const searchBar = (
@@ -84,7 +84,7 @@ export function RoutinesBrowser({
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={isCoach ? "Buscar alumno, carpeta o rutina…" : "Buscar rutina…"}
+          placeholder={isCoach ? "Buscar cliente, carpeta o rutina…" : "Buscar rutina…"}
           className="pl-9"
         />
       </div>
@@ -149,19 +149,14 @@ export function RoutinesBrowser({
   }
 
   // ============================ COACH ============================
-  const studentGroups: Group[] = students.map((st) => ({
-    id: `student:${st.key}`,
-    name: st.name,
-    subtitle: countLabel(st.routines.length),
+  const clientGroups: Group[] = clients.map((c) => ({
+    id: `client:${c.clientId}`,
+    name: c.name,
+    subtitle: countLabel(c.routines.length),
     icon: User,
-    badge:
-      st.linkStatus === "pending"
-        ? { text: "Pendiente", tone: "pending" }
-        : st.linkStatus === null
-          ? { text: "Desvinculado", tone: "muted" }
-          : undefined,
+    badge: c.archived ? { text: "Archivado", tone: "muted" } : undefined,
     deletable: false,
-    items: st.routines,
+    items: c.routines,
   }));
 
   const rootRoutines = routines.filter((r) => !r.folder_id);
@@ -267,10 +262,10 @@ export function RoutinesBrowser({
       {searchBar}
 
       <section className="space-y-3">
-        <h2 className="text-muted-foreground text-sm font-semibold">Rutinas de alumnos</h2>
+        <h2 className="text-muted-foreground text-sm font-semibold">Rutinas de clientes</h2>
         {renderGroups(
-          studentGroups,
-          "Todavía no armaste rutinas para alumnos. Entrá a una plantilla y tocá «Asignar a alumno», o creala desde Alumnos.",
+          clientGroups,
+          "Todavía no armaste rutinas para clientes. Entrá a una plantilla y tocá «Asignar a cliente», o creala desde Clientes.",
         )}
       </section>
 

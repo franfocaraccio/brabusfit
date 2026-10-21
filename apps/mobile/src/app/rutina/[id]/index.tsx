@@ -3,12 +3,19 @@ import { router, Stack, useFocusEffect, useLocalSearchParams } from "expo-router
 import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { deleteRoutine, getRoutineDetail, type RoutineDetail } from "@brabus/supabase";
+import {
+  deleteRoutine,
+  getRoutineDetail,
+  getRoutineExport,
+  type RoutineDetail,
+} from "@brabus/supabase";
 
+import { AccessBadge } from "@/components/clients";
 import { Loading, NotFound } from "@/components/loading";
 import { Tile } from "@/components/tile";
 import { Button, Card, Muted, SectionLabel, Title } from "@/components/ui";
 import { confirm, notify } from "@/lib/confirm";
+import { shareRoutinePdf, shareRoutineXlsx } from "@/lib/export";
 import { supabase } from "@/lib/supabase";
 import { colors, fonts } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
@@ -18,6 +25,7 @@ export default function RutinaScreen() {
   const { session, profile } = useAuth();
   const [detail, setDetail] = useState<RoutineDetail | null | undefined>(undefined);
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState<"pdf" | "xlsx" | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -28,10 +36,22 @@ export default function RutinaScreen() {
   if (detail === undefined) return <Loading />;
   if (detail === null) return <NotFound text="No se encontró la rutina." />;
 
-  const { routine, days, student } = detail;
+  const { routine, days, client } = detail;
   const isOwner = routine.owner_id === session?.user.id;
-  // Plantilla del coach: se asigna a un alumno creándole una copia propia.
-  const canAssign = isOwner && (profile?.is_coach ?? false) && !student;
+  // Plantilla del coach: se asigna a un cliente creándole una copia propia.
+  const canAssign = isOwner && (profile?.is_coach ?? false) && !routine.client_id;
+
+  const onExport = async (kind: "pdf" | "xlsx") => {
+    setExporting(kind);
+    try {
+      const data = await getRoutineExport(supabase, id, detail);
+      if (data) await (kind === "pdf" ? shareRoutinePdf(data) : shareRoutineXlsx(data));
+    } catch {
+      notify("No se pudo exportar", "Probá de nuevo en un momento.");
+    } finally {
+      setExporting(null);
+    }
+  };
 
   const onDelete = () =>
     confirm({
@@ -61,31 +81,24 @@ export default function RutinaScreen() {
             </Text>
           </Muted>
         ) : null}
-        {isOwner && student ? (
+        {isOwner && client ? (
           <View style={styles.studentRow}>
             <Muted>
               Rutina de:{" "}
               <Text
                 style={{ color: colors.foreground, fontFamily: fonts.medium }}
-                onPress={
-                  student.id && student.linkStatus
-                    ? () => router.push(`/alumno/${student.id}`)
-                    : undefined
-                }
+                onPress={() => router.push(`/cliente/${client.id}`)}
               >
-                {student.name}
+                {client.name}
               </Text>
             </Muted>
-            {student.linkStatus === "pending" ? (
-              <Text style={[styles.badge, styles.badgePending]}>Invitación pendiente</Text>
-            ) : student.linkStatus === null ? (
-              <Text style={styles.badge}>Desvinculado</Text>
-            ) : null}
+            <AccessBadge access={client.appAccess} />
+            {client.archived ? <Text style={styles.badge}>Archivado</Text> : null}
           </View>
         ) : null}
         {canAssign ? (
           <Muted style={{ fontSize: 13 }}>
-            Plantilla: asignala a un alumno para crearle su propia copia.
+            Plantilla: asignala a un cliente para crearle su propia copia.
           </Muted>
         ) : null}
       </View>
@@ -102,13 +115,31 @@ export default function RutinaScreen() {
         ) : null}
         {canAssign ? (
           <Button
-            title="Asignar a alumno"
+            title="Asignar a cliente"
             variant="outline"
             style={styles.action}
             onPress={() => router.push(`/rutina/${id}/asignar`)}
             icon={<Ionicons name="person-add-outline" size={18} color={colors.foreground} />}
           />
         ) : null}
+        <Button
+          title="PDF"
+          variant="outline"
+          style={styles.action}
+          onPress={() => onExport("pdf")}
+          loading={exporting === "pdf"}
+          disabled={exporting !== null}
+          icon={<Ionicons name="document-text-outline" size={18} color={colors.foreground} />}
+        />
+        <Button
+          title="Excel"
+          variant="outline"
+          style={styles.action}
+          onPress={() => onExport("xlsx")}
+          loading={exporting === "xlsx"}
+          disabled={exporting !== null}
+          icon={<Ionicons name="grid-outline" size={18} color={colors.foreground} />}
+        />
         <Button
           title="Historial"
           variant="outline"
@@ -129,7 +160,7 @@ export default function RutinaScreen() {
       </View>
 
       <View style={styles.section}>
-        <SectionLabel>Elegí un día para entrenar</SectionLabel>
+        <SectionLabel>{client ? "Días" : "Elegí un día para entrenar"}</SectionLabel>
         {days.length > 0 ? (
           days.map((day, i) => (
             <Tile
@@ -168,5 +199,4 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     overflow: "hidden",
   },
-  badgePending: { color: "#f59e0b", backgroundColor: "rgba(245,158,11,0.15)" },
 });

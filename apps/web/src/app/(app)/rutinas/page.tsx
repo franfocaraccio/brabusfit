@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 export default async function RutinasPage() {
   const { userId, profile } = await requireProfile();
-  const { folders, routines, students, fromCoaches } = await getRoutinesOverview(
+  const { folders, routines, clients, fromCoaches } = await getRoutinesOverview(
     await createClient(),
     userId,
   );
@@ -21,7 +21,7 @@ export default async function RutinasPage() {
   const hasNothing =
     routines.length === 0 &&
     folders.length === 0 &&
-    students.length === 0 &&
+    clients.length === 0 &&
     fromCoaches.length === 0;
 
   return (
@@ -42,7 +42,7 @@ export default async function RutinasPage() {
         isCoach={profile.is_coach}
         folders={folders}
         routines={routines}
-        students={students}
+        clients={clients}
         fromCoaches={fromCoaches}
       />
     </div>
