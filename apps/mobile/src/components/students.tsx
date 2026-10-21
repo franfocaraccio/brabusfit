@@ -1,7 +1,6 @@
-import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { View } from "react-native";
 
 import { usernameError, type AddStudentStatus } from "@brabus/shared";
 import { addStudent, checkAddStudent, unlinkStudent } from "@brabus/supabase";
@@ -9,9 +8,8 @@ import { addStudent, checkAddStudent, unlinkStudent } from "@brabus/supabase";
 import { ErrorText, FieldHint } from "@/components/forms";
 import { Segmented } from "@/components/segmented";
 import { Sheet } from "@/components/sheet";
-import { Button, Muted, TextField } from "@/components/ui";
+import { Button, TextField } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
-import { colors, fonts, radius } from "@/lib/theme";
 
 type Mode = "email" | "username";
 
@@ -108,7 +106,7 @@ export function AddStudentSheet({
       visible={visible}
       onClose={onClose}
       title="Agregar alumno"
-      description="Le llega una invitación. Mientras tanto ya podés compartirle rutinas: las va a ver cuando la acepte."
+      description="Le llega una invitación. Mientras tanto ya podés armarle rutinas: las va a ver cuando la acepte."
     >
       <Segmented
         value={mode}
@@ -137,7 +135,10 @@ export function AddStudentSheet({
   );
 }
 
-/** Desvincular un alumno o cancelar su invitación (igual que la web). */
+/**
+ * Desvincular un alumno o cancelar su invitación (igual que la web). Las rutinas
+ * que el coach le armó le quedan guardadas; el alumno deja de verlas.
+ */
 export function UnlinkStudentSheet({
   visible,
   onClose,
@@ -155,19 +156,25 @@ export function UnlinkStudentSheet({
   routineCount: number;
   onDone: () => void;
 }) {
-  const [keepRoutines, setKeepRoutines] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const confirmUnlink = async () => {
     setSaving(true);
     setError(null);
-    const result = await unlinkStudent(supabase, linkId, { keepRoutines: !pending && keepRoutines });
+    const result = await unlinkStudent(supabase, linkId);
     setSaving(false);
     if (!result.ok) return setError(result.error);
     onClose();
     onDone();
   };
+
+  const routinesText =
+    routineCount === 0
+      ? ""
+      : routineCount === 1
+        ? " La rutina que le armaste te queda guardada, pero el alumno deja de verla."
+        : ` Las ${routineCount} rutinas que le armaste te quedan guardadas, pero el alumno deja de verlas.`;
 
   return (
     <Sheet
@@ -175,36 +182,12 @@ export function UnlinkStudentSheet({
       onClose={onClose}
       title={pending ? "Cancelar invitación" : `Desvincular a ${name}`}
       description={
-        pending
-          ? "Se borra la invitación y lo que le compartiste mientras estaba pendiente."
-          : "Deja de ser tu alumno: ya no vas a ver su progreso ni sus entrenamientos."
+        (pending
+          ? "Se borra la invitación."
+          : "Deja de ser tu alumno: ya no vas a ver su progreso ni sus entrenamientos.") +
+        routinesText
       }
     >
-      {!pending ? (
-        <View style={{ gap: 8 }}>
-          <Muted style={{ fontSize: 13 }}>¿Qué conserva?</Muted>
-          <Pressable
-            onPress={() => setKeepRoutines((k) => !k)}
-            style={styles.check}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: keepRoutines }}
-          >
-            <View style={[styles.box, keepRoutines && styles.boxOn]}>
-              {keepRoutines ? (
-                <Ionicons name="checkmark" size={16} color={colors.primaryForeground} />
-              ) : null}
-            </View>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={styles.checkTitle}>Seguir compartiéndole sus rutinas</Text>
-              <Text style={styles.checkHint}>
-                {routineCount === 0
-                  ? "Hoy no tiene rutinas tuyas."
-                  : `Conserva ${routineCount === 1 ? "la rutina" : `las ${routineCount} rutinas`} que le compartiste.`}
-              </Text>
-            </View>
-          </Pressable>
-        </View>
-      ) : null}
       {error ? <ErrorText>{error}</ErrorText> : null}
       <Button
         title={pending ? "Cancelar invitación" : "Desvincular"}
@@ -215,26 +198,3 @@ export function UnlinkStudentSheet({
     </Sheet>
   );
 }
-
-const styles = StyleSheet.create({
-  check: {
-    flexDirection: "row",
-    gap: 12,
-    padding: 12,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  box: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: colors.mutedForeground,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  boxOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  checkTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.foreground },
-  checkHint: { fontFamily: fonts.regular, fontSize: 13, color: colors.mutedForeground },
-});

@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 export default async function RutinasPage() {
   const { userId, profile } = await requireProfile();
-  const { folders, routines, shared } = await getRoutinesOverview(
+  const { folders, routines, students, fromCoaches } = await getRoutinesOverview(
     await createClient(),
     userId,
   );
@@ -19,7 +19,10 @@ export default async function RutinasPage() {
   // Si no hay nada, el empty state ya ofrece "Crear mi primera rutina":
   // ocultamos el botón chico del header para no duplicar.
   const hasNothing =
-    routines.length === 0 && folders.length === 0 && shared.length === 0;
+    routines.length === 0 &&
+    folders.length === 0 &&
+    students.length === 0 &&
+    fromCoaches.length === 0;
 
   return (
     <div className="space-y-6">
@@ -39,7 +42,8 @@ export default async function RutinasPage() {
         isCoach={profile.is_coach}
         folders={folders}
         routines={routines}
-        shared={shared}
+        students={students}
+        fromCoaches={fromCoaches}
       />
     </div>
   );

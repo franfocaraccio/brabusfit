@@ -48,7 +48,7 @@ export default async function DashboardPage() {
         </h1>
         <p className="text-muted-foreground text-sm">
           {profile.is_coach
-            ? "Creá rutinas y compartilas con tus alumnos."
+            ? "Armales rutinas a tus alumnos."
             : "Elegí una rutina y empezá a entrenar."}
         </p>
       </div>

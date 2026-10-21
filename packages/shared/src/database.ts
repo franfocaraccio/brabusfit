@@ -6,26 +6,6 @@
 export type ShareStatus = "pending" | "accepted";
 export type SessionStatus = "in_progress" | "finished" | "abandoned";
 
-// Estado de un email al validarlo para compartir (RPC validate_share_email).
-export type ShareEmailStatus =
-  | "invalid"
-  | "forbidden"
-  | "self"
-  | "coach"
-  | "already"
-  | "existing"
-  | "new";
-
-// Estado de un username al validarlo para compartir (RPC validate_share_username).
-export type ShareUsernameStatus =
-  | "invalid"
-  | "forbidden"
-  | "not_found"
-  | "self"
-  | "coach"
-  | "already"
-  | "existing";
-
 // Forma del payload que reciben las RPC create_full_routine / update_full_routine.
 export type ExerciseInput = {
   id?: string;
@@ -137,6 +117,10 @@ export type Database = {
           owner_id: string;
           folder_id: string | null;
           name: string;
+          /** Alumno al que el coach le asignó la rutina (null = plantilla o rutina propia). */
+          student_id: string | null;
+          /** Email del alumno asignado (también mientras no tiene cuenta). */
+          student_email: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -145,6 +129,8 @@ export type Database = {
           owner_id: string;
           folder_id?: string | null;
           name: string;
+          student_id?: string | null;
+          student_email?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -212,34 +198,6 @@ export type Database = {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["exercise_catalog"]["Insert"]>;
-        Relationships: [];
-      };
-      routine_shares: {
-        Row: {
-          id: string;
-          routine_id: string;
-          shared_by: string;
-          shared_with_email: string;
-          shared_with_user_id: string | null;
-          status: ShareStatus;
-          created_at: string;
-          accepted_at: string | null;
-          /** El alumno la conserva aunque el coach lo desvinculó. */
-          kept: boolean;
-        };
-        Insert: {
-          id?: string;
-          routine_id: string;
-          shared_by: string;
-          shared_with_email: string;
-          shared_with_user_id?: string | null;
-          status?: ShareStatus;
-          created_at?: string;
-          accepted_at?: string | null;
-        };
-        Update: Partial<
-          Database["public"]["Tables"]["routine_shares"]["Insert"]
-        >;
         Relationships: [];
       };
       coach_students: {
@@ -330,7 +288,14 @@ export type Database = {
           p_name: string;
           p_folder_id: string | null;
           p_days: RoutineDayInput[];
+          /** Vínculo con el alumno: crea la rutina asignada a él. */
+          p_link_id?: string | null;
         };
+        Returns: string;
+      };
+      copy_routine: {
+        /** Sin p_link_id: copia como plantilla nueva. */
+        Args: { p_routine_id: string; p_link_id?: string | null };
         Returns: string;
       };
       update_full_routine: {
@@ -341,22 +306,6 @@ export type Database = {
           p_days: RoutineDayInput[];
         };
         Returns: string;
-      };
-      share_routine: {
-        Args: { p_routine_id: string; p_email: string };
-        Returns: { existed: boolean; email: string };
-      };
-      validate_share_email: {
-        Args: { p_routine_id: string; p_email: string };
-        Returns: ShareEmailStatus;
-      };
-      validate_share_username: {
-        Args: { p_routine_id: string; p_username: string };
-        Returns: ShareUsernameStatus;
-      };
-      share_routine_by_username: {
-        Args: { p_routine_id: string; p_username: string };
-        Returns: { existed: boolean; email: string };
       };
       username_available: {
         Args: { p_username: string };
@@ -379,15 +328,11 @@ export type Database = {
         Returns: undefined;
       };
       unlink_student: {
-        Args: { p_link_id: string; p_keep_routines: boolean };
+        Args: { p_link_id: string };
         Returns: undefined;
       };
       leave_coach: {
         Args: { p_link_id: string };
-        Returns: undefined;
-      };
-      set_routine_share: {
-        Args: { p_routine_id: string; p_link_id: string; p_shared: boolean };
         Returns: undefined;
       };
     };
@@ -407,7 +352,6 @@ export type Folder = Tables<"folders">;
 export type Routine = Tables<"routines">;
 export type RoutineDay = Tables<"routine_days">;
 export type Exercise = Tables<"exercises">;
-export type RoutineShare = Tables<"routine_shares">;
 export type WorkoutSession = Tables<"workout_sessions">;
 export type ExerciseLog = Tables<"exercise_logs">;
 export type SetLog = Tables<"set_logs">;

@@ -49,7 +49,7 @@ export default function InicioScreen() {
         <Text style={styles.greeting}>Hola, {profile?.first_name}</Text>
         <Muted>
           {isCoach
-            ? "Creá rutinas y compartilas con tus alumnos."
+            ? "Armales rutinas a tus alumnos."
             : "Elegí una rutina y empezá a entrenar."}
         </Muted>
       </View>

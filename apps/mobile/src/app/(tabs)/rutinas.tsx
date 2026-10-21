@@ -16,9 +16,10 @@ import {
   createFolder,
   deleteFolder,
   getRoutinesOverview,
+  type CoachRoutineLite,
   type FolderLite,
   type RoutineLite,
-  type SharedRoutineLite,
+  type StudentRoutineGroup,
 } from "@brabus/supabase";
 
 import { ErrorText } from "@/components/forms";
@@ -35,8 +36,20 @@ const ROOT_GROUP = "__root__";
 type Overview = {
   folders: FolderLite[];
   routines: RoutineLite[];
-  shared: SharedRoutineLite[];
+  students: StudentRoutineGroup[];
+  fromCoaches: CoachRoutineLite[];
 };
+
+type Group = {
+  id: string;
+  name: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  badge?: { text: string; pending: boolean };
+  deletable: boolean;
+  items: { id: string; name: string }[];
+};
+
+const countLabel = (n: number) => `${n} ${n === 1 ? "rutina" : "rutinas"}`;
 
 export default function RutinasScreen() {
   const { session, profile } = useAuth();
@@ -120,27 +133,126 @@ export default function RutinasScreen() {
     );
   }
 
-  const { folders, routines, shared } = data;
-  const sharedFiltered = shared.filter(
+  const { folders, routines, students, fromCoaches } = data;
+  const coachList = fromCoaches.filter(
     (s) => !q || matches(s.name) || (s.coachName ? matches(s.coachName) : false),
   );
 
-  // Coach: carpetas (+ "Sin carpeta" para rutinas viejas). Alumno: lista plana.
+  // Coach: rutinas por alumno + plantillas en carpetas. Alumno: lista plana.
+  const visible = (groups: Group[]) =>
+    groups.filter((g) => !q || matches(g.name) || g.items.some((r) => matches(r.name)));
+
+  const studentGroups = visible(
+    students.map((st) => ({
+      id: `student:${st.key}`,
+      name: st.name,
+      icon: "person-outline" as const,
+      badge:
+        st.linkStatus === "pending"
+          ? { text: "Pendiente", pending: true }
+          : st.linkStatus === null
+            ? { text: "Desvinculado", pending: false }
+            : undefined,
+      deletable: false,
+      items: st.routines,
+    })),
+  );
+
   const rootRoutines = routines.filter((r) => !r.folder_id);
-  const groups = [
+  const templateGroups = visible([
     ...folders.map((f) => ({
       id: f.id,
       name: f.name,
+      icon: "folder-outline" as const,
+      deletable: true,
       items: routines.filter((r) => r.folder_id === f.id),
     })),
     ...(rootRoutines.length > 0
-      ? [{ id: ROOT_GROUP, name: "Sin carpeta", items: rootRoutines }]
+      ? [
+          {
+            id: ROOT_GROUP,
+            name: "Sin carpeta",
+            icon: "folder-outline" as const,
+            deletable: false,
+            items: rootRoutines,
+          },
+        ]
       : []),
-  ].filter((g) => !q || matches(g.name) || g.items.some((r) => matches(r.name)));
+  ]);
 
   const ownFlat = routines.filter((r) => !q || matches(r.name));
   const hasNothing =
-    routines.length === 0 && folders.length === 0 && shared.length === 0;
+    routines.length === 0 &&
+    folders.length === 0 &&
+    students.length === 0 &&
+    fromCoaches.length === 0;
+
+  const renderGroups = (groups: Group[], empty: string) =>
+    groups.length === 0 ? (
+      <Muted>{q ? "No se encontraron resultados." : empty}</Muted>
+    ) : (
+      groups.map((g) => {
+        const nameMatch = !q || matches(g.name);
+        const items = nameMatch ? g.items : g.items.filter((r) => matches(r.name));
+        const isOpen = q ? true : expanded.has(g.id);
+        return (
+          <View key={g.id} style={styles.group}>
+            <View style={styles.folder}>
+              <Pressable
+                onPress={() => toggle(g.id)}
+                style={styles.folderToggle}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: isOpen }}
+              >
+                <View style={styles.folderIcon}>
+                  <Ionicons name={g.icon} size={20} color={colors.foreground} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={styles.folderTitleRow}>
+                    <Text style={[styles.folderName, { flexShrink: 1 }]} numberOfLines={1}>
+                      {g.name}
+                    </Text>
+                    {g.badge ? (
+                      <Text style={[styles.badge, g.badge.pending && styles.badgePending]}>
+                        {g.badge.text}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Text style={styles.folderCount}>{countLabel(g.items.length)}</Text>
+                </View>
+                <Ionicons
+                  name={isOpen ? "chevron-up" : "chevron-down"}
+                  size={20}
+                  color={colors.mutedForeground}
+                />
+              </Pressable>
+              {g.deletable ? (
+                <Pressable
+                  onPress={() => onDeleteFolder(g.id, g.name)}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel="Eliminar carpeta"
+                  style={styles.folderTrash}
+                >
+                  <Ionicons name="trash-outline" size={18} color={colors.mutedForeground} />
+                </Pressable>
+              ) : null}
+            </View>
+            {isOpen && (
+              <View style={styles.groupItems}>
+                {items.length > 0 ? (
+                  items.map((r) => (
+                    <Tile key={r.id} title={r.name} icon="barbell" onPress={() => open(r.id)} />
+                  ))
+                ) : (
+                  <Muted>Carpeta vacía.</Muted>
+                )}
+              </View>
+            )}
+          </View>
+        );
+      })
+    );
 
   return (
     <ScrollView
@@ -159,7 +271,7 @@ export default function RutinasScreen() {
         <Card style={styles.empty}>
           <Muted style={{ textAlign: "center" }}>Todavía no tenés rutinas.</Muted>
           <Button
-            title="Crear mi primera rutina"
+            title={isCoach ? "Crear mi primera plantilla" : "Crear mi primera rutina"}
             onPress={() => router.push("/rutina/crear")}
             icon={<Ionicons name="add" size={18} color={colors.primaryForeground} />}
           />
@@ -178,7 +290,7 @@ export default function RutinasScreen() {
               <TextInput
                 value={query}
                 onChangeText={setQuery}
-                placeholder={isCoach ? "Buscar por carpeta o rutina…" : "Buscar rutina…"}
+                placeholder={isCoach ? "Buscar alumno, carpeta o rutina…" : "Buscar rutina…"}
                 placeholderTextColor={colors.mutedForeground}
                 selectionColor={colors.primary}
                 style={styles.searchInput}
@@ -199,93 +311,36 @@ export default function RutinasScreen() {
             ) : null}
           </View>
 
-          {sharedFiltered.length > 0 && (
+          {!isCoach && coachList.length > 0 && (
             <View style={styles.section}>
-              <SectionLabel>Compartidas conmigo</SectionLabel>
-              {sharedFiltered.map((s) => (
+              <SectionLabel>De mis coaches</SectionLabel>
+              {coachList.map((s) => (
                 <Tile
                   key={s.id}
                   title={s.name}
-                  subtitle={s.coachName ? `Coach: ${s.coachName}` : "Compartida"}
+                  subtitle={s.coachName ? `Coach: ${s.coachName}` : "De tu coach"}
                   icon="barbell"
                   accent
-                  onPress={() => open(s.routineId)}
+                  onPress={() => open(s.id)}
                 />
               ))}
             </View>
           )}
 
           {isCoach ? (
-            <View style={styles.section}>
-              <SectionLabel>Carpetas</SectionLabel>
-              {groups.length === 0 ? (
-                <Muted>No se encontraron resultados.</Muted>
-              ) : (
-                groups.map((g) => {
-                  const nameMatch = !q || matches(g.name);
-                  const items = nameMatch
-                    ? g.items
-                    : g.items.filter((r) => matches(r.name));
-                  const isOpen = q ? true : expanded.has(g.id);
-                  return (
-                    <View key={g.id} style={styles.group}>
-                      <View style={styles.folder}>
-                        <Pressable
-                          onPress={() => toggle(g.id)}
-                          style={styles.folderToggle}
-                          accessibilityRole="button"
-                          accessibilityState={{ expanded: isOpen }}
-                        >
-                          <View style={styles.folderIcon}>
-                            <Ionicons name="folder-outline" size={20} color={colors.foreground} />
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.folderName} numberOfLines={1}>
-                              {g.name}
-                            </Text>
-                            <Text style={styles.folderCount}>
-                              {g.items.length} rutina(s)
-                            </Text>
-                          </View>
-                          <Ionicons
-                            name={isOpen ? "chevron-up" : "chevron-down"}
-                            size={20}
-                            color={colors.mutedForeground}
-                          />
-                        </Pressable>
-                        {g.id !== ROOT_GROUP ? (
-                          <Pressable
-                            onPress={() => onDeleteFolder(g.id, g.name)}
-                            hitSlop={10}
-                            accessibilityRole="button"
-                            accessibilityLabel="Eliminar carpeta"
-                            style={styles.folderTrash}
-                          >
-                            <Ionicons name="trash-outline" size={18} color={colors.mutedForeground} />
-                          </Pressable>
-                        ) : null}
-                      </View>
-                      {isOpen && (
-                        <View style={styles.groupItems}>
-                          {items.length > 0 ? (
-                            items.map((r) => (
-                              <Tile
-                                key={r.id}
-                                title={r.name}
-                                icon="barbell"
-                                onPress={() => open(r.id)}
-                              />
-                            ))
-                          ) : (
-                            <Muted>Carpeta vacía.</Muted>
-                          )}
-                        </View>
-                      )}
-                    </View>
-                  );
-                })
-              )}
-            </View>
+            <>
+              <View style={styles.section}>
+                <SectionLabel>Rutinas de alumnos</SectionLabel>
+                {renderGroups(
+                  studentGroups,
+                  "Todavía no armaste rutinas para alumnos. Entrá a una plantilla y tocá «Asignar a alumno», o creala desde Alumnos.",
+                )}
+              </View>
+              <View style={styles.section}>
+                <SectionLabel>Plantillas</SectionLabel>
+                {renderGroups(templateGroups, "Todavía no tenés plantillas.")}
+              </View>
+            </>
           ) : (
             <View style={styles.section}>
               <SectionLabel>Mis rutinas</SectionLabel>
@@ -389,4 +444,16 @@ const styles = StyleSheet.create({
   },
   folderName: { fontFamily: fonts.semibold, fontSize: 16, color: colors.foreground },
   folderCount: { fontFamily: fonts.regular, fontSize: 13, color: colors.mutedForeground },
+  folderTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  badge: {
+    fontFamily: fonts.semibold,
+    fontSize: 11,
+    color: colors.mutedForeground,
+    backgroundColor: colors.muted,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  badgePending: { color: "#f59e0b", backgroundColor: "rgba(245,158,11,0.15)" },
 });

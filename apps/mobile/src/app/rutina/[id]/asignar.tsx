@@ -1,85 +1,83 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { getShareTargets, setRoutineShare, type ShareTarget } from "@brabus/supabase";
+import { copyRoutine, getStudents, type StudentSummary } from "@brabus/supabase";
 
 import { Loading } from "@/components/loading";
 import { AddStudentSheet } from "@/components/students";
 import { Button, Card, Muted } from "@/components/ui";
 import { notify } from "@/lib/confirm";
 import { supabase } from "@/lib/supabase";
-import { colors, fonts, radius } from "@/lib/theme";
+import { colors, fonts } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
 
-/** Compartir una rutina eligiendo entre los alumnos (igual que la web). */
-export default function CompartirScreen() {
+/** Asignar una plantilla a un alumno: le crea una copia propia (igual que la web). */
+export default function AsignarScreen() {
   const { id: routineId } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
-  const [targets, setTargets] = useState<ShareTarget[] | null>(null);
+  const [students, setStudents] = useState<StudentSummary[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
 
   const load = useCallback(async () => {
-    if (session) setTargets(await getShareTargets(supabase, session.user.id, routineId));
-  }, [session, routineId]);
+    if (session) setStudents(await getStudents(supabase, session.user.id));
+  }, [session]);
 
   useEffect(() => {
-    if (session) getShareTargets(supabase, session.user.id, routineId).then(setTargets);
-  }, [session, routineId]);
+    if (session) getStudents(supabase, session.user.id).then(setStudents);
+  }, [session]);
 
-  const toggle = async (t: ShareTarget) => {
-    setBusy(t.linkId);
-    const result = await setRoutineShare(supabase, routineId, t.linkId, !t.shared);
+  const assign = async (st: StudentSummary) => {
+    setBusy(st.linkId);
+    const result = await copyRoutine(supabase, routineId, st.linkId);
     setBusy(null);
-    if (!result.ok) return notify("No se pudo compartir", result.error);
-    Haptics.selectionAsync().catch(() => {});
-    setTargets((list) =>
-      list ? list.map((x) => (x.linkId === t.linkId ? { ...x, shared: !t.shared } : x)) : list,
-    );
+    if (!result.ok) return notify("No se pudo asignar", result.error);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    router.replace(`/rutina/${result.data.id}`);
   };
 
-  if (!targets) return <Loading />;
+  if (!students) return <Loading />;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Muted>
-        Elegí con cuáles de tus alumnos compartirla. Los que tienen la invitación pendiente la van a
-        ver cuando la acepten.
+        Se le crea una copia propia de esta plantilla. Después podés ajustarla solo para ese
+        alumno: los cambios no afectan a la plantilla ni a otros alumnos.
       </Muted>
 
-      {targets.length === 0 ? (
+      {students.length === 0 ? (
         <Card style={{ padding: 20 }}>
           <Muted style={{ textAlign: "center" }}>Todavía no tenés alumnos.</Muted>
         </Card>
       ) : (
         <Card style={{ overflow: "hidden" }}>
-          {targets.map((t, i) => (
+          {students.map((st, i) => (
             <Pressable
-              key={t.linkId}
-              onPress={() => toggle(t)}
+              key={st.linkId}
+              onPress={() => assign(st)}
               disabled={busy !== null}
               style={[styles.row, i > 0 && styles.rowBorder]}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: t.shared }}
+              accessibilityRole="button"
             >
-              <View style={[styles.box, t.shared && styles.boxOn]}>
-                {t.shared ? (
-                  <Ionicons name="checkmark" size={16} color={colors.primaryForeground} />
-                ) : null}
-              </View>
+              <Ionicons name="person-outline" size={20} color={colors.mutedForeground} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.name} numberOfLines={1}>
-                  {t.name}
+                  {st.name}
                 </Text>
                 <Text style={styles.meta} numberOfLines={1}>
-                  {t.username ? `@${t.username}` : t.email}
-                  {t.status === "pending" ? " · Invitación pendiente" : ""}
+                  {st.username ? `@${st.username}` : st.email}
+                  {st.status === "pending" ? " · Invitación pendiente" : ""}
+                  {` · ${st.routineCount} ${st.routineCount === 1 ? "rutina" : "rutinas"}`}
                 </Text>
               </View>
-              {busy === t.linkId ? <ActivityIndicator color={colors.primary} /> : null}
+              {busy === st.linkId ? (
+                <ActivityIndicator color={colors.primary} />
+              ) : (
+                <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
+              )}
             </Pressable>
           ))}
         </Card>
@@ -101,16 +99,6 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 40, gap: 16 },
   row: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14 },
   rowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
-  box: {
-    width: 22,
-    height: 22,
-    borderRadius: radius.sm - 2,
-    borderWidth: 1.5,
-    borderColor: colors.mutedForeground,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  boxOn: { backgroundColor: colors.primary, borderColor: colors.primary },
   name: { fontFamily: fonts.semibold, fontSize: 15, color: colors.foreground },
   meta: { fontFamily: fonts.regular, fontSize: 12, color: colors.mutedForeground },
 });

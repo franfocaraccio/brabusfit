@@ -2,11 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { History, Pencil } from "lucide-react";
 
-import { getRoutineDetail, getShareTargets } from "@brabus/supabase";
+import { getRoutineDetail, getStudents } from "@brabus/supabase";
 
 import { LinkTile } from "@/components/app/link-tile";
 import { DeleteRoutineButton } from "@/components/routines/delete-routine-button";
-import { ShareRoutine } from "@/components/routines/share-routine";
+import { AssignRoutine } from "@/components/routines/assign-routine";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireProfile } from "@/lib/auth";
@@ -24,13 +24,12 @@ export default async function RutinaDetailPage({
 
   const detail = await getRoutineDetail(supabase, id);
   if (!detail) notFound();
-  const { routine, ownerName, days } = detail;
+  const { routine, ownerName, student, days } = detail;
 
   const isOwner = routine.owner_id === userId;
-  const canShare = isOwner && profile.is_coach;
-
-  // Panel de compartir: solo el coach dueño (elige entre sus alumnos).
-  const targets = canShare ? await getShareTargets(supabase, userId, id) : [];
+  // Plantilla del coach: se asigna a un alumno creándole una copia propia.
+  const canAssign = isOwner && profile.is_coach && !student;
+  const students = canAssign ? await getStudents(supabase, userId) : [];
 
   return (
     <div className="space-y-6">
@@ -50,6 +49,37 @@ export default async function RutinaDetailPage({
             <span className="text-foreground font-medium">{ownerName ?? "tu coach"}</span>
           </p>
         )}
+        {isOwner && student && (
+          <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-sm">
+            <span>
+              Rutina de:{" "}
+              {student.id && student.linkStatus ? (
+                <Link
+                  href={`/alumnos/${student.id}`}
+                  className="text-foreground font-medium hover:underline"
+                >
+                  {student.name}
+                </Link>
+              ) : (
+                <span className="text-foreground font-medium">{student.name}</span>
+              )}
+            </span>
+            {student.linkStatus === "pending" ? (
+              <span className="rounded bg-amber-500/15 px-1.5 text-[10px] font-semibold text-amber-500">
+                Invitación pendiente
+              </span>
+            ) : student.linkStatus === null ? (
+              <span className="bg-muted rounded px-1.5 text-[10px] font-semibold">
+                Desvinculado · no la ve
+              </span>
+            ) : null}
+          </p>
+        )}
+        {canAssign && (
+          <p className="text-muted-foreground text-sm">
+            Plantilla: asignala a un alumno para crearle su propia copia.
+          </p>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -61,7 +91,7 @@ export default async function RutinaDetailPage({
             <Pencil className="size-4" /> Editar
           </Link>
         )}
-        {canShare && <ShareRoutine routineId={id} targets={targets} />}
+        {canAssign && <AssignRoutine routineId={id} students={students} />}
         <Link
           href={`/rutinas/${id}/historial`}
           className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}

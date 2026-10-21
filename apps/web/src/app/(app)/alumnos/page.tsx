@@ -36,7 +36,7 @@ export default async function AlumnosPage({
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Alumnos</h1>
           <p className="text-muted-foreground text-sm">
-            Tu grupo: seguí su progreso y compartiles lo que armes.
+            Tu grupo: seguí su progreso y armales sus rutinas.
           </p>
         </div>
         <AddStudent defaultOpen={agregar === "1"} />

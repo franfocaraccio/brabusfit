@@ -31,6 +31,7 @@ export default async function EditarRutinaPage({
     id: routine.id,
     name: routine.name,
     folderId: routine.folderId,
+    studentName: routine.studentName,
     days: routine.days.map((d) => ({
       key: d.id,
       id: d.id,

@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { createRoutine, updateRoutine } from "@/lib/actions/routines";
 import type { CatalogEntry, RoutineDayInput } from "@brabus/shared";
-import type { FolderLite } from "@brabus/supabase";
+import type { FolderLite, StudentSummary } from "@brabus/supabase";
 import { ExercisePicker } from "@/components/routines/exercise-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,6 +31,8 @@ type ExerciseDraft = {
 type DayDraft = { key: string; id?: string; name: string; exercises: ExerciseDraft[] };
 
 const NEW_FOLDER = "__new__";
+/** Destino "plantilla" (en vez de un alumno). */
+const TEMPLATE = "__template__";
 const newKey = () => crypto.randomUUID();
 
 function emptyExercise(): ExerciseDraft {
@@ -44,6 +46,8 @@ export type RoutineBuilderInitial = {
   id: string;
   name: string;
   folderId: string | null;
+  /** Rutina asignada a un alumno: no usa carpeta. */
+  studentName: string | null;
   days: DayDraft[];
 };
 
@@ -52,12 +56,18 @@ export function RoutineBuilder({
   catalog,
   isCoach,
   initial,
+  students = [],
+  initialStudentLinkId,
 }: {
   folders: FolderLite[];
   /** Catálogo de ejercicios disponible (general + propios). */
   catalog: CatalogEntry[];
   isCoach: boolean;
   initial?: RoutineBuilderInitial;
+  /** Coach, al crear: alumnos a los que se le puede armar la rutina. */
+  students?: StudentSummary[];
+  /** Alumno elegido de entrada (viene de su página). */
+  initialStudentLinkId?: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -68,11 +78,24 @@ export function RoutineBuilder({
     initial?.folderId ?? null,
   );
   const [newFolderName, setNewFolderName] = useState("");
+  // Coach al crear: plantilla (con carpeta) o rutina para un alumno.
+  const [target, setTarget] = useState<string>(
+    initialStudentLinkId && students.some((s) => s.linkId === initialStudentLinkId)
+      ? initialStudentLinkId
+      : TEMPLATE,
+  );
   const [days, setDays] = useState<DayDraft[]>(initial?.days ?? [emptyDay()]);
   // Catálogo local: suma los ejercicios propios que se crean en el momento.
   const [catalogList, setCatalogList] = useState<CatalogEntry[]>(catalog);
 
   const isEdit = Boolean(initial);
+  const forStudent = isEdit ? Boolean(initial?.studentName) : target !== TEMPLATE;
+  const usesFolder = isCoach && !forStudent;
+
+  const targetItems: Record<string, string> = {
+    [TEMPLATE]: "Plantilla (en una carpeta)",
+    ...Object.fromEntries(students.map((s) => [s.linkId, s.name])),
+  };
 
   // Carpetas existentes + opción para crear una nueva en el momento.
   const folderItems: Record<string, string> = {
@@ -129,7 +152,7 @@ export function RoutineBuilder({
     // Resolución de carpeta según rol (validación inmediata para coaches).
     let folderIdPayload: string | null = null;
     let newFolderNamePayload: string | null = null;
-    if (isCoach) {
+    if (usesFolder) {
       if (folderId === NEW_FOLDER) {
         if (!newFolderName.trim()) {
           toast.error("Poné un nombre para la carpeta nueva.");
@@ -159,6 +182,7 @@ export function RoutineBuilder({
       name: name.trim(),
       folderId: folderIdPayload,
       newFolderName: newFolderNamePayload,
+      studentLinkId: !isEdit && forStudent ? target : null,
       days: payloadDays,
     };
 
@@ -190,9 +214,40 @@ export function RoutineBuilder({
           />
         </div>
 
-        {isCoach && (
+        {isCoach && !isEdit && (
           <div className="space-y-2">
-            <Label>Carpeta del alumno</Label>
+            <Label>¿Para quién es?</Label>
+            <Select value={target} onValueChange={(v) => setTarget(v ?? TEMPLATE)} items={targetItems}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={TEMPLATE}>Plantilla (en una carpeta)</SelectItem>
+                {students.map((s) => (
+                  <SelectItem key={s.linkId} value={s.linkId}>
+                    {s.name}
+                    {s.status === "pending" ? " · pendiente" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-muted-foreground text-xs">
+              {forStudent
+                ? "Es solo de este alumno: cambiarla no afecta a nadie más."
+                : "Las plantillas no las ve nadie: sirven para armarles rutinas a tus alumnos."}
+            </p>
+          </div>
+        )}
+
+        {isCoach && isEdit && initial?.studentName && (
+          <p className="text-muted-foreground text-sm">
+            Rutina de: <span className="text-foreground font-medium">{initial.studentName}</span>
+          </p>
+        )}
+
+        {usesFolder && (
+          <div className="space-y-2">
+            <Label>Carpeta</Label>
             <Select
               value={folderId}
               onValueChange={(v) => setFolderId(v)}
@@ -216,7 +271,7 @@ export function RoutineBuilder({
               <Input
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
-                placeholder="Nombre de la carpeta (ej: Juan Pérez)"
+                placeholder="Nombre de la carpeta (ej: Fuerza)"
                 autoFocus
               />
             )}

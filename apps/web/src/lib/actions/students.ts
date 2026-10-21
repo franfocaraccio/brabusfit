@@ -34,24 +34,11 @@ export async function addStudent(
   return { ok: true, data: { existed: result.data.existed } };
 }
 
-export async function unlinkStudent(
-  linkId: string,
-  keepRoutines: boolean,
-): Promise<ActionResult> {
-  const result = await db.unlinkStudent(await createClient(), linkId, { keepRoutines });
-  if (result.ok) revalidatePath("/alumnos", "layout");
-  return result;
-}
-
-export async function setRoutineShare(
-  routineId: string,
-  linkId: string,
-  shared: boolean,
-): Promise<ActionResult> {
-  const result = await db.setRoutineShare(await createClient(), routineId, linkId, shared);
+export async function unlinkStudent(linkId: string): Promise<ActionResult> {
+  const result = await db.unlinkStudent(await createClient(), linkId);
   if (result.ok) {
-    revalidatePath(`/rutinas/${routineId}`);
     revalidatePath("/alumnos", "layout");
+    revalidatePath("/rutinas");
   }
   return result;
 }
@@ -66,7 +53,7 @@ export async function respondInvitation(
   return result;
 }
 
-/** Alumno: desvincularse de un coach (pierde lo que le compartía). */
+/** Alumno: desvincularse de un coach (deja de ver lo que le armó). */
 export async function leaveCoach(linkId: string): Promise<ActionResult> {
   const result = await db.leaveCoach(await createClient(), linkId);
   if (result.ok) revalidatePath("/", "layout");

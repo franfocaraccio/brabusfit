@@ -57,7 +57,7 @@ export default function AlumnosScreen() {
         />
       }
     >
-      <Muted>Tu grupo: seguí su progreso y compartiles lo que armes.</Muted>
+      <Muted>Tu grupo: seguí su progreso y armales sus rutinas.</Muted>
       <Button
         title="Agregar alumno"
         onPress={() => setAdding(true)}

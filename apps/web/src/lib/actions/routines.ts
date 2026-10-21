@@ -32,6 +32,19 @@ export async function updateRoutine(
   return result;
 }
 
+/** Copia una rutina propia a un alumno (o como plantilla nueva si linkId es null). */
+export async function copyRoutine(
+  routineId: string,
+  linkId: string | null,
+): Promise<ActionResult<{ id: string }>> {
+  const result = await db.copyRoutine(await createClient(), routineId, linkId);
+  if (result.ok) {
+    revalidatePath("/rutinas");
+    revalidatePath("/alumnos", "layout");
+  }
+  return result;
+}
+
 export async function deleteRoutine(routineId: string): Promise<ActionResult> {
   const result = await db.deleteRoutine(await createClient(), routineId);
   if (result.ok) revalidatePath("/rutinas");

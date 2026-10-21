@@ -6,6 +6,8 @@ export type RoutinePayload = {
   folderId: string | null;
   /** Si viene, se crea una carpeta nueva con este nombre y se usa para la rutina. */
   newFolderName?: string | null;
+  /** Solo al crear: vínculo del alumno al que se le asigna (no usa carpeta). */
+  studentLinkId?: string | null;
   days: RoutineDayInput[];
 };
 

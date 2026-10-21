@@ -5,7 +5,7 @@
 -- Usuarios (contraseña de todos: brabus-test-123):
 --   coach@brabus.test    coach_test   coach
 --   coach2@brabus.test   coach_dos    coach (para probar "no se comparte a coaches")
---   alumno@brabus.test   alumno_test  alumno de coach_test (activo) con rutina compartida
+--   alumno@brabus.test   alumno_test  alumno de coach_test (activo) con su rutina asignada
 --                                     + ~6 meses de entrenamientos
 --   alumno2@brabus.test  alumno_dos   alumno sin rutinas
 -- ============================================================================
@@ -42,16 +42,22 @@ select pg_temp.seed_user('33333333-3333-3333-3333-333333333333', 'alumno@brabus.
 select pg_temp.seed_user('44444444-4444-4444-4444-444444444444', 'alumno2@brabus.test',
   '{"first_name":"Belén","last_name":"Alumna","username":"alumno_dos","is_coach":false}');
 
--- Rutina del coach en una carpeta, compartida con alumno_test ---------------
+-- Vínculos coach ↔ alumno: Andrés ya aceptó; invitado@ todavía no tiene cuenta.
+insert into public.coach_students (coach_id, student_id, student_email, status, accepted_at) values
+  ('11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333',
+   'alumno@brabus.test', 'active', now()),
+  ('11111111-1111-1111-1111-111111111111', null, 'invitado@brabus.test', 'pending', null);
+
+-- Rutinas del coach: la de Andrés (asignada) y una plantilla en carpeta -------
 insert into public.folders (id, owner_id, name) values
   ('a0000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'Fuerza'),
   ('a0000000-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', 'Hipertrofia');
 
-insert into public.routines (id, owner_id, folder_id, name) values
+insert into public.routines (id, owner_id, folder_id, name, student_id, student_email) values
   ('b0000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111',
-   'a0000000-0000-0000-0000-000000000001', 'Fuerza 3 días'),
+   null, 'Fuerza 3 días', '33333333-3333-3333-3333-333333333333', 'alumno@brabus.test'),
   ('b0000000-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111',
-   'a0000000-0000-0000-0000-000000000002', 'Torso / Pierna');
+   'a0000000-0000-0000-0000-000000000002', 'Torso / Pierna', null, null);
 
 insert into public.routine_days (id, routine_id, name, position) values
   ('c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'Día 1 - Empuje', 0),
@@ -69,17 +75,12 @@ insert into public.exercises (id, day_id, name, sets_reps, position) values
   ('d0000000-0000-0000-0000-000000000007', 'c0000000-0000-0000-0000-000000000003', 'Peso muerto rumano', '3x10', 1),
   ('d0000000-0000-0000-0000-000000000008', 'c0000000-0000-0000-0000-000000000004', 'Press inclinado', '4x10', 0);
 
--- Vínculos coach ↔ alumno: Andrés ya aceptó; invitado@ todavía no tiene cuenta.
-insert into public.coach_students (coach_id, student_id, student_email, status, accepted_at) values
-  ('11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333',
-   'alumno@brabus.test', 'active', now()),
-  ('11111111-1111-1111-1111-111111111111', null, 'invitado@brabus.test', 'pending', null);
-
-insert into public.routine_shares (routine_id, shared_by, shared_with_email, shared_with_user_id, status, accepted_at) values
-  ('b0000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111',
-   'alumno@brabus.test', '33333333-3333-3333-3333-333333333333', 'accepted', now()),
-  ('b0000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111',
-   'invitado@brabus.test', null, 'pending', null);
+-- Plantilla "Fuerza 3 días" (copia en la carpeta Fuerza) y una rutina ya
+-- asignada a invitado@ (la ve cuando se registre y acepte).
+select public._copy_routine('b0000000-0000-0000-0000-000000000001', null,
+  'a0000000-0000-0000-0000-000000000001', null, null);
+select public._copy_routine('b0000000-0000-0000-0000-000000000002', null,
+  null, null, 'invitado@brabus.test');
 
 -- Rutina propia del alumno (sin carpeta) -------------------------------------
 insert into public.routines (id, owner_id, folder_id, name) values

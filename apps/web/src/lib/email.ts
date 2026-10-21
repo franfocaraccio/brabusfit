@@ -34,25 +34,6 @@ function shell(title: string, body: string, ctaText: string, ctaHref: string) {
   </div>`;
 }
 
-/** Aviso a un usuario existente de que le compartieron una rutina. */
-export async function sendRoutineSharedEmail(params: {
-  to: string;
-  coachName: string;
-  routineName: string;
-}) {
-  const { to, coachName, routineName } = params;
-  await send(
-    to,
-    `${coachName} te compartió una rutina`,
-    shell(
-      "Tenés una rutina nueva",
-      `<strong>${coachName}</strong> te compartió la rutina <strong>${routineName}</strong>. Entrá para verla y empezar a entrenar.`,
-      "Ver mis rutinas",
-      `${siteUrl}/rutinas`,
-    ),
-  );
-}
-
 /** Un coach agregó como alumno a alguien que todavía no tiene cuenta. */
 export async function sendCoachInviteEmail(params: { to: string; coachName: string }) {
   const { to, coachName } = params;
@@ -62,25 +43,6 @@ export async function sendCoachInviteEmail(params: { to: string; coachName: stri
     shell(
       "Te invitaron a un grupo de entrenamiento",
       `<strong>${coachName}</strong> te agregó a su grupo de entrenamiento en Brabus Fit. Creá tu cuenta con este email y aceptá la invitación al ingresar.`,
-      "Crear mi cuenta",
-      `${siteUrl}/signup`,
-    ),
-  );
-}
-
-/** Invitación a alguien que todavía no tiene cuenta. */
-export async function sendRoutineInviteEmail(params: {
-  to: string;
-  coachName: string;
-  routineName: string;
-}) {
-  const { to, coachName, routineName } = params;
-  await send(
-    to,
-    `${coachName} te invitó a Brabus Fit`,
-    shell(
-      "Te compartieron una rutina",
-      `<strong>${coachName}</strong> te compartió la rutina <strong>${routineName}</strong> en Brabus Fit. Creá tu cuenta con este email y la vas a ver al ingresar.`,
       "Crear mi cuenta",
       `${siteUrl}/signup`,
     ),

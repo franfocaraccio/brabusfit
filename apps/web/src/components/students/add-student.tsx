@@ -124,7 +124,7 @@ export function AddStudent({ defaultOpen = false }: { defaultOpen?: boolean }) {
           <DialogHeader>
             <DialogTitle>Agregar alumno</DialogTitle>
             <DialogDescription>
-              Le llega una invitación. Mientras tanto ya podés compartirle rutinas: las va a ver
+              Le llega una invitación. Mientras tanto ya podés armarle rutinas: las va a ver
               cuando la acepte.
             </DialogDescription>
           </DialogHeader>

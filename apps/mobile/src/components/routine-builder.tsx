@@ -19,6 +19,7 @@ import {
   updateRoutine,
   type EditableRoutine,
   type FolderLite,
+  type StudentSummary,
 } from "@brabus/supabase";
 
 import { ExercisePicker } from "@/components/exercise-picker";
@@ -38,6 +39,8 @@ type ExerciseDraft = {
 type DayDraft = { key: string; id?: string; name: string; exercises: ExerciseDraft[] };
 
 const NEW_FOLDER = "__new__";
+/** Destino "plantilla" (en vez de un alumno). */
+const TEMPLATE = "__template__";
 let keySeq = 0;
 const newKey = () => `k${Date.now().toString(36)}${(keySeq++).toString(36)}`;
 
@@ -51,19 +54,26 @@ const emptyDay = (): DayDraft => ({ key: newKey(), name: "", exercises: [emptyEx
 
 /**
  * Crear / editar rutina (mismo comportamiento que RoutineBuilder de la web):
- * nombre, carpeta obligatoria para coaches (existente o nueva), días y ejercicios.
+ * nombre, destino del coach (plantilla en una carpeta o rutina de un alumno),
+ * días y ejercicios.
  */
 export function RoutineBuilder({
   folders,
   catalog,
   isCoach,
   initial,
+  students = [],
+  initialStudentLinkId,
 }: {
   folders: FolderLite[];
   /** Catálogo de ejercicios disponible (general + propios). */
   catalog: CatalogEntry[];
   isCoach: boolean;
   initial?: EditableRoutine;
+  /** Coach, al crear: alumnos a los que se le puede armar la rutina. */
+  students?: StudentSummary[];
+  /** Alumno elegido de entrada (viene de su pantalla). */
+  initialStudentLinkId?: string;
 }) {
   const insets = useSafeAreaInsets();
   const isEdit = Boolean(initial);
@@ -72,6 +82,18 @@ export function RoutineBuilder({
   const [folderId, setFolderId] = useState<string | null>(initial?.folderId ?? null);
   const [newFolderName, setNewFolderName] = useState("");
   const [folderSheet, setFolderSheet] = useState(false);
+  const [target, setTarget] = useState<string>(
+    initialStudentLinkId && students.some((s) => s.linkId === initialStudentLinkId)
+      ? initialStudentLinkId
+      : TEMPLATE,
+  );
+  const [targetSheet, setTargetSheet] = useState(false);
+  const forStudent = isEdit ? Boolean(initial?.studentName) : target !== TEMPLATE;
+  const usesFolder = isCoach && !forStudent;
+  const targetLabel =
+    target === TEMPLATE
+      ? "Plantilla (en una carpeta)"
+      : (students.find((s) => s.linkId === target)?.name ?? "Alumno");
   const [days, setDays] = useState<DayDraft[]>(
     initial
       ? initial.days.map((d) => ({
@@ -133,7 +155,7 @@ export function RoutineBuilder({
     setError(null);
     let folderIdPayload: string | null = null;
     let newFolderNamePayload: string | null = null;
-    if (isCoach) {
+    if (usesFolder) {
       if (folderId === NEW_FOLDER) {
         if (!newFolderName.trim()) {
           setError("Poné un nombre para la carpeta nueva.");
@@ -162,6 +184,7 @@ export function RoutineBuilder({
       name: name.trim(),
       folderId: folderIdPayload,
       newFolderName: newFolderNamePayload,
+      studentLinkId: !isEdit && forStudent ? target : null,
       days: payloadDays,
     };
 
@@ -198,9 +221,44 @@ export function RoutineBuilder({
           placeholder="Junio 2026 4 días"
         />
 
-        {isCoach ? (
+        {isCoach && !isEdit ? (
           <View style={{ gap: 6 }}>
-            <Text style={styles.label}>Carpeta del alumno</Text>
+            <Text style={styles.label}>¿Para quién es?</Text>
+            <Pressable
+              onPress={() => setTargetSheet(true)}
+              style={styles.select}
+              accessibilityRole="button"
+            >
+              <Ionicons
+                name={forStudent ? "person-outline" : "albums-outline"}
+                size={18}
+                color={colors.mutedForeground}
+              />
+              <Text style={styles.selectText} numberOfLines={1}>
+                {targetLabel}
+              </Text>
+              <Ionicons name="chevron-down" size={18} color={colors.mutedForeground} />
+            </Pressable>
+            <Text style={styles.hint}>
+              {forStudent
+                ? "Es solo de este alumno: cambiarla no afecta a nadie más."
+                : "Las plantillas no las ve nadie: sirven para armarles rutinas a tus alumnos."}
+            </Text>
+          </View>
+        ) : null}
+
+        {isCoach && isEdit && initial?.studentName ? (
+          <Text style={styles.hint}>
+            Rutina de:{" "}
+            <Text style={{ color: colors.foreground, fontFamily: fonts.medium }}>
+              {initial.studentName}
+            </Text>
+          </Text>
+        ) : null}
+
+        {usesFolder ? (
+          <View style={{ gap: 6 }}>
+            <Text style={styles.label}>Carpeta</Text>
             <Pressable
               onPress={() => setFolderSheet(true)}
               style={styles.select}
@@ -219,7 +277,7 @@ export function RoutineBuilder({
               <TextField
                 value={newFolderName}
                 onChangeText={setNewFolderName}
-                placeholder="Nombre de la carpeta (ej: Juan Pérez)"
+                placeholder="Nombre de la carpeta (ej: Fuerza)"
                 autoFocus
               />
             ) : null}
@@ -308,6 +366,26 @@ export function RoutineBuilder({
         />
       </View>
 
+      <Sheet visible={targetSheet} onClose={() => setTargetSheet(false)} title="¿Para quién es?">
+        <ScrollView style={{ maxHeight: 420 }}>
+          <OptionList
+            value={target}
+            options={[
+              { value: TEMPLATE, label: "Plantilla (en una carpeta)", icon: "albums-outline" as const },
+              ...students.map((s) => ({
+                value: s.linkId,
+                label: s.status === "pending" ? `${s.name} · pendiente` : s.name,
+                icon: "person-outline" as const,
+              })),
+            ]}
+            onSelect={(v) => {
+              setTarget(v);
+              setTargetSheet(false);
+            }}
+          />
+        </ScrollView>
+      </Sheet>
+
       <Sheet visible={folderSheet} onClose={() => setFolderSheet(false)} title="Carpeta">
         <OptionList
           value={folderId}
@@ -358,6 +436,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: 16, paddingBottom: 32, gap: 16 },
   label: { fontFamily: fonts.medium, fontSize: 14, color: colors.foreground },
+  hint: { fontFamily: fonts.regular, fontSize: 13, color: colors.mutedForeground },
   select: {
     flexDirection: "row",
     alignItems: "center",

@@ -2,13 +2,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { formatSessionDate, summarizeHistory } from "@brabus/shared";
-import { getProgressSessions, getStudentDetail, visibleLogs } from "@brabus/supabase";
+import {
+  getProgressSessions,
+  getRoutinesOverview,
+  getStudentDetail,
+  visibleLogs,
+} from "@brabus/supabase";
 
 import { ProgressView } from "@/components/progress/progress-view";
 import { SegmentedTabs } from "@/components/progress/segmented-tabs";
 import { Dumbbell } from "lucide-react";
 
 import { LinkTile } from "@/components/app/link-tile";
+import { NewStudentRoutine } from "@/components/routines/assign-routine";
 import { UnlinkStudent } from "@/components/students/unlink-student";
 import { Card } from "@/components/ui/card";
 import { requireProfile } from "@/lib/auth";
@@ -24,9 +30,10 @@ export default async function AlumnoDetailPage({
   if (!profile.is_coach) notFound();
 
   const supabase = await createClient();
-  const [detail, progress] = await Promise.all([
+  const [detail, progress, overview] = await Promise.all([
     getStudentDetail(supabase, userId, studentId),
     getProgressSessions(supabase, studentId),
+    getRoutinesOverview(supabase, userId),
   ]);
   if (!detail) notFound();
   const { name, sessions, link, routines } = detail;
@@ -34,13 +41,13 @@ export default async function AlumnoDetailPage({
 
   const workouts =
     sessions.length === 0 ? (
-      <Card className="p-8 text-center">
+      <Card key="entrenamientos" className="p-8 text-center">
         <p className="text-muted-foreground text-sm">
           Este alumno todavía no registró entrenamientos.
         </p>
       </Card>
     ) : (
-      <div className="space-y-3">
+      <div key="entrenamientos" className="space-y-3">
         {sessions.map((s) => {
           const logs = visibleLogs(s);
           return (
@@ -104,7 +111,7 @@ export default async function AlumnoDetailPage({
       {isPending && (
         <Card className="border-amber-500/40 bg-amber-500/10 p-4">
           <p className="text-sm">
-            <span className="font-semibold">Invitación pendiente.</span> Ya podés compartirle
+            <span className="font-semibold">Invitación pendiente.</span> Ya podés armarle
             rutinas: las va a ver cuando acepte. Su progreso aparece después de aceptar.
           </p>
         </Card>
@@ -117,6 +124,7 @@ export default async function AlumnoDetailPage({
             label: "Progreso",
             content: (
               <ProgressView
+                key="progreso"
                 sessions={progress}
                 emptyText={
                   isPending
@@ -130,21 +138,32 @@ export default async function AlumnoDetailPage({
           {
             id: "rutinas",
             label: `Rutinas (${routines.length})`,
-            content:
-              routines.length === 0 ? (
-                <Card className="p-8 text-center">
-                  <p className="text-muted-foreground text-sm">
-                    Todavía no le compartiste rutinas. Entrá a una rutina y tocá
-                    &quot;Compartir&quot;.
-                  </p>
-                </Card>
-              ) : (
-                <div className="space-y-2.5">
-                  {routines.map((r) => (
-                    <LinkTile key={r.id} href={`/rutinas/${r.id}`} title={r.name} icon={Dumbbell} />
-                  ))}
+            content: (
+              <div key="rutinas" className="space-y-3">
+                <div className="flex justify-end">
+                  <NewStudentRoutine
+                    linkId={link.id}
+                    studentName={name}
+                    folders={overview.folders}
+                    templates={overview.routines}
+                  />
                 </div>
-              ),
+                {routines.length === 0 ? (
+                  <Card className="p-8 text-center">
+                    <p className="text-muted-foreground text-sm">
+                      Todavía no le armaste rutinas. Creale una desde cero o a partir de una
+                      plantilla.
+                    </p>
+                  </Card>
+                ) : (
+                  <div className="space-y-2.5">
+                    {routines.map((r) => (
+                      <LinkTile key={r.id} href={`/rutinas/${r.id}`} title={r.name} icon={Dumbbell} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ),
           },
         ]}
       />

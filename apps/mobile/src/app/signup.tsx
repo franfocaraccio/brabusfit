@@ -154,7 +154,7 @@ export default function SignupScreen() {
               checked={isCoach}
               onChange={setIsCoach}
               title="Soy coach"
-              description="Vas a poder crear rutinas y compartirlas con tus alumnos."
+              description="Vas a poder armarles rutinas a tus alumnos."
             />
 
             {error ? <ErrorText>{error}</ErrorText> : null}

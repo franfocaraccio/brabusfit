@@ -26,9 +26,8 @@ web; perdemos push, cámara y pasos).
 - **Paridad con la web (2026-10-18):** registro, login con Google (navegador del
   sistema + PKCE, vuelve a `exp://u.expo.dev/...` en Expo Go), completar perfil,
   perfil editable, inicio + pestañas (Inicio / Rutinas / Alumnos / Perfil),
-  crear/editar/eliminar rutinas, carpetas, compartir por email o usuario (con
-  validaciones en vivo, pendientes y dejar de compartir) y alumnos con su
-  historial. **Regla:** toda funcionalidad nueva va en web y mobile.
+  crear/editar/eliminar rutinas, carpetas, alumnos (invitaciones) y rutinas
+  por alumno con su historial. **Regla:** toda funcionalidad nueva va en web y mobile.
 - Entorno local con Supabase en Docker (`npm run db:start`, ver SETUP.md) para
   probar todo sin tocar producción.
 - **EAS Update** (proyecto `@brabusfit-team/brabus-fit`): `npm run publish` desde
@@ -149,16 +148,25 @@ Storage + (si hace falta) un job programado.
   catálogo. Pendiente a futuro: borrar `exercises.name` cuando ya no haga falta.
 - ✅ **Relación coach ↔ alumno explícita** (2026-10-21, migración 0009): tabla
   `coach_students` (muchos a muchos, `pending` / `active`). El coach agrega
-  alumnos por usuario o email (invitación); puede compartirles cosas mientras
+  alumnos por usuario o email (invitación); puede armarles cosas mientras
   está pendiente, pero el alumno las ve recién al aceptar (popup al abrir la app
-  + globito en Perfil + aviso en Inicio). "Compartir" elige entre los alumnos.
-  Desvincular desde el coach permite conservar las rutinas
-  (`routine_shares.kept`); si el alumno se desvincula o rechaza, pierde todo lo
-  de ese coach. El coach solo ve entrenamientos con vínculo activo. **Base para
-  los módulos Nutrición y Reportes**: cada módulo nuevo debe respetar el mismo
-  acceso (vínculo activo o "conservado") y sumar su tilde al desvincular.
+  + globito en Perfil + aviso en Inicio). El coach solo ve entrenamientos con
+  vínculo activo.
+- ✅ **Rutinas por alumno + plantillas** (2026-10-21, migración 0010): se eliminó
+  "compartir" (`routine_shares`). Cada alumno tiene **su propia rutina**
+  (`routines.student_id` / `student_email`), que solo edita el coach; editarla no
+  afecta a nadie más. Las rutinas del coach sin alumno son **plantillas** (en
+  carpetas, nadie más las ve): "Asignar a alumno" o "Nueva rutina" desde el
+  alumno crea una **copia independiente** (`copy_routine`). Rutinas → "Rutinas de
+  alumnos" (agrupadas por alumno) + "Plantillas". Si se desvinculan (lo haga
+  quien lo haga) el alumno deja de verlas y al coach le quedan guardadas; si se
+  vuelven a vincular, el alumno las recupera. El alumno conserva su historial y
+  progreso (ve los ejercicios que entrenó). Migración de datos: cada alumno que
+  tenía una rutina compartida recibió su copia con sus entrenamientos; la
+  original quedó como plantilla. **Mismo patrón para Nutrición y Reportes**:
+  plantillas del coach + una copia por alumno, visible con vínculo activo.
 - Ideas siguientes: reordenar ejercicios/días (el ícono de "arrastrar" del editor
-  web hoy es decorativo), duplicar rutina.
+  web hoy es decorativo), duplicar plantilla (`copy_routine` sin alumno ya existe).
 - **Alertas de progresión:** regla en SQL (ej. mismo peso N semanas y reps en el
   tope del rango → sugerir subir). Calcular on-the-fly o con `pg_cron` diario
   guardando avisos en una tabla.
@@ -170,7 +178,8 @@ Storage + (si hace falta) un job programado.
 ### Nutrición
 - Plantillas de alimentación del coach (plantilla → comidas → alimentos con
   calorías/macros) asignables a alumnos. Mismo patrón que rutinas
-  (owner + share por alumno + RLS). Totales calculados por query.
+  (plantilla + copia por alumno + RLS por vínculo activo). Totales calculados
+  por query.
 
 ### Reportes semanales (check-in)
 - Tabla de reportes (semana, peso, pasos, notas de entrenamiento, etc.) + fotos

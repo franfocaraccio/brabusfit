@@ -3,13 +3,7 @@ import { router, Stack, useFocusEffect, useLocalSearchParams } from "expo-router
 import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
-import type { Routine } from "@brabus/shared";
-import {
-  deleteRoutine,
-  getRoutineDetail,
-  getShareTargets,
-  type RoutineDayLite,
-} from "@brabus/supabase";
+import { deleteRoutine, getRoutineDetail, type RoutineDetail } from "@brabus/supabase";
 
 import { Loading, NotFound } from "@/components/loading";
 import { Tile } from "@/components/tile";
@@ -19,37 +13,25 @@ import { supabase } from "@/lib/supabase";
 import { colors, fonts } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
 
-type Detail = {
-  routine: Routine;
-  ownerName: string | null;
-  days: RoutineDayLite[];
-  shareCount: number;
-};
-
 export default function RutinaScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session, profile } = useAuth();
-  const [detail, setDetail] = useState<Detail | null | undefined>(undefined);
+  const [detail, setDetail] = useState<RoutineDetail | null | undefined>(undefined);
   const [deleting, setDeleting] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      (async () => {
-        const d = await getRoutineDetail(supabase, id);
-        if (!d) return setDetail(null);
-        const canShare = session && d.routine.owner_id === session.user.id && profile?.is_coach;
-        const targets = canShare ? await getShareTargets(supabase, session.user.id, id) : [];
-        setDetail({ ...d, shareCount: targets.filter((t) => t.shared).length });
-      })();
-    }, [id, session, profile?.is_coach]),
+      getRoutineDetail(supabase, id).then(setDetail);
+    }, [id]),
   );
 
   if (detail === undefined) return <Loading />;
   if (detail === null) return <NotFound text="No se encontró la rutina." />;
 
-  const { routine, days, shareCount } = detail;
+  const { routine, days, student } = detail;
   const isOwner = routine.owner_id === session?.user.id;
-  const canShare = isOwner && (profile?.is_coach ?? false);
+  // Plantilla del coach: se asigna a un alumno creándole una copia propia.
+  const canAssign = isOwner && (profile?.is_coach ?? false) && !student;
 
   const onDelete = () =>
     confirm({
@@ -79,6 +61,33 @@ export default function RutinaScreen() {
             </Text>
           </Muted>
         ) : null}
+        {isOwner && student ? (
+          <View style={styles.studentRow}>
+            <Muted>
+              Rutina de:{" "}
+              <Text
+                style={{ color: colors.foreground, fontFamily: fonts.medium }}
+                onPress={
+                  student.id && student.linkStatus
+                    ? () => router.push(`/alumno/${student.id}`)
+                    : undefined
+                }
+              >
+                {student.name}
+              </Text>
+            </Muted>
+            {student.linkStatus === "pending" ? (
+              <Text style={[styles.badge, styles.badgePending]}>Invitación pendiente</Text>
+            ) : student.linkStatus === null ? (
+              <Text style={styles.badge}>Desvinculado · no la ve</Text>
+            ) : null}
+          </View>
+        ) : null}
+        {canAssign ? (
+          <Muted style={{ fontSize: 13 }}>
+            Plantilla: asignala a un alumno para crearle su propia copia.
+          </Muted>
+        ) : null}
       </View>
 
       <View style={styles.actions}>
@@ -91,13 +100,13 @@ export default function RutinaScreen() {
             icon={<Ionicons name="create-outline" size={18} color={colors.foreground} />}
           />
         ) : null}
-        {canShare ? (
+        {canAssign ? (
           <Button
-            title={shareCount > 0 ? `Compartir (${shareCount})` : "Compartir"}
+            title="Asignar a alumno"
             variant="outline"
             style={styles.action}
-            onPress={() => router.push(`/rutina/${id}/compartir`)}
-            icon={<Ionicons name="share-social-outline" size={18} color={colors.foreground} />}
+            onPress={() => router.push(`/rutina/${id}/asignar`)}
+            icon={<Ionicons name="person-add-outline" size={18} color={colors.foreground} />}
           />
         ) : null}
         <Button
@@ -148,4 +157,16 @@ const styles = StyleSheet.create({
   section: { gap: 10 },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   action: { minHeight: 40, paddingHorizontal: 14, flexGrow: 1 },
+  studentRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
+  badge: {
+    fontFamily: fonts.semibold,
+    fontSize: 11,
+    color: colors.mutedForeground,
+    backgroundColor: colors.muted,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  badgePending: { color: "#f59e0b", backgroundColor: "rgba(245,158,11,0.15)" },
 });

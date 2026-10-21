@@ -3,10 +3,10 @@
 App de rutinas de entrenamiento para **coaches** y **alumnos**, en **web** y
 **mobile (iOS + Android)**.
 
-- Los **coaches** crean rutinas (organizadas en carpetas) y las comparten con
-  sus alumnos por email o nombre de usuario.
-- Los **alumnos** usan las rutinas compartidas (o las propias) y registran peso
-  y repeticiones por serie; el coach ve el progreso.
+- Los **coaches** agregan alumnos (por email o nombre de usuario) y les arman
+  una rutina propia a cada uno, desde cero o a partir de sus plantillas.
+- Los **alumnos** usan las rutinas que les armó su coach (o las propias) y
+  registran peso y repeticiones por serie; el coach ve el progreso.
 
 ## Monorepo
 
