@@ -9,6 +9,7 @@ import { AccessBadge } from "@/components/clients/clients-list";
 import { DeleteRoutineButton } from "@/components/routines/delete-routine-button";
 import { AssignRoutine } from "@/components/routines/assign-routine";
 import { ExportButtons } from "@/components/app/export-buttons";
+import { SetCurrentPlanButton } from "@/components/nutrition/plan-actions";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireProfile } from "@/lib/auth";
@@ -46,7 +47,14 @@ export default async function RutinaDetailPage({
           ← {client ? client.name : "Rutinas"}
         </Link>
         <div className="mt-1 flex items-start justify-between gap-2">
-          <h1 className="text-2xl font-bold tracking-tight">{routine.name}</h1>
+          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold tracking-tight">
+            {routine.name}
+            {routine.is_current && (
+              <span className="bg-primary/15 text-primary rounded px-1.5 text-[10px] font-semibold">
+                Vigente
+              </span>
+            )}
+          </h1>
         </div>
         {!isOwner && (
           <p className="text-muted-foreground text-sm">
@@ -89,6 +97,9 @@ export default async function RutinaDetailPage({
         )}
         {canAssign && (
           <AssignRoutine routineId={id} clients={clients.filter((c) => !c.archived)} />
+        )}
+        {isOwner && routine.client_id && !routine.is_current && (
+          <SetCurrentPlanButton kind="routine" planId={id} />
         )}
         {exportData && <ExportButtons kind="routine" data={exportData} />}
         <Link

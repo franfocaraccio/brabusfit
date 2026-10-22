@@ -108,6 +108,16 @@ export async function updateRoutine(
  * Copia independiente de una rutina propia: asignada a un alumno (linkId) o
  * como plantilla nueva. Editar una no afecta a la otra.
  */
+/** Marca la rutina como vigente para su cliente (la que ve en el inicio). */
+export async function setCurrentRoutine(
+  client: BrabusClient,
+  routineId: string,
+): Promise<ActionResult> {
+  const { error } = await client.rpc("set_current_routine", { p_routine_id: routineId });
+  if (error) return fail(error.message);
+  return ok(undefined);
+}
+
 export async function copyRoutine(
   client: BrabusClient,
   routineId: string,
@@ -165,7 +175,12 @@ export type FolderLite = Pick<Folder, "id" | "name">;
 export type RoutineLite = Pick<Routine, "id" | "name" | "folder_id">;
 
 /** Alumno: rutina que le armó un coach. */
-export type CoachRoutineLite = { id: string; name: string; coachName: string | null };
+export type CoachRoutineLite = {
+  id: string;
+  name: string;
+  coachName: string | null;
+  isCurrent: boolean;
+};
 
 /** Coach: rutinas que le armó a un cliente. */
 export type ClientRoutineGroup = {
@@ -173,7 +188,7 @@ export type ClientRoutineGroup = {
   name: string;
   appAccess: AppAccess;
   archived: boolean;
-  routines: { id: string; name: string }[];
+  routines: { id: string; name: string; isCurrent: boolean }[];
 };
 
 export type Person = { first_name: string; last_name: string };
@@ -210,7 +225,7 @@ export const clientRef = (c: ClientNameRow): ClientRef => ({
 export const clientName = (c: ClientNameRow) =>
   fullName(c) ?? fullName(c.account) ?? c.student_email ?? "Cliente";
 
-type FromCoachRow = { id: string; name: string; owner: Person | null };
+type FromCoachRow = { id: string; name: string; is_current: boolean; owner: Person | null };
 
 /**
  * Lo que muestra la sección Rutinas:
@@ -231,15 +246,16 @@ export async function getRoutinesOverview(
     client.from("folders").select("id, name").eq("owner_id", userId).order("name"),
     client
       .from("routines")
-      .select("id, name, folder_id, client_id")
+      .select("id, name, folder_id, client_id, is_current")
       .eq("owner_id", userId)
       .order("created_at", { ascending: false }),
     client.from("coach_students").select(CLIENT_NAME_SELECT).eq("coach_id", userId),
     // RLS: solo las de coaches con acceso activo.
     client
       .from("routines")
-      .select("id, name, owner:profiles!routines_owner_id_fkey(first_name, last_name)")
+      .select("id, name, is_current, owner:profiles!routines_owner_id_fkey(first_name, last_name)")
       .neq("owner_id", userId)
+      .order("is_current", { ascending: false })
       .order("created_at", { ascending: false }),
   ]);
 
@@ -263,7 +279,7 @@ export async function getRoutinesOverview(
       };
       groups.set(c.id, group);
     }
-    group.routines.push({ id: r.id, name: r.name });
+    group.routines.push({ id: r.id, name: r.name, isCurrent: r.is_current });
   }
 
   return {
@@ -278,6 +294,7 @@ export async function getRoutinesOverview(
       id: r.id,
       name: r.name,
       coachName: fullName(r.owner),
+      isCurrent: r.is_current,
     })),
   };
 }

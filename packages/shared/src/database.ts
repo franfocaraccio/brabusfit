@@ -135,6 +135,8 @@ export type Database = {
           name: string;
           /** Cliente al que el coach le armó la rutina (null = plantilla o rutina propia). */
           client_id: string | null;
+          /** Rutina vigente del cliente (una por ficha). */
+          is_current: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -434,6 +436,10 @@ export type Database = {
         /** Sin p_client_id: copia como plantilla nueva. */
         Args: { p_plan_id: string; p_client_id?: string | null };
         Returns: string;
+      };
+      set_current_routine: {
+        Args: { p_routine_id: string };
+        Returns: undefined;
       };
       set_current_plan: {
         Args: { p_plan_id: string };

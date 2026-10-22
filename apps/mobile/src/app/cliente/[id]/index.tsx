@@ -310,6 +310,8 @@ export default function ClienteScreen() {
                 <Tile
                   key={r.id}
                   title={r.name}
+                  subtitle={r.isCurrent ? "Vigente" : undefined}
+                  accent={r.isCurrent}
                   icon="barbell"
                   onPress={() => router.push(`/rutina/${r.id}`)}
                 />

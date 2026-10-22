@@ -132,7 +132,7 @@ export type ClientDetail = {
   archived: boolean;
   createdAt: string;
   /** Rutinas que el coach le armó. */
-  routines: { id: string; name: string }[];
+  routines: { id: string; name: string; isCurrent: boolean }[];
   /** Últimos 20 entrenamientos (solo con la app activa). */
   sessions: StudentSession[];
 };
@@ -155,7 +155,12 @@ export async function getClient(
   const c = data as unknown as ClientRow & { account: AccountProfile | null };
 
   const [routinesRes, sessionsRes] = await Promise.all([
-    client.from("routines").select("id, name").eq("client_id", c.id).order("name"),
+    client
+      .from("routines")
+      .select("id, name, is_current")
+      .eq("client_id", c.id)
+      .order("is_current", { ascending: false })
+      .order("name"),
     c.status === "active" && c.student_id
       ? client
           .from("workout_sessions")
@@ -192,7 +197,11 @@ export async function getClient(
     status: clientStatus(c.status, c.student_id !== null),
     archived: c.archived_at !== null,
     createdAt: c.created_at,
-    routines: (routinesRes.data ?? []) as { id: string; name: string }[],
+    routines: (routinesRes.data ?? []).map((r) => ({
+      id: r.id,
+      name: r.name,
+      isCurrent: r.is_current,
+    })),
     sessions: (sessionsRes.data ?? []) as unknown as StudentSession[],
   };
 }

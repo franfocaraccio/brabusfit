@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import {
   deleteRoutine,
+  setCurrentRoutine,
   getRoutineDetail,
   getRoutineExport,
   type RoutineDetail,
@@ -73,6 +74,7 @@ export default function RutinaScreen() {
       <Stack.Screen options={{ title: "" }} />
       <View style={{ gap: 4 }}>
         <Title>{routine.name}</Title>
+        {routine.is_current ? <Text style={[styles.badge, styles.current]}>Vigente</Text> : null}
         {!isOwner ? (
           <Muted>
             Compartida por:{" "}
@@ -95,6 +97,19 @@ export default function RutinaScreen() {
             <AccessBadge status={client.status} />
             {client.archived ? <Text style={styles.badge}>Archivado</Text> : null}
           </View>
+        ) : null}
+        {isOwner && routine.client_id && !routine.is_current ? (
+          <Button
+            title="Marcar vigente"
+            variant="outline"
+            style={styles.action}
+            onPress={async () => {
+              const result = await setCurrentRoutine(supabase, id);
+              if (!result.ok) return notify("No se pudo marcar", result.error);
+              getRoutineDetail(supabase, id).then(setDetail);
+            }}
+            icon={<Ionicons name="star-outline" size={18} color={colors.foreground} />}
+          />
         ) : null}
         {canAssign ? (
           <Muted style={{ fontSize: 13 }}>
@@ -189,6 +204,7 @@ const styles = StyleSheet.create({
   actions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   action: { minHeight: 40, paddingHorizontal: 14, flexGrow: 1 },
   studentRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
+  current: { alignSelf: "flex-start", color: colors.primary, backgroundColor: "rgba(249,115,22,0.15)" },
   badge: {
     fontFamily: fonts.semibold,
     fontSize: 11,

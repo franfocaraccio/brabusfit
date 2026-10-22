@@ -224,7 +224,14 @@ export default async function ClienteDetailPage({
                 ) : (
                   <div className="space-y-2.5">
                     {routines.map((r) => (
-                      <LinkTile key={r.id} href={`/rutinas/${r.id}`} title={r.name} icon={Dumbbell} />
+                      <LinkTile
+                        key={r.id}
+                        href={`/rutinas/${r.id}`}
+                        title={r.name}
+                        subtitle={r.isCurrent ? "Vigente" : undefined}
+                        icon={Dumbbell}
+                        accent={r.isCurrent}
+                      />
                     ))}
                   </div>
                 )}

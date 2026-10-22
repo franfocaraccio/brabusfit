@@ -6,6 +6,7 @@ import { Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { deletePlan, setCurrentPlan } from "@/lib/actions/nutrition";
+import { setCurrentRoutine } from "@/lib/actions/routines";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,8 +18,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-/** Marca el plan como vigente para su cliente. */
-export function SetCurrentPlanButton({ planId }: { planId: string }) {
+/** Marca el plan (o la rutina) como vigente para su cliente. */
+export function SetCurrentPlanButton({
+  planId,
+  kind = "plan",
+}: {
+  planId: string;
+  kind?: "plan" | "routine";
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   return (
@@ -29,12 +36,19 @@ export function SetCurrentPlanButton({ planId }: { planId: string }) {
       disabled={pending}
       onClick={() =>
         startTransition(async () => {
-          const result = await setCurrentPlan(planId);
+          const result =
+            kind === "routine"
+              ? await setCurrentRoutine(planId)
+              : await setCurrentPlan(planId);
           if (!result.ok) {
             toast.error(result.error);
             return;
           }
-          toast.success("Marcado como plan vigente");
+          toast.success(
+            kind === "routine"
+              ? "Marcada como rutina vigente"
+              : "Marcado como plan vigente",
+          );
           router.refresh();
         })
       }
@@ -83,11 +97,16 @@ export function DeletePlanButton({
         <DialogHeader>
           <DialogTitle>Eliminar plan</DialogTitle>
           <DialogDescription>
-            Se eliminará «{planName}» con todas sus comidas. Esta acción no se puede deshacer.
+            Se eliminará «{planName}» con todas sus comidas. Esta acción no se
+            puede deshacer.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)} disabled={pending}>
+          <Button
+            variant="ghost"
+            onClick={() => setOpen(false)}
+            disabled={pending}
+          >
             Cancelar
           </Button>
           <Button variant="destructive" onClick={remove} disabled={pending}>

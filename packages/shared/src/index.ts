@@ -1,6 +1,7 @@
 export * from "./catalog";
 export * from "./clients";
 export * from "./database";
+export * from "./dashboard";
 export * from "./date";
 export * from "./draft";
 export * from "./export";

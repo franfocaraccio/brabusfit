@@ -45,6 +45,15 @@ export async function copyRoutine(
   return result;
 }
 
+export async function setCurrentRoutine(routineId: string): Promise<ActionResult> {
+  const result = await db.setCurrentRoutine(await createClient(), routineId);
+  if (result.ok) {
+    revalidatePath("/rutinas", "layout");
+    revalidatePath("/clientes", "layout");
+  }
+  return result;
+}
+
 export async function deleteRoutine(routineId: string): Promise<ActionResult> {
   const result = await db.deleteRoutine(await createClient(), routineId);
   if (result.ok) revalidatePath("/rutinas");
