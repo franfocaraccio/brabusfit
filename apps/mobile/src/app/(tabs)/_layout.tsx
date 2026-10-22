@@ -55,20 +55,11 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         // Sin barra de título: el saludo ya hace de encabezado.
-        options={{ title: "Inicio", headerShown: false, tabBarIcon: icon("home-outline") }}
-      />
-      <Tabs.Screen
-        name="rutinas"
-        // "Entrenamiento" no entra en la barra de 5 pestañas: etiqueta corta abajo.
         options={{
-          title: "Entrenamiento",
-          tabBarLabel: "Entreno",
-          tabBarIcon: icon("barbell-outline"),
+          title: "Inicio",
+          headerShown: false,
+          tabBarIcon: icon("home-outline"),
         }}
-      />
-      <Tabs.Screen
-        name="nutricion"
-        options={{ title: "Nutrición", tabBarIcon: icon("nutrition-outline") }}
       />
       <Tabs.Screen
         name="clientes"
@@ -79,13 +70,30 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="rutinas"
+        // Alumno: "Entrenamiento" (rutinas y progreso), con etiqueta corta abajo.
+        // Coach: solo administra rutinas de sus clientes, no entrena.
+        options={{
+          title: isCoach ? "Rutinas" : "Entrenamiento",
+          tabBarLabel: isCoach ? "Rutinas" : "Entreno",
+          tabBarIcon: icon("barbell-outline"),
+        }}
+      />
+      <Tabs.Screen
+        name="nutricion"
+        options={{ title: "Nutrición", tabBarIcon: icon("nutrition-outline") }}
+      />
+      <Tabs.Screen
         name="perfil"
         options={{
           title: "Perfil",
           tabBarIcon: icon("person-outline"),
           // Invitaciones de coaches sin responder.
           tabBarBadge: pending.length > 0 ? pending.length : undefined,
-          tabBarBadgeStyle: { backgroundColor: colors.primary, color: colors.primaryForeground },
+          tabBarBadgeStyle: {
+            backgroundColor: colors.primary,
+            color: colors.primaryForeground,
+          },
         }}
       />
     </Tabs>
@@ -97,7 +105,11 @@ function askInvitation(invite: MyCoach, refresh: () => Promise<void>) {
     const result = await respondInvitation(supabase, invite.linkId, accept);
     if (!result.ok) return notify("No se pudo responder", result.error);
     await refresh();
-    if (accept) notify(`Ahora entrenás con ${invite.name}`, "Ya podés ver todo lo que te comparta.");
+    if (accept)
+      notify(
+        `Ahora entrenás con ${invite.name}`,
+        "Ya podés ver todo lo que te comparta.",
+      );
   };
 
   const title = "Te invitaron a un grupo de entrenamiento";

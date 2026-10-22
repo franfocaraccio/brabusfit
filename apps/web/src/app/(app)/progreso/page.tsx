@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 import { getProgressSessions } from "@brabus/supabase";
 
 import { TrainingTabs } from "@/components/app/training-tabs";
@@ -6,7 +8,9 @@ import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function ProgresoPage() {
-  const { userId } = await requireProfile();
+  const { userId, profile } = await requireProfile();
+  // El coach no entrena: no tiene progreso propio.
+  if (profile.is_coach) redirect("/rutinas");
   const sessions = await getProgressSessions(await createClient(), userId);
 
   return (

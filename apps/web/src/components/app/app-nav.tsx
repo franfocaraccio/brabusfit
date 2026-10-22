@@ -25,19 +25,27 @@ export function AppNav({
 }) {
   const pathname = usePathname();
 
-  const items: NavItem[] = [
-    { href: "/dashboard", label: "Inicio", icon: Home },
-    // Entrenamiento agrupa Rutinas y Progreso.
-    {
-      href: "/rutinas",
-      label: "Entrenamiento",
-      icon: Dumbbell,
-      also: ["/progreso"],
-    },
-    { href: "/nutricion", label: "Nutrición", icon: Salad },
-    ...(isCoach ? [{ href: "/clientes", label: "Clientes", icon: Users }] : []),
-    { href: "/perfil", label: "Perfil", icon: User },
-  ];
+  // El coach solo administra a sus clientes (no entrena): "Rutinas" sin Progreso.
+  const items: NavItem[] = isCoach
+    ? [
+        { href: "/dashboard", label: "Inicio", icon: Home },
+        { href: "/clientes", label: "Clientes", icon: Users },
+        { href: "/rutinas", label: "Rutinas", icon: Dumbbell },
+        { href: "/nutricion", label: "Nutrición", icon: Salad },
+        { href: "/perfil", label: "Perfil", icon: User },
+      ]
+    : [
+        { href: "/dashboard", label: "Inicio", icon: Home },
+        // Entrenamiento agrupa Rutinas y Progreso.
+        {
+          href: "/rutinas",
+          label: "Entrenamiento",
+          icon: Dumbbell,
+          also: ["/progreso"],
+        },
+        { href: "/nutricion", label: "Nutrición", icon: Salad },
+        { href: "/perfil", label: "Perfil", icon: User },
+      ];
 
   const matches = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);

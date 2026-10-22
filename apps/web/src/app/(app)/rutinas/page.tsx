@@ -29,6 +29,7 @@ export default async function RutinasPage() {
     <div className="space-y-6">
       <TrainingTabs
         active="rutinas"
+        isCoach={profile.is_coach}
         action={
           !hasNothing && (
             <Link
