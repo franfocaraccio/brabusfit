@@ -4,7 +4,25 @@
  * dos sesiones el mismo día valen una.
  */
 
+/** Semanas de la grilla de consistencia antes de medir el ancho disponible. */
 export const CONSISTENCY_WEEKS = 16;
+/** Máximo de semanas (el inicio carga el último año de entrenamientos). */
+export const MAX_CONSISTENCY_WEEKS = 52;
+
+/**
+ * Cuántas semanas entran en la grilla y de qué tamaño queda cada celda para
+ * llenar el ancho: fila = etiqueta + N × (celda + separación).
+ */
+export function fitConsistencyGrid(
+  width: number,
+  { cell, gap, label }: { cell: number; gap: number; label: number },
+): { weeks: number; cell: number } {
+  const weeks = Math.min(
+    MAX_CONSISTENCY_WEEKS,
+    Math.max(4, Math.floor((width - label) / (cell + gap))),
+  );
+  return { weeks, cell: Math.max(4, (width - label) / weeks - gap) };
+}
 
 /** Lunes 00:00 (hora local) de la semana de `d`. */
 export function weekStart(d: Date): Date {
@@ -32,7 +50,7 @@ export type StudentDashboard = {
   /** Índice de hoy en `thisWeek` (0 = lunes). */
   todayIndex: number;
   daysThisWeek: number;
-  /** Últimas 16 semanas, la última es la semana en curso. */
+  /** Últimas semanas de la grilla, la última es la semana en curso. */
   weeks: WeekSummary[];
   /**
    * Promedio de días por semana en las semanas completas del período, desde la
@@ -46,11 +64,13 @@ export type StudentDashboard = {
 /**
  * @param finishedAt fechas ISO de las sesiones terminadas.
  * @param goal objetivo de días por semana (null = sin objetivo, sin racha).
+ * @param weekCount semanas de la grilla (el promedio y el total se calculan sobre ellas).
  */
 export function studentDashboard(
   finishedAt: string[],
   goal: number | null,
   now = new Date(),
+  weekCount = CONSISTENCY_WEEKS,
 ): StudentDashboard {
   const days = new Set(finishedAt.map((iso) => dayKey(new Date(iso))));
   const current = weekStart(now);
@@ -80,7 +100,7 @@ export function studentDashboard(
     });
 
   const weeks: WeekSummary[] = [];
-  for (let i = CONSISTENCY_WEEKS - 1; i >= 0; i--) {
+  for (let i = weekCount - 1; i >= 0; i--) {
     const start = weekAt(i);
     weeks.push({ start, days: countWeek(start), daily: daily(start) });
   }

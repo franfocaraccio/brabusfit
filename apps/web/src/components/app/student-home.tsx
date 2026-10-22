@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ArrowRight, Salad } from "lucide-react";
 
 import {
   WEEKDAY_INITIALS,
+  fitConsistencyGrid,
   longDate,
   shortDate,
   monthLabels,
@@ -19,7 +20,7 @@ import { cn } from "@/lib/utils";
 
 const noop = () => () => {};
 
-/** Inicio del alumno: semana en curso, consistencia de 16 semanas, su rutina y su plan. */
+/** Inicio del alumno: semana en curso, consistencia, su rutina y su plan. */
 export function StudentHome({
   firstName,
   finishedAt,
@@ -39,7 +40,28 @@ export function StudentHome({
     () => false,
   );
   const goal = routine && routine.dayCount > 0 ? routine.dayCount : null;
-  const stats = mounted ? studentDashboard(finishedAt, goal) : null;
+  // La grilla muestra las semanas que entran en el ancho de la tarjeta.
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [gridWidth, setGridWidth] = useState(0);
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) =>
+      setGridWidth(entry.contentRect.width),
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  const fit = gridWidth
+    ? fitConsistencyGrid(gridWidth, {
+        cell: CELL,
+        gap: CELL_GAP,
+        label: LABEL_W,
+      })
+    : null;
+  const stats = mounted
+    ? studentDashboard(finishedAt, goal, undefined, fit?.weeks)
+    : null;
 
   return (
     <div className="space-y-4">
@@ -50,7 +72,7 @@ export function StudentHome({
         </p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card className="space-y-3 p-4">
           <div className="text-muted-foreground flex items-baseline justify-between text-xs">
             <span>Semana en curso</span>
@@ -91,35 +113,35 @@ export function StudentHome({
           </div>
         </Card>
 
-        <Card className="space-y-2 p-4">
-          <p className="text-muted-foreground text-xs">
-            Consistencia · 16 semanas
-          </p>
-          <div className="flex flex-wrap items-center gap-x-10 gap-y-4">
-            <ConsistencyGrid weeks={stats?.weeks ?? []} />
-            {stats ? (
-              <div className="flex gap-8 sm:flex-col sm:gap-2.5">
-                <Stat
-                  label="Promedio"
-                  value={
-                    stats.average === null
-                      ? "—"
-                      : `${stats.average.toLocaleString("es-AR", { maximumFractionDigits: 1 })} / sem`
-                  }
-                />
-                {goal ? (
-                  <Stat
-                    label="Racha"
-                    value={`${stats.streak} ${stats.streak === 1 ? "semana" : "semanas"}`}
-                  />
-                ) : null}
-                <Stat
-                  label="Días entrenados"
-                  value={String(stats.weeks.reduce((n, w) => n + w.days, 0))}
-                />
-              </div>
+        <Card className="space-y-3 p-4">
+          <p className="text-muted-foreground text-xs">Consistencia</p>
+          <div ref={gridRef} style={{ minHeight: GRID_H }}>
+            {fit && stats ? (
+              <ConsistencyGrid weeks={stats.weeks} cell={fit.cell} />
             ) : null}
           </div>
+          {stats ? (
+            <div className="flex justify-between gap-4">
+              <Stat
+                label="Promedio"
+                value={
+                  stats.average === null
+                    ? "—"
+                    : `${stats.average.toLocaleString("es-AR", { maximumFractionDigits: 1 })} / sem`
+                }
+              />
+              {goal ? (
+                <Stat
+                  label="Racha"
+                  value={`${stats.streak} ${stats.streak === 1 ? "semana" : "semanas"}`}
+                />
+              ) : null}
+              <Stat
+                label="Días entrenados"
+                value={String(stats.weeks.reduce((n, w) => n + w.days, 0))}
+              />
+            </div>
+          ) : null}
         </Card>
       </div>
 
@@ -176,51 +198,69 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
+const CELL = 14;
+const CELL_GAP = 3;
+const LABEL_W = 12;
+/** Alto de la grilla (meses + 7 filas) mientras se mide el ancho. */
+const GRID_H = 13 + 7 * (CELL + CELL_GAP);
+
 /** Grilla tipo GitHub: una columna por semana, una fila por día (L a D). */
-function ConsistencyGrid({ weeks }: { weeks: WeekSummary[] }) {
+function ConsistencyGrid({
+  weeks,
+  cell,
+}: {
+  weeks: WeekSummary[];
+  cell: number;
+}) {
   const months = monthLabels(weeks);
   return (
-    <div className="flex shrink-0 gap-[3px]">
-      <div className="text-muted-foreground flex flex-col gap-[3px] pr-1 text-[9px]">
-        <span className="h-[13px]" />
-        {WEEKDAY_INITIALS.map((d, i) => (
-          <span key={i} className="flex h-3.5 items-center">
-            {i % 2 === 0 ? d : ""}
+    <div className="flex flex-col" style={{ gap: CELL_GAP }}>
+      <div className="flex" style={{ gap: CELL_GAP }}>
+        <span style={{ width: LABEL_W }} />
+        {weeks.map((_, wi) => (
+          <span
+            key={wi}
+            className="text-muted-foreground h-[13px] overflow-visible text-[9px] whitespace-nowrap"
+            style={{ width: cell }}
+          >
+            {months[wi]}
           </span>
         ))}
       </div>
-      {weeks.map((w, wi) => {
-        const month = months[wi];
-        return (
-          <div key={wi} className="flex w-3.5 flex-col gap-[3px]">
-            <span className="text-muted-foreground h-[13px] overflow-visible text-[9px] whitespace-nowrap">
-              {month}
-            </span>
-            {w.daily.map((state, di) => {
-              const date = new Date(w.start);
-              date.setDate(date.getDate() + di);
-              return (
-                <span
-                  key={di}
-                  title={
-                    state === "future"
-                      ? undefined
-                      : `${shortDate(date)}: ${state === "done" ? "entrenaste" : "sin entrenar"}`
-                  }
-                  className={cn(
-                    "size-3.5 rounded-[3px]",
-                    state === "done"
-                      ? "bg-primary"
-                      : state === "rest"
-                        ? "bg-muted"
-                        : "border-muted border",
-                  )}
-                />
-              );
-            })}
-          </div>
-        );
-      })}
+      {WEEKDAY_INITIALS.map((d, di) => (
+        <div key={di} className="flex items-center" style={{ gap: CELL_GAP }}>
+          <span
+            className="text-muted-foreground text-[9px]"
+            style={{ width: LABEL_W }}
+          >
+            {di % 2 === 0 ? d : ""}
+          </span>
+          {weeks.map((w, wi) => {
+            const state = w.daily[di];
+            const date = new Date(w.start);
+            date.setDate(date.getDate() + di);
+            return (
+              <span
+                key={wi}
+                title={
+                  state === "future"
+                    ? undefined
+                    : `${shortDate(date)}: ${state === "done" ? "entrenaste" : "sin entrenar"}`
+                }
+                className={cn(
+                  "shrink-0 rounded-[3px]",
+                  state === "done"
+                    ? "bg-primary"
+                    : state === "rest"
+                      ? "bg-muted"
+                      : "border-muted border",
+                )}
+                style={{ width: cell, height: cell }}
+              />
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 }

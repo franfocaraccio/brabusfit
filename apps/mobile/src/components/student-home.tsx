@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, {
   Circle,
@@ -11,6 +12,7 @@ import Svg, {
 
 import {
   WEEKDAY_INITIALS,
+  fitConsistencyGrid,
   monthLabels,
   studentDashboard,
   type WeekSummary,
@@ -20,7 +22,7 @@ import type { HomePlan, HomeRoutine } from "@brabus/supabase";
 import { Card, Muted } from "@/components/ui";
 import { colors, fonts } from "@/lib/theme";
 
-/** Inicio del alumno (igual que StudentHome de la web): semana, 16 semanas, su rutina y su plan. */
+/** Inicio del alumno (igual que StudentHome de la web): semana, consistencia, su rutina y su plan. */
 export function StudentHome({
   finishedAt,
   routine,
@@ -31,7 +33,16 @@ export function StudentHome({
   plan: HomePlan | null;
 }) {
   const goal = routine && routine.dayCount > 0 ? routine.dayCount : null;
-  const stats = studentDashboard(finishedAt, goal);
+  // La grilla muestra las semanas que entran en el ancho de la tarjeta.
+  const [gridWidth, setGridWidth] = useState(0);
+  const fit = gridWidth
+    ? fitConsistencyGrid(gridWidth, {
+        cell: CELL,
+        gap: CELL_GAP,
+        label: LABEL_W,
+      })
+    : null;
+  const stats = studentDashboard(finishedAt, goal, undefined, fit?.weeks);
 
   return (
     <View style={{ gap: 12 }}>
@@ -74,9 +85,15 @@ export function StudentHome({
       </Card>
 
       <Card style={styles.card}>
-        <Text style={styles.label}>Consistencia · 16 semanas</Text>
+        <Text style={styles.label}>Consistencia</Text>
         <View style={styles.consistency}>
-          <ConsistencyGrid weeks={stats.weeks} />
+          <View onLayout={(e) => setGridWidth(e.nativeEvent.layout.width)}>
+            {fit ? (
+              <ConsistencyGrid weeks={stats.weeks} cell={fit.cell} />
+            ) : (
+              <View style={{ height: GRID_H }} />
+            )}
+          </View>
           <View style={styles.consistencyStats}>
             <Stat
               label="Promedio"
@@ -170,23 +187,29 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 /** Grilla tipo GitHub: una columna por semana, una fila por día (L a D). */
-function ConsistencyGrid({ weeks }: { weeks: WeekSummary[] }) {
+function ConsistencyGrid({
+  weeks,
+  cell,
+}: {
+  weeks: WeekSummary[];
+  cell: number;
+}) {
   const months = monthLabels(weeks);
   return (
     <View style={styles.grid}>
       <View style={styles.gridRow}>
         <View style={styles.gridLabel} />
         {weeks.map((w, wi) => (
-          <View key={wi} style={styles.gridMonthBox}>
-            <Text style={styles.gridMonth}>
-              {months[wi]}
-            </Text>
+          <View key={wi} style={[styles.gridMonthBox, { width: cell }]}>
+            <Text style={styles.gridMonth}>{months[wi]}</Text>
           </View>
         ))}
       </View>
       {WEEKDAY_INITIALS.map((d, di) => (
         <View key={di} style={styles.gridRow}>
-          <Text style={styles.gridLabel}>{di % 2 === 0 ? d : ""}</Text>
+          <Text style={[styles.gridLabel, { lineHeight: cell }]}>
+            {di % 2 === 0 ? d : ""}
+          </Text>
           {weeks.map((w, wi) => {
             const state = w.daily[di];
             return (
@@ -194,6 +217,7 @@ function ConsistencyGrid({ weeks }: { weeks: WeekSummary[] }) {
                 key={wi}
                 style={[
                   styles.cell,
+                  { width: cell, height: cell },
                   state === "done"
                     ? { backgroundColor: colors.primary }
                     : state === "rest"
@@ -312,6 +336,9 @@ function PlanCard({ plan }: { plan: HomePlan }) {
 
 const CELL = 14;
 const CELL_GAP = 3;
+const LABEL_W = 12;
+/** Alto de la grilla (meses + 7 filas) mientras se mide el ancho. */
+const GRID_H = 13 + 7 * (CELL + CELL_GAP);
 
 const styles = StyleSheet.create({
   card: { padding: 14, gap: 10 },
@@ -360,13 +387,12 @@ const styles = StyleSheet.create({
   grid: { gap: CELL_GAP },
   gridRow: { flexDirection: "row", alignItems: "center", gap: CELL_GAP },
   gridLabel: {
-    width: 12,
+    width: LABEL_W,
     fontFamily: fonts.regular,
     fontSize: 9,
-    lineHeight: CELL,
     color: colors.mutedForeground,
   },
-  gridMonthBox: { width: CELL, height: 13 },
+  gridMonthBox: { height: 13 },
   gridMonth: {
     position: "absolute",
     left: 0,
@@ -375,7 +401,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: colors.mutedForeground,
   },
-  cell: { width: CELL, height: CELL, borderRadius: 3 },
+  cell: { borderRadius: 3 },
   axis: {
     fontFamily: fonts.regular,
     fontSize: 11,
