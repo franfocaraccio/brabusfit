@@ -17,6 +17,9 @@ hecho y las decisiones de diseño están en las secciones de más abajo.
   - Récords personales recientes de sus clientes.
   - (Con Reportes) check-ins nuevos para revisar. (Con pagos) cuotas por vencer.
 - **Vista cliente:** últimos entrenamientos y récords recientes.
+- **Vista cliente — revisar el gráfico de consistencia** (hoy grilla tipo GitHub).
+  Alternativas vistas: columnas con pista de 7 días, apiladas por tipo de día
+  de la rutina, columnas con meta, anillos semanales, semanas cumplidas (racha).
 
 ### Clientes
 - Pagos / cuotas por cliente (monto, vencimiento, pagado / atrasado).
