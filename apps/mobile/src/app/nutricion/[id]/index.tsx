@@ -1,10 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router, Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
+import {
+  router,
+  Stack,
+  useFocusEffect,
+  useLocalSearchParams,
+} from "expo-router";
 import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { STUDENTS_CAN_EDIT_PLANS } from "@brabus/shared";
 import {
+  copyPlan,
   deletePlan,
   getPlanDetail,
   planExport,
@@ -26,8 +32,12 @@ import { useAuth } from "@/providers/auth";
 export default function PlanScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session, profile } = useAuth();
-  const [detail, setDetail] = useState<PlanDetail | null | undefined>(undefined);
-  const [busy, setBusy] = useState<"pdf" | "xlsx" | "current" | "delete" | null>(null);
+  const [detail, setDetail] = useState<PlanDetail | null | undefined>(
+    undefined,
+  );
+  const [busy, setBusy] = useState<
+    "pdf" | "xlsx" | "current" | "delete" | "copy" | null
+  >(null);
 
   const load = useCallback(() => {
     getPlanDetail(supabase, id).then(setDetail);
@@ -43,6 +53,15 @@ export default function PlanScreen() {
   const isOwner = plan.owner_id === session?.user.id;
   const canEdit = isOwner && (isCoach || STUDENTS_CAN_EDIT_PLANS);
   const canAssign = isOwner && isCoach && !plan.client_id;
+
+  // Plantilla: copia con "(copia)" en el nombre.
+  const onDuplicate = async () => {
+    setBusy("copy");
+    const result = await copyPlan(supabase, id, null);
+    setBusy(null);
+    if (!result.ok) return notify("No se pudo duplicar", result.error);
+    router.push(`/nutricion/${result.data.id}`);
+  };
 
   const onExport = async (kind: "pdf" | "xlsx") => {
     setBusy(kind);
@@ -89,7 +108,9 @@ export default function PlanScreen() {
           {!isOwner ? (
             <Muted>
               De:{" "}
-              <Text style={{ color: colors.foreground, fontFamily: fonts.medium }}>
+              <Text
+                style={{ color: colors.foreground, fontFamily: fonts.medium }}
+              >
                 {ownerName ?? "tu coach"}
               </Text>
             </Muted>
@@ -123,7 +144,29 @@ export default function PlanScreen() {
             variant="outline"
             style={styles.action}
             onPress={() => router.push(`/nutricion/${id}/editar`)}
-            icon={<Ionicons name="create-outline" size={18} color={colors.foreground} />}
+            icon={
+              <Ionicons
+                name="create-outline"
+                size={18}
+                color={colors.foreground}
+              />
+            }
+          />
+        ) : null}
+        {canAssign ? (
+          <Button
+            title="Duplicar"
+            variant="outline"
+            style={styles.action}
+            onPress={onDuplicate}
+            loading={busy === "copy"}
+            icon={
+              <Ionicons
+                name="copy-outline"
+                size={18}
+                color={colors.foreground}
+              />
+            }
           />
         ) : null}
         {canAssign ? (
@@ -132,7 +175,13 @@ export default function PlanScreen() {
             variant="outline"
             style={styles.action}
             onPress={() => router.push(`/nutricion/${id}/asignar`)}
-            icon={<Ionicons name="person-add-outline" size={18} color={colors.foreground} />}
+            icon={
+              <Ionicons
+                name="person-add-outline"
+                size={18}
+                color={colors.foreground}
+              />
+            }
           />
         ) : null}
         {isOwner && plan.client_id && !plan.is_current ? (
@@ -142,7 +191,13 @@ export default function PlanScreen() {
             style={styles.action}
             onPress={onSetCurrent}
             loading={busy === "current"}
-            icon={<Ionicons name="star-outline" size={18} color={colors.foreground} />}
+            icon={
+              <Ionicons
+                name="star-outline"
+                size={18}
+                color={colors.foreground}
+              />
+            }
           />
         ) : null}
         <Button
@@ -152,7 +207,13 @@ export default function PlanScreen() {
           onPress={() => onExport("pdf")}
           loading={busy === "pdf"}
           disabled={busy !== null}
-          icon={<Ionicons name="document-text-outline" size={18} color={colors.foreground} />}
+          icon={
+            <Ionicons
+              name="document-text-outline"
+              size={18}
+              color={colors.foreground}
+            />
+          }
         />
         <Button
           title="Excel"
@@ -161,7 +222,9 @@ export default function PlanScreen() {
           onPress={() => onExport("xlsx")}
           loading={busy === "xlsx"}
           disabled={busy !== null}
-          icon={<Ionicons name="grid-outline" size={18} color={colors.foreground} />}
+          icon={
+            <Ionicons name="grid-outline" size={18} color={colors.foreground} />
+          }
         />
         {canEdit ? (
           <Button
@@ -170,7 +233,13 @@ export default function PlanScreen() {
             style={styles.action}
             onPress={onDelete}
             loading={busy === "delete"}
-            icon={<Ionicons name="trash-outline" size={18} color={colors.destructive} />}
+            icon={
+              <Ionicons
+                name="trash-outline"
+                size={18}
+                color={colors.destructive}
+              />
+            }
           />
         ) : null}
       </View>
@@ -183,7 +252,12 @@ export default function PlanScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: 16, paddingBottom: 40, gap: 16 },
-  metaRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
+  metaRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 8,
+  },
   current: {
     fontFamily: fonts.semibold,
     fontSize: 11,

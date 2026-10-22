@@ -9,6 +9,7 @@ import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import {
+  copyRoutine,
   deleteRoutine,
   setCurrentRoutine,
   getRoutineDetail,
@@ -35,6 +36,7 @@ export default function RutinaScreen() {
   );
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState<"pdf" | "xlsx" | null>(null);
+  const [duplicating, setDuplicating] = useState(false);
   // El coach no entrena: ve los ejercicios de cada día en vez de abrir el día.
   const isCoach = profile?.is_coach ?? false;
   const [exercises, setExercises] = useState<RoutineExport["days"] | null>(
@@ -59,6 +61,15 @@ export default function RutinaScreen() {
   // Plantilla del coach: se asigna a un cliente creándole una copia propia.
   const canAssign =
     isOwner && (profile?.is_coach ?? false) && !routine.client_id;
+
+  // Plantilla (o rutina propia): copia con "(copia)" en el nombre.
+  const onDuplicate = async () => {
+    setDuplicating(true);
+    const result = await copyRoutine(supabase, id, null);
+    setDuplicating(false);
+    if (!result.ok) return notify("No se pudo duplicar", result.error);
+    router.push(`/rutina/${result.data.id}`);
+  };
 
   const onExport = async (kind: "pdf" | "xlsx") => {
     setExporting(kind);
@@ -159,6 +170,22 @@ export default function RutinaScreen() {
             icon={
               <Ionicons
                 name="create-outline"
+                size={18}
+                color={colors.foreground}
+              />
+            }
+          />
+        ) : null}
+        {isOwner && !routine.client_id ? (
+          <Button
+            title="Duplicar"
+            variant="outline"
+            style={styles.action}
+            onPress={onDuplicate}
+            loading={duplicating}
+            icon={
+              <Ionicons
+                name="copy-outline"
                 size={18}
                 color={colors.foreground}
               />

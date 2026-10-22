@@ -7,15 +7,23 @@ import { getClients, getPlanDetail, planExport } from "@brabus/supabase";
 
 import { ExportButtons } from "@/components/app/export-buttons";
 import { AccessBadge } from "@/components/clients/clients-list";
-import { DeletePlanButton, SetCurrentPlanButton } from "@/components/nutrition/plan-actions";
+import {
+  DeletePlanButton,
+  SetCurrentPlanButton,
+} from "@/components/nutrition/plan-actions";
 import { PlanView } from "@/components/nutrition/plan-view";
 import { AssignRoutine } from "@/components/routines/assign-routine";
+import { DuplicateButton } from "@/components/routines/duplicate-button";
 import { buttonVariants } from "@/components/ui/button";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
-export default async function PlanPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PlanPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
   const { userId, profile } = await requireProfile();
   const supabase = await createClient();
@@ -49,7 +57,10 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
         </h1>
         {!isOwner && (
           <p className="text-muted-foreground text-sm">
-            De: <span className="text-foreground font-medium">{ownerName ?? "tu coach"}</span>
+            De:{" "}
+            <span className="text-foreground font-medium">
+              {ownerName ?? "tu coach"}
+            </span>
           </p>
         )}
         {isOwner && client && (
@@ -77,7 +88,10 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
         {canEdit && (
           <Link
             href={`/nutricion/${id}/editar`}
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "gap-1.5",
+            )}
           >
             <Pencil className="size-4" /> Editar
           </Link>
@@ -89,7 +103,10 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
             clients={clients.filter((c) => !c.archived)}
           />
         )}
-        {isOwner && plan.client_id && !plan.is_current && <SetCurrentPlanButton planId={id} />}
+        {canAssign && <DuplicateButton kind="nutrition" id={id} />}
+        {isOwner && plan.client_id && !plan.is_current && (
+          <SetCurrentPlanButton planId={id} />
+        )}
         <ExportButtons kind="plan" data={planExport(detail)} />
         {canEdit && (
           <DeletePlanButton

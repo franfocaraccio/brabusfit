@@ -20,9 +20,6 @@ hecho y las decisiones de diseño están en las secciones de más abajo.
 
 ### Entrenamiento (rutinas y progreso)
 - Foto ilustrativa por ejercicio (en el catálogo; Supabase Storage).
-- Reordenar ejercicios y días (el ícono de "arrastrar" del editor web hoy es
-  decorativo).
-- Botón "Duplicar plantilla" (la base ya lo soporta: `copy_routine`).
 - Alertas de progresión (ej. mismo peso N semanas con reps en el tope → subir).
 - Videos de ejercicios (Storage, servicio de video o links de YouTube).
 

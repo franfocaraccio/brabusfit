@@ -2,13 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { GripVertical, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { createRoutine, updateRoutine } from "@/lib/actions/routines";
 import type { CatalogEntry, RoutineDayInput } from "@brabus/shared";
 import type { ClientSummary, FolderLite } from "@brabus/supabase";
 import { ExercisePicker } from "@/components/routines/exercise-picker";
+import { SortableList } from "@/components/routines/sortable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -28,7 +29,12 @@ type ExerciseDraft = {
   variant: string;
   sets_reps: string;
 };
-type DayDraft = { key: string; id?: string; name: string; exercises: ExerciseDraft[] };
+type DayDraft = {
+  key: string;
+  id?: string;
+  name: string;
+  exercises: ExerciseDraft[];
+};
 
 const NEW_FOLDER = "__new__";
 /** Destino "plantilla" (en vez de un cliente). */
@@ -105,7 +111,9 @@ export function RoutineBuilder({
 
   // --- mutadores de estado ---------------------------------------------------
   const updateDay = (key: string, patch: Partial<DayDraft>) =>
-    setDays((d) => d.map((day) => (day.key === key ? { ...day, ...patch } : day)));
+    setDays((d) =>
+      d.map((day) => (day.key === key ? { ...day, ...patch } : day)),
+    );
 
   const addDay = () => setDays((d) => [...d, emptyDay()]);
   const removeDay = (key: string) =>
@@ -138,11 +146,17 @@ export function RoutineBuilder({
       ),
     );
 
+  const reorderExercises = (dayKey: string, exercises: ExerciseDraft[]) =>
+    updateDay(dayKey, { exercises });
+
   const removeExercise = (dayKey: string, exKey: string) =>
     setDays((d) =>
       d.map((day) =>
         day.key === dayKey
-          ? { ...day, exercises: day.exercises.filter((ex) => ex.key !== exKey) }
+          ? {
+              ...day,
+              exercises: day.exercises.filter((ex) => ex.key !== exKey),
+            }
           : day,
       ),
     );
@@ -217,12 +231,18 @@ export function RoutineBuilder({
         {isCoach && !isEdit && (
           <div className="space-y-2">
             <Label>¿Para quién es?</Label>
-            <Select value={target} onValueChange={(v) => setTarget(v ?? TEMPLATE)} items={targetItems}>
+            <Select
+              value={target}
+              onValueChange={(v) => setTarget(v ?? TEMPLATE)}
+              items={targetItems}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={TEMPLATE}>Plantilla (en una carpeta)</SelectItem>
+                <SelectItem value={TEMPLATE}>
+                  Plantilla (en una carpeta)
+                </SelectItem>
                 {clients.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.name}
@@ -240,7 +260,10 @@ export function RoutineBuilder({
 
         {isCoach && isEdit && initial?.clientName && (
           <p className="text-muted-foreground text-sm">
-            Rutina de: <span className="text-foreground font-medium">{initial.clientName}</span>
+            Rutina de:{" "}
+            <span className="text-foreground font-medium">
+              {initial.clientName}
+            </span>
           </p>
         )}
 
@@ -279,92 +302,106 @@ export function RoutineBuilder({
       </div>
 
       <div className="space-y-4">
-        {days.map((day, dayIdx) => (
-          <Card key={day.key}>
-            <CardContent className="space-y-4 pt-6">
-              <div className="flex items-end gap-2">
-                <div className="flex-1 space-y-2">
-                  <Label htmlFor={`day-${day.key}`}>Día {dayIdx + 1}</Label>
-                  <Input
-                    id={`day-${day.key}`}
-                    value={day.name}
-                    onChange={(e) => updateDay(day.key, { name: e.target.value })}
-                    placeholder="Día 1 - Piernas"
-                  />
+        <SortableList items={days} onReorder={setDays} className="space-y-4">
+          {(day, dayIdx, dayHandle) => (
+            <Card>
+              <CardContent className="space-y-4 pt-6">
+                <div className="flex items-end gap-2">
+                  <div className="mb-1.5">{dayHandle}</div>
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor={`day-${day.key}`}>Día {dayIdx + 1}</Label>
+                    <Input
+                      id={`day-${day.key}`}
+                      value={day.name}
+                      onChange={(e) =>
+                        updateDay(day.key, { name: e.target.value })
+                      }
+                      placeholder="Día 1 - Piernas"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Eliminar día"
+                    onClick={() => removeDay(day.key)}
+                    disabled={days.length === 1}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
                 </div>
+
+                <SortableList
+                  items={day.exercises}
+                  onReorder={(exercises) =>
+                    reorderExercises(day.key, exercises)
+                  }
+                  className="space-y-3"
+                >
+                  {(ex, _exIdx, exHandle) => (
+                    <div className="bg-muted/30 flex items-start gap-2 rounded-md border p-3">
+                      <div className="mt-1.5 shrink-0">{exHandle}</div>
+                      <div className="grid min-w-0 flex-1 gap-2">
+                        <ExercisePicker
+                          value={ex.catalog}
+                          catalog={catalogList}
+                          onChange={(entry) =>
+                            updateExercise(day.key, ex.key, { catalog: entry })
+                          }
+                          onCreated={(entry) =>
+                            setCatalogList((list) => [...list, entry])
+                          }
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            value={ex.sets_reps}
+                            onChange={(e) =>
+                              updateExercise(day.key, ex.key, {
+                                sets_reps: e.target.value,
+                              })
+                            }
+                            placeholder="4 x (10 a 12)"
+                            aria-label="Series y repeticiones"
+                          />
+                          <Input
+                            value={ex.variant}
+                            onChange={(e) =>
+                              updateExercise(day.key, ex.key, {
+                                variant: e.target.value,
+                              })
+                            }
+                            placeholder="Variante (opcional)"
+                            aria-label="Variante"
+                          />
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Eliminar ejercicio"
+                        onClick={() => removeExercise(day.key, ex.key)}
+                        disabled={day.exercises.length === 1}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  )}
+                </SortableList>
+
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Eliminar día"
-                  onClick={() => removeDay(day.key)}
-                  disabled={days.length === 1}
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => addExercise(day.key)}
                 >
-                  <Trash2 className="size-4" />
+                  <Plus className="size-4" /> Agregar ejercicio
                 </Button>
-              </div>
-
-              <div className="space-y-3">
-                {day.exercises.map((ex) => (
-                  <div
-                    key={ex.key}
-                    className="bg-muted/30 flex items-start gap-2 rounded-md border p-3"
-                  >
-                    <GripVertical className="text-muted-foreground mt-2.5 size-4 shrink-0" />
-                    <div className="grid min-w-0 flex-1 gap-2">
-                      <ExercisePicker
-                        value={ex.catalog}
-                        catalog={catalogList}
-                        onChange={(entry) => updateExercise(day.key, ex.key, { catalog: entry })}
-                        onCreated={(entry) => setCatalogList((list) => [...list, entry])}
-                      />
-                      <div className="grid grid-cols-2 gap-2">
-                        <Input
-                          value={ex.sets_reps}
-                          onChange={(e) =>
-                            updateExercise(day.key, ex.key, {
-                              sets_reps: e.target.value,
-                            })
-                          }
-                          placeholder="4 x (10 a 12)"
-                          aria-label="Series y repeticiones"
-                        />
-                        <Input
-                          value={ex.variant}
-                          onChange={(e) =>
-                            updateExercise(day.key, ex.key, { variant: e.target.value })
-                          }
-                          placeholder="Variante (opcional)"
-                          aria-label="Variante"
-                        />
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Eliminar ejercicio"
-                      onClick={() => removeExercise(day.key, ex.key)}
-                      disabled={day.exercises.length === 1}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => addExercise(day.key)}
-              >
-                <Plus className="size-4" /> Agregar ejercicio
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          )}
+        </SortableList>
 
         <Button
           type="button"
@@ -383,11 +420,7 @@ export function RoutineBuilder({
           onClick={handleSubmit}
           disabled={pending}
         >
-          {pending
-            ? "Guardando…"
-            : isEdit
-              ? "Guardar cambios"
-              : "Crear rutina"}
+          {pending ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear rutina"}
         </Button>
       </div>
     </div>

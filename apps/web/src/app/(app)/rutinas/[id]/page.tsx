@@ -12,6 +12,7 @@ import { LinkTile } from "@/components/app/link-tile";
 import { AccessBadge } from "@/components/clients/clients-list";
 import { DeleteRoutineButton } from "@/components/routines/delete-routine-button";
 import { AssignRoutine } from "@/components/routines/assign-routine";
+import { DuplicateButton } from "@/components/routines/duplicate-button";
 import { ExportButtons } from "@/components/app/export-buttons";
 import { SetCurrentPlanButton } from "@/components/nutrition/plan-actions";
 import { buttonVariants } from "@/components/ui/button";
@@ -111,6 +112,9 @@ export default async function RutinaDetailPage({
             routineId={id}
             clients={clients.filter((c) => !c.archived)}
           />
+        )}
+        {isOwner && !routine.client_id && (
+          <DuplicateButton kind="routine" id={id} />
         )}
         {isOwner && routine.client_id && !routine.is_current && (
           <SetCurrentPlanButton kind="routine" planId={id} />

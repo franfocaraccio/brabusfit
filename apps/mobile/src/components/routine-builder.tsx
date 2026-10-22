@@ -36,7 +36,12 @@ type ExerciseDraft = {
   variant: string;
   sets_reps: string;
 };
-type DayDraft = { key: string; id?: string; name: string; exercises: ExerciseDraft[] };
+type DayDraft = {
+  key: string;
+  id?: string;
+  name: string;
+  exercises: ExerciseDraft[];
+};
 
 const NEW_FOLDER = "__new__";
 /** Destino "plantilla" (en vez de un cliente). */
@@ -50,7 +55,20 @@ const emptyExercise = (): ExerciseDraft => ({
   variant: "",
   sets_reps: "",
 });
-const emptyDay = (): DayDraft => ({ key: newKey(), name: "", exercises: [emptyExercise()] });
+const emptyDay = (): DayDraft => ({
+  key: newKey(),
+  name: "",
+  exercises: [emptyExercise()],
+});
+
+/** Mueve el elemento `index` una posición (-1 arriba, +1 abajo). */
+function move<T>(list: T[], index: number, delta: -1 | 1): T[] {
+  const to = index + delta;
+  if (to < 0 || to >= list.length) return list;
+  const next = [...list];
+  [next[index], next[to]] = [next[to], next[index]];
+  return next;
+}
 
 /**
  * Crear / editar rutina (mismo comportamiento que RoutineBuilder de la web):
@@ -79,7 +97,9 @@ export function RoutineBuilder({
   const isEdit = Boolean(initial);
 
   const [name, setName] = useState(initial?.name ?? "");
-  const [folderId, setFolderId] = useState<string | null>(initial?.folderId ?? null);
+  const [folderId, setFolderId] = useState<string | null>(
+    initial?.folderId ?? null,
+  );
   const [newFolderName, setNewFolderName] = useState("");
   const [folderSheet, setFolderSheet] = useState(false);
   const [target, setTarget] = useState<string>(
@@ -122,21 +142,42 @@ export function RoutineBuilder({
 
   // --- mutadores ---------------------------------------------------------------
   const updateDay = (key: string, patch: Partial<DayDraft>) =>
-    setDays((d) => d.map((day) => (day.key === key ? { ...day, ...patch } : day)));
-  const removeDay = (key: string) => setDays((d) => d.filter((day) => day.key !== key));
+    setDays((d) =>
+      d.map((day) => (day.key === key ? { ...day, ...patch } : day)),
+    );
+  const removeDay = (key: string) =>
+    setDays((d) => d.filter((day) => day.key !== key));
+  const moveDay = (index: number, delta: -1 | 1) =>
+    setDays((d) => move(d, index, delta));
+  const moveExercise = (dayKey: string, index: number, delta: -1 | 1) =>
+    setDays((d) =>
+      d.map((day) =>
+        day.key === dayKey
+          ? { ...day, exercises: move(day.exercises, index, delta) }
+          : day,
+      ),
+    );
   const addExercise = (dayKey: string) =>
     setDays((d) =>
       d.map((day) =>
-        day.key === dayKey ? { ...day, exercises: [...day.exercises, emptyExercise()] } : day,
+        day.key === dayKey
+          ? { ...day, exercises: [...day.exercises, emptyExercise()] }
+          : day,
       ),
     );
-  const updateExercise = (dayKey: string, exKey: string, patch: Partial<ExerciseDraft>) =>
+  const updateExercise = (
+    dayKey: string,
+    exKey: string,
+    patch: Partial<ExerciseDraft>,
+  ) =>
     setDays((d) =>
       d.map((day) =>
         day.key === dayKey
           ? {
               ...day,
-              exercises: day.exercises.map((ex) => (ex.key === exKey ? { ...ex, ...patch } : ex)),
+              exercises: day.exercises.map((ex) =>
+                ex.key === exKey ? { ...ex, ...patch } : ex,
+              ),
             }
           : day,
       ),
@@ -145,7 +186,10 @@ export function RoutineBuilder({
     setDays((d) =>
       d.map((day) =>
         day.key === dayKey
-          ? { ...day, exercises: day.exercises.filter((ex) => ex.key !== exKey) }
+          ? {
+              ...day,
+              exercises: day.exercises.filter((ex) => ex.key !== exKey),
+            }
           : day,
       ),
     );
@@ -198,7 +242,9 @@ export function RoutineBuilder({
       setError(result.error);
       return;
     }
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+      () => {},
+    );
     if (isEdit) router.back();
     else router.replace(`/rutina/${result.data.id}`);
   };
@@ -237,7 +283,11 @@ export function RoutineBuilder({
               <Text style={styles.selectText} numberOfLines={1}>
                 {targetLabel}
               </Text>
-              <Ionicons name="chevron-down" size={18} color={colors.mutedForeground} />
+              <Ionicons
+                name="chevron-down"
+                size={18}
+                color={colors.mutedForeground}
+              />
             </Pressable>
             <Text style={styles.hint}>
               {forClient
@@ -250,7 +300,9 @@ export function RoutineBuilder({
         {isCoach && isEdit && initial?.clientName ? (
           <Text style={styles.hint}>
             Rutina de:{" "}
-            <Text style={{ color: colors.foreground, fontFamily: fonts.medium }}>
+            <Text
+              style={{ color: colors.foreground, fontFamily: fonts.medium }}
+            >
               {initial.clientName}
             </Text>
           </Text>
@@ -264,14 +316,25 @@ export function RoutineBuilder({
               style={styles.select}
               accessibilityRole="button"
             >
-              <Ionicons name="folder-outline" size={18} color={colors.mutedForeground} />
+              <Ionicons
+                name="folder-outline"
+                size={18}
+                color={colors.mutedForeground}
+              />
               <Text
-                style={[styles.selectText, !folderLabel && { color: colors.mutedForeground }]}
+                style={[
+                  styles.selectText,
+                  !folderLabel && { color: colors.mutedForeground },
+                ]}
                 numberOfLines={1}
               >
                 {folderLabel ?? "Elegí una carpeta"}
               </Text>
-              <Ionicons name="chevron-down" size={18} color={colors.mutedForeground} />
+              <Ionicons
+                name="chevron-down"
+                size={18}
+                color={colors.mutedForeground}
+              />
             </Pressable>
             {folderId === NEW_FOLDER ? (
               <TextField
@@ -296,6 +359,18 @@ export function RoutineBuilder({
                 />
               </View>
               <IconButton
+                icon="chevron-up"
+                label="Subir día"
+                onPress={() => moveDay(dayIdx, -1)}
+                disabled={dayIdx === 0}
+              />
+              <IconButton
+                icon="chevron-down"
+                label="Bajar día"
+                onPress={() => moveDay(dayIdx, 1)}
+                disabled={dayIdx === days.length - 1}
+              />
+              <IconButton
                 icon="trash-outline"
                 label="Eliminar día"
                 onPress={() => removeDay(day.key)}
@@ -303,20 +378,26 @@ export function RoutineBuilder({
               />
             </View>
 
-            {day.exercises.map((ex) => (
+            {day.exercises.map((ex, exIdx) => (
               <View key={ex.key} style={styles.exercise}>
                 <View style={{ flex: 1, gap: 8 }}>
                   <ExercisePicker
                     value={ex.catalog}
                     catalog={catalogList}
-                    onChange={(entry) => updateExercise(day.key, ex.key, { catalog: entry })}
-                    onCreated={(entry) => setCatalogList((list) => [...list, entry])}
+                    onChange={(entry) =>
+                      updateExercise(day.key, ex.key, { catalog: entry })
+                    }
+                    onCreated={(entry) =>
+                      setCatalogList((list) => [...list, entry])
+                    }
                   />
                   <View style={{ flexDirection: "row", gap: 8 }}>
                     <View style={{ flex: 1 }}>
                       <TextField
                         value={ex.sets_reps}
-                        onChangeText={(v) => updateExercise(day.key, ex.key, { sets_reps: v })}
+                        onChangeText={(v) =>
+                          updateExercise(day.key, ex.key, { sets_reps: v })
+                        }
                         placeholder="4 x (10 a 12)"
                         accessibilityLabel="Series y repeticiones"
                       />
@@ -324,19 +405,38 @@ export function RoutineBuilder({
                     <View style={{ flex: 1 }}>
                       <TextField
                         value={ex.variant}
-                        onChangeText={(v) => updateExercise(day.key, ex.key, { variant: v })}
+                        onChangeText={(v) =>
+                          updateExercise(day.key, ex.key, { variant: v })
+                        }
                         placeholder="Variante"
                         accessibilityLabel="Variante"
                       />
                     </View>
                   </View>
                 </View>
-                <IconButton
-                  icon="trash-outline"
-                  label="Eliminar ejercicio"
-                  onPress={() => removeExercise(day.key, ex.key)}
-                  disabled={day.exercises.length === 1}
-                />
+                <View style={styles.exerciseActions}>
+                  <IconButton
+                    compact
+                    icon="chevron-up"
+                    label="Subir ejercicio"
+                    onPress={() => moveExercise(day.key, exIdx, -1)}
+                    disabled={exIdx === 0}
+                  />
+                  <IconButton
+                    compact
+                    icon="trash-outline"
+                    label="Eliminar ejercicio"
+                    onPress={() => removeExercise(day.key, ex.key)}
+                    disabled={day.exercises.length === 1}
+                  />
+                  <IconButton
+                    compact
+                    icon="chevron-down"
+                    label="Bajar ejercicio"
+                    onPress={() => moveExercise(day.key, exIdx, 1)}
+                    disabled={exIdx === day.exercises.length - 1}
+                  />
+                </View>
               </View>
             ))}
 
@@ -357,7 +457,9 @@ export function RoutineBuilder({
         />
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <View
+        style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}
+      >
         {error ? <ErrorText>{error}</ErrorText> : null}
         <Button
           title={isEdit ? "Guardar cambios" : "Crear rutina"}
@@ -366,12 +468,20 @@ export function RoutineBuilder({
         />
       </View>
 
-      <Sheet visible={targetSheet} onClose={() => setTargetSheet(false)} title="¿Para quién es?">
+      <Sheet
+        visible={targetSheet}
+        onClose={() => setTargetSheet(false)}
+        title="¿Para quién es?"
+      >
         <ScrollView style={{ maxHeight: 420 }}>
           <OptionList
             value={target}
             options={[
-              { value: TEMPLATE, label: "Plantilla (en una carpeta)", icon: "albums-outline" as const },
+              {
+                value: TEMPLATE,
+                label: "Plantilla (en una carpeta)",
+                icon: "albums-outline" as const,
+              },
               ...clients.map((c) => ({
                 value: c.id,
                 label: c.name,
@@ -386,7 +496,11 @@ export function RoutineBuilder({
         </ScrollView>
       </Sheet>
 
-      <Sheet visible={folderSheet} onClose={() => setFolderSheet(false)} title="Carpeta">
+      <Sheet
+        visible={folderSheet}
+        onClose={() => setFolderSheet(false)}
+        title="Carpeta"
+      >
         <OptionList
           value={folderId}
           options={[
@@ -395,7 +509,11 @@ export function RoutineBuilder({
               label: f.name,
               icon: "folder-outline" as const,
             })),
-            { value: NEW_FOLDER, label: "Crear carpeta nueva", icon: "add" as const },
+            {
+              value: NEW_FOLDER,
+              label: "Crear carpeta nueva",
+              icon: "add" as const,
+            },
           ]}
           onSelect={(v) => {
             setFolderId(v);
@@ -412,7 +530,10 @@ function IconButton({
   label,
   onPress,
   disabled,
+  compact,
 }: {
+  /** Más bajo (columna de acciones de un ejercicio). */
+  compact?: boolean;
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
@@ -425,7 +546,11 @@ function IconButton({
       accessibilityLabel={label}
       accessibilityRole="button"
       hitSlop={8}
-      style={[styles.iconButton, disabled && { opacity: 0.35 }]}
+      style={[
+        styles.iconButton,
+        compact && { height: 32 },
+        disabled && { opacity: 0.35 },
+      ]}
     >
       <Ionicons name={icon} size={20} color={colors.mutedForeground} />
     </Pressable>
@@ -433,10 +558,19 @@ function IconButton({
 }
 
 const styles = StyleSheet.create({
+  exerciseActions: {
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 6,
+  },
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: 16, paddingBottom: 32, gap: 16 },
   label: { fontFamily: fonts.medium, fontSize: 14, color: colors.foreground },
-  hint: { fontFamily: fonts.regular, fontSize: 13, color: colors.mutedForeground },
+  hint: {
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    color: colors.mutedForeground,
+  },
   select: {
     flexDirection: "row",
     alignItems: "center",
@@ -448,7 +582,12 @@ const styles = StyleSheet.create({
     borderColor: colors.input,
     backgroundColor: "rgba(43,51,61,0.4)",
   },
-  selectText: { flex: 1, fontFamily: fonts.regular, fontSize: 16, color: colors.foreground },
+  selectText: {
+    flex: 1,
+    fontFamily: fonts.regular,
+    fontSize: 16,
+    color: colors.foreground,
+  },
   dayCard: { padding: 14, gap: 12 },
   dayHeader: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
   exercise: {
