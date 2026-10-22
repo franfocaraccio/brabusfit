@@ -1,6 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { router, Stack, useLocalSearchParams, useNavigation } from "expo-router";
+import {
+  Redirect,
+  router,
+  Stack,
+  useLocalSearchParams,
+  useNavigation,
+} from "expo-router";
 // SDK 57: usePreventRemove todavía no se exporta desde "expo-router".
 import { usePreventRemove } from "expo-router/react-navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -69,7 +75,15 @@ const onlyDigits = (v: string) => v.replace(/[^0-9]/g, "");
 // Pantalla: carga los datos y monta el entrenador
 // ---------------------------------------------------------------------------
 
-export default function TrainDayScreen() {
+/** El coach no entrena: ve los días desde el detalle de la rutina. */
+export default function TrainDayRoute() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { profile } = useAuth();
+  if (profile?.is_coach) return <Redirect href={`/rutina/${id}`} />;
+  return <TrainDayScreen />;
+}
+
+function TrainDayScreen() {
   const { id: routineId, dayId } = useLocalSearchParams<{
     id: string;
     dayId: string;
@@ -136,7 +150,9 @@ function Trainer({
   const [openId, setOpenId] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState<Record<string, boolean>>({});
   // Ejercicio cuyo historial completo se muestra en el panel "Ver más".
-  const [historySheet, setHistorySheet] = useState<TrainingExercise | null>(null);
+  const [historySheet, setHistorySheet] = useState<TrainingExercise | null>(
+    null,
+  );
   const [rows, setRows] = useState<Record<string, SetRow[]>>(() =>
     Object.fromEntries(exercises.map((e) => [e.id, initialRowsFor(e)])),
   );
@@ -166,7 +182,8 @@ function Trainer({
   usePreventRemove(dirty && !leaving, ({ data }) => {
     confirm({
       title: "Los cambios no fueron guardados",
-      message: 'Si salís ahora se pierde lo que cargaste. Para guardarlo usá "Guardar sesión".',
+      message:
+        'Si salís ahora se pierde lo que cargaste. Para guardarlo usá "Guardar sesión".',
       cancelText: "Seguir entrenando",
       confirmText: "Salir sin guardar",
       destructive: true,
@@ -210,17 +227,26 @@ function Trainer({
       onCancel: () => clearDraft(authStorage, draftId),
       onConfirm: () => {
         setCompleted(
-          Object.fromEntries(draft.completed.filter((id) => ids.has(id)).map((id) => [id, true])),
+          Object.fromEntries(
+            draft.completed.filter((id) => ids.has(id)).map((id) => [id, true]),
+          ),
         );
         setRows((prev) => ({
           ...prev,
           ...Object.fromEntries(
             Object.entries(draft.rows)
               .filter(([id, rs]) => ids.has(id) && rs.length > 0)
-              .map(([id, rs]) => [id, rs.map((r) => ({ key: newKey(), ...r }))]),
+              .map(([id, rs]) => [
+                id,
+                rs.map((r) => ({ key: newKey(), ...r })),
+              ]),
           ),
         }));
-        setNotes(Object.fromEntries(Object.entries(draft.notes).filter(([id]) => ids.has(id))));
+        setNotes(
+          Object.fromEntries(
+            Object.entries(draft.notes).filter(([id]) => ids.has(id)),
+          ),
+        );
       },
     });
   }, [draftId, exercises]);
@@ -244,7 +270,9 @@ function Trainer({
     setRows((prev) => ({
       ...prev,
       [exId]:
-        prev[exId].length > 1 ? prev[exId].filter((r) => r.key !== key) : prev[exId],
+        prev[exId].length > 1
+          ? prev[exId].filter((r) => r.key !== key)
+          : prev[exId],
     }));
 
   const toggleDone = (exId: string) => {
@@ -335,7 +363,11 @@ function Trainer({
                 >
                   <View style={[styles.check, isDone && styles.checkDone]}>
                     {isDone ? (
-                      <Ionicons name="checkmark" size={16} color={colors.successForeground} />
+                      <Ionicons
+                        name="checkmark"
+                        size={16}
+                        color={colors.successForeground}
+                      />
                     ) : null}
                   </View>
                 </Pressable>
@@ -349,7 +381,9 @@ function Trainer({
                     <Text style={styles.exerciseName}>{ex.name}</Text>
                     <Text style={styles.exerciseSets}>{ex.setsReps}</Text>
                     {ex.history[0] ? (
-                      <Text style={styles.exerciseLast}>{summarizeHistory(ex.history[0])}</Text>
+                      <Text style={styles.exerciseLast}>
+                        {summarizeHistory(ex.history[0])}
+                      </Text>
                     ) : null}
                   </View>
                   <Ionicons
@@ -370,12 +404,18 @@ function Trainer({
                         }
                         style={styles.historyToggle}
                       >
-                        <Ionicons name="time-outline" size={15} color={colors.mutedForeground} />
+                        <Ionicons
+                          name="time-outline"
+                          size={15}
+                          color={colors.mutedForeground}
+                        />
                         <Text style={styles.historyToggleText}>
                           {historyLabel(ex.history.length)}
                         </Text>
                         <Ionicons
-                          name={historyOpen[ex.id] ? "chevron-up" : "chevron-down"}
+                          name={
+                            historyOpen[ex.id] ? "chevron-up" : "chevron-down"
+                          }
                           size={15}
                           color={colors.mutedForeground}
                         />
@@ -384,7 +424,8 @@ function Trainer({
                         ex.history
                           .slice(0, HISTORY_PREVIEW)
                           .map((h, i) => <HistoryRow key={i} entry={h} />)}
-                      {historyOpen[ex.id] && ex.history.length > HISTORY_PREVIEW ? (
+                      {historyOpen[ex.id] &&
+                      ex.history.length > HISTORY_PREVIEW ? (
                         <Pressable
                           onPress={() => setHistorySheet(ex)}
                           hitSlop={8}
@@ -396,7 +437,8 @@ function Trainer({
                       ) : null}
                       <Muted style={{ fontSize: 13 }}>
                         Precargado con tu entrenamiento del{" "}
-                        {formatShortDate(ex.history[0].date)}. Si progresaste, editalo.
+                        {formatShortDate(ex.history[0].date)}. Si progresaste,
+                        editalo.
                       </Muted>
                     </View>
                   )}
@@ -408,7 +450,9 @@ function Trainer({
                         <TextField
                           value={row.weight}
                           onChangeText={(v) =>
-                            setRow(ex.id, row.key, { weight: sanitizeDecimal(v) })
+                            setRow(ex.id, row.key, {
+                              weight: sanitizeDecimal(v),
+                            })
                           }
                           placeholder="Peso"
                           keyboardType="decimal-pad"
@@ -419,7 +463,9 @@ function Trainer({
                       <View style={{ flex: 1 }}>
                         <TextField
                           value={row.reps}
-                          onChangeText={(v) => setRow(ex.id, row.key, { reps: onlyDigits(v) })}
+                          onChangeText={(v) =>
+                            setRow(ex.id, row.key, { reps: onlyDigits(v) })
+                          }
                           placeholder="Reps"
                           keyboardType="number-pad"
                           style={styles.compactInput}
@@ -432,7 +478,11 @@ function Trainer({
                         accessibilityLabel="Quitar serie"
                         style={{ opacity: rows[ex.id].length === 1 ? 0.3 : 1 }}
                       >
-                        <Ionicons name="trash-outline" size={20} color={colors.foreground} />
+                        <Ionicons
+                          name="trash-outline"
+                          size={20}
+                          color={colors.foreground}
+                        />
                       </Pressable>
                     </View>
                   ))}
@@ -441,7 +491,13 @@ function Trainer({
                     title="Agregar serie"
                     variant="outline"
                     onPress={() => addRow(ex.id)}
-                    icon={<Ionicons name="add" size={18} color={colors.foreground} />}
+                    icon={
+                      <Ionicons
+                        name="add"
+                        size={18}
+                        color={colors.foreground}
+                      />
+                    }
                     style={styles.compactButton}
                   />
 
@@ -450,7 +506,9 @@ function Trainer({
                     {/* Una línea; crece sola si el texto no entra. */}
                     <TextInput
                       value={notes[ex.id] ?? ""}
-                      onChangeText={(v) => setNotes((n) => ({ ...n, [ex.id]: v }))}
+                      onChangeText={(v) =>
+                        setNotes((n) => ({ ...n, [ex.id]: v }))
+                      }
                       maxLength={NOTE_MAX_LENGTH}
                       placeholder="Ej: hecho en Smith"
                       placeholderTextColor={colors.mutedForeground}
@@ -487,10 +545,14 @@ function Trainer({
         visible={historySheet !== null}
         onClose={() => setHistorySheet(null)}
         title={historySheet?.name ?? ""}
-        description={historySheet ? historyLabel(historySheet.history.length) : undefined}
+        description={
+          historySheet ? historyLabel(historySheet.history.length) : undefined
+        }
       >
         <View style={{ gap: 6 }}>
-          {historySheet?.history.map((h, i) => <HistoryRow key={i} entry={h} />)}
+          {historySheet?.history.map((h, i) => (
+            <HistoryRow key={i} entry={h} />
+          ))}
         </View>
       </Sheet>
     </SafeAreaView>
@@ -544,8 +606,16 @@ const styles = StyleSheet.create({
     paddingLeft: 6,
     paddingRight: 14,
   },
-  exerciseName: { fontFamily: fonts.semibold, fontSize: 16, color: colors.foreground },
-  exerciseSets: { fontFamily: fonts.regular, fontSize: 13, color: colors.mutedForeground },
+  exerciseName: {
+    fontFamily: fonts.semibold,
+    fontSize: 16,
+    color: colors.foreground,
+  },
+  exerciseSets: {
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    color: colors.mutedForeground,
+  },
   exerciseLast: {
     marginTop: 2,
     fontFamily: fonts.regular,
@@ -559,7 +629,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   historyToggle: { flexDirection: "row", alignItems: "center", gap: 6 },
-  historyToggleText: { fontFamily: fonts.medium, fontSize: 13, color: colors.mutedForeground },
+  historyToggleText: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.mutedForeground,
+  },
   historyRow: {
     flexDirection: "row",
     gap: 10,
@@ -568,18 +642,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  historyDate: { fontFamily: fonts.medium, fontSize: 13, color: colors.mutedForeground },
-  historySets: { flex: 1, fontFamily: fonts.regular, fontSize: 13, color: colors.foreground },
+  historyDate: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.mutedForeground,
+  },
+  historySets: {
+    flex: 1,
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    color: colors.foreground,
+  },
   seeMore: { fontFamily: fonts.semibold, fontSize: 13, color: colors.primary },
   setRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  setLabel: { width: 54, fontFamily: fonts.regular, fontSize: 13, color: colors.mutedForeground },
+  setLabel: {
+    width: 54,
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    color: colors.mutedForeground,
+  },
   // Campos y botones secundarios más bajos que el estándar (48) para que la
   // lista de series sea compacta; sigue siendo cómodo de tocar (≥ 38).
   compactInput: { minHeight: 40, paddingVertical: 6, fontSize: 15 },
   compactButton: { minHeight: 40 },
   // Mínimo recomendado por Apple para un objetivo táctil.
   saveExerciseButton: { minHeight: 44 },
-  noteLabel: { fontFamily: fonts.medium, fontSize: 13, color: colors.mutedForeground },
+  noteLabel: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.mutedForeground,
+  },
   note: {
     minHeight: 38,
     borderRadius: radius.md,

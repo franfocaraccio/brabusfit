@@ -2,7 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { History, Pencil } from "lucide-react";
 
-import { getClients, getRoutineDetail, getRoutineExport } from "@brabus/supabase";
+import {
+  getClients,
+  getRoutineDetail,
+  getRoutineExport,
+} from "@brabus/supabase";
 
 import { LinkTile } from "@/components/app/link-tile";
 import { AccessBadge } from "@/components/clients/clients-list";
@@ -59,7 +63,9 @@ export default async function RutinaDetailPage({
         {!isOwner && (
           <p className="text-muted-foreground text-sm">
             Compartida por:{" "}
-            <span className="text-foreground font-medium">{ownerName ?? "tu coach"}</span>
+            <span className="text-foreground font-medium">
+              {ownerName ?? "tu coach"}
+            </span>
           </p>
         )}
         {isOwner && client && (
@@ -75,7 +81,9 @@ export default async function RutinaDetailPage({
             </span>
             <AccessBadge status={client.status} />
             {client.archived ? (
-              <span className="bg-muted rounded px-1.5 text-[10px] font-semibold">Archivado</span>
+              <span className="bg-muted rounded px-1.5 text-[10px] font-semibold">
+                Archivado
+              </span>
             ) : null}
           </p>
         )}
@@ -90,13 +98,19 @@ export default async function RutinaDetailPage({
         {isOwner && (
           <Link
             href={`/rutinas/${id}/editar`}
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "gap-1.5",
+            )}
           >
             <Pencil className="size-4" /> Editar
           </Link>
         )}
         {canAssign && (
-          <AssignRoutine routineId={id} clients={clients.filter((c) => !c.archived)} />
+          <AssignRoutine
+            routineId={id}
+            clients={clients.filter((c) => !c.archived)}
+          />
         )}
         {isOwner && routine.client_id && !routine.is_current && (
           <SetCurrentPlanButton kind="routine" planId={id} />
@@ -104,18 +118,47 @@ export default async function RutinaDetailPage({
         {exportData && <ExportButtons kind="routine" data={exportData} />}
         <Link
           href={`/rutinas/${id}/historial`}
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}
+          className={cn(
+            buttonVariants({ variant: "outline", size: "sm" }),
+            "gap-1.5",
+          )}
         >
           <History className="size-4" /> Historial
         </Link>
-        {isOwner && <DeleteRoutineButton routineId={id} routineName={routine.name} />}
+        {isOwner && (
+          <DeleteRoutineButton routineId={id} routineName={routine.name} />
+        )}
       </div>
 
       <section className="space-y-2.5">
         <h2 className="text-muted-foreground text-sm font-semibold">
-          {client ? "Días" : "Elegí un día para entrenar"}
+          {client || profile.is_coach ? "Días" : "Elegí un día para entrenar"}
         </h2>
-        {days.length > 0 ? (
+        {days.length > 0 && profile.is_coach ? (
+          // El coach no entrena: ve los ejercicios de cada día.
+          <div className="grid gap-2.5 md:grid-cols-2">
+            {days.map((day, i) => (
+              <Card key={day.id} className="space-y-2 p-4">
+                <div className="flex items-center gap-2.5">
+                  <span className="bg-primary/15 text-primary flex size-6 items-center justify-center rounded-full text-xs font-semibold">
+                    {i + 1}
+                  </span>
+                  <h3 className="font-semibold">{day.name}</h3>
+                </div>
+                <ul className="divide-border divide-y text-sm">
+                  {(exportData?.days[i]?.exercises ?? []).map((e, ei) => (
+                    <li key={ei} className="flex justify-between gap-3 py-1.5">
+                      <span>{e.name}</span>
+                      <span className="text-muted-foreground shrink-0">
+                        {e.setsReps}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            ))}
+          </div>
+        ) : days.length > 0 ? (
           <div className="stagger space-y-2.5">
             {days.map((day, i) => (
               <LinkTile

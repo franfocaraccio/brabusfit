@@ -1,5 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router, Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
+import {
+  router,
+  Stack,
+  useFocusEffect,
+  useLocalSearchParams,
+} from "expo-router";
 import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
@@ -10,6 +15,7 @@ import {
   getRoutineExport,
   type RoutineDetail,
 } from "@brabus/supabase";
+import type { RoutineExport } from "@brabus/shared";
 
 import { AccessBadge } from "@/components/clients";
 import { Loading, NotFound } from "@/components/loading";
@@ -24,14 +30,25 @@ import { useAuth } from "@/providers/auth";
 export default function RutinaScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session, profile } = useAuth();
-  const [detail, setDetail] = useState<RoutineDetail | null | undefined>(undefined);
+  const [detail, setDetail] = useState<RoutineDetail | null | undefined>(
+    undefined,
+  );
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState<"pdf" | "xlsx" | null>(null);
+  // El coach no entrena: ve los ejercicios de cada día en vez de abrir el día.
+  const isCoach = profile?.is_coach ?? false;
+  const [exercises, setExercises] = useState<RoutineExport["days"] | null>(
+    null,
+  );
 
   useFocusEffect(
     useCallback(() => {
-      getRoutineDetail(supabase, id).then(setDetail);
-    }, [id]),
+      getRoutineDetail(supabase, id).then(async (d) => {
+        setDetail(d);
+        if (d && isCoach)
+          setExercises((await getRoutineExport(supabase, id, d))?.days ?? null);
+      });
+    }, [id, isCoach]),
   );
 
   if (detail === undefined) return <Loading />;
@@ -40,13 +57,15 @@ export default function RutinaScreen() {
   const { routine, days, client } = detail;
   const isOwner = routine.owner_id === session?.user.id;
   // Plantilla del coach: se asigna a un cliente creándole una copia propia.
-  const canAssign = isOwner && (profile?.is_coach ?? false) && !routine.client_id;
+  const canAssign =
+    isOwner && (profile?.is_coach ?? false) && !routine.client_id;
 
   const onExport = async (kind: "pdf" | "xlsx") => {
     setExporting(kind);
     try {
       const data = await getRoutineExport(supabase, id, detail);
-      if (data) await (kind === "pdf" ? shareRoutinePdf(data) : shareRoutineXlsx(data));
+      if (data)
+        await (kind === "pdf" ? shareRoutinePdf(data) : shareRoutineXlsx(data));
     } catch {
       notify("No se pudo exportar", "Probá de nuevo en un momento.");
     } finally {
@@ -74,11 +93,15 @@ export default function RutinaScreen() {
       <Stack.Screen options={{ title: "" }} />
       <View style={{ gap: 4 }}>
         <Title>{routine.name}</Title>
-        {routine.is_current ? <Text style={[styles.badge, styles.current]}>Vigente</Text> : null}
+        {routine.is_current ? (
+          <Text style={[styles.badge, styles.current]}>Vigente</Text>
+        ) : null}
         {!isOwner ? (
           <Muted>
             Compartida por:{" "}
-            <Text style={{ color: colors.foreground, fontFamily: fonts.medium }}>
+            <Text
+              style={{ color: colors.foreground, fontFamily: fonts.medium }}
+            >
               {detail.ownerName ?? "tu coach"}
             </Text>
           </Muted>
@@ -95,7 +118,9 @@ export default function RutinaScreen() {
               </Text>
             </Muted>
             <AccessBadge status={client.status} />
-            {client.archived ? <Text style={styles.badge}>Archivado</Text> : null}
+            {client.archived ? (
+              <Text style={styles.badge}>Archivado</Text>
+            ) : null}
           </View>
         ) : null}
         {isOwner && routine.client_id && !routine.is_current ? (
@@ -108,7 +133,13 @@ export default function RutinaScreen() {
               if (!result.ok) return notify("No se pudo marcar", result.error);
               getRoutineDetail(supabase, id).then(setDetail);
             }}
-            icon={<Ionicons name="star-outline" size={18} color={colors.foreground} />}
+            icon={
+              <Ionicons
+                name="star-outline"
+                size={18}
+                color={colors.foreground}
+              />
+            }
           />
         ) : null}
         {canAssign ? (
@@ -125,7 +156,13 @@ export default function RutinaScreen() {
             variant="outline"
             style={styles.action}
             onPress={() => router.push(`/rutina/${id}/editar`)}
-            icon={<Ionicons name="create-outline" size={18} color={colors.foreground} />}
+            icon={
+              <Ionicons
+                name="create-outline"
+                size={18}
+                color={colors.foreground}
+              />
+            }
           />
         ) : null}
         {canAssign ? (
@@ -134,7 +171,13 @@ export default function RutinaScreen() {
             variant="outline"
             style={styles.action}
             onPress={() => router.push(`/rutina/${id}/asignar`)}
-            icon={<Ionicons name="person-add-outline" size={18} color={colors.foreground} />}
+            icon={
+              <Ionicons
+                name="person-add-outline"
+                size={18}
+                color={colors.foreground}
+              />
+            }
           />
         ) : null}
         <Button
@@ -144,7 +187,13 @@ export default function RutinaScreen() {
           onPress={() => onExport("pdf")}
           loading={exporting === "pdf"}
           disabled={exporting !== null}
-          icon={<Ionicons name="document-text-outline" size={18} color={colors.foreground} />}
+          icon={
+            <Ionicons
+              name="document-text-outline"
+              size={18}
+              color={colors.foreground}
+            />
+          }
         />
         <Button
           title="Excel"
@@ -153,14 +202,18 @@ export default function RutinaScreen() {
           onPress={() => onExport("xlsx")}
           loading={exporting === "xlsx"}
           disabled={exporting !== null}
-          icon={<Ionicons name="grid-outline" size={18} color={colors.foreground} />}
+          icon={
+            <Ionicons name="grid-outline" size={18} color={colors.foreground} />
+          }
         />
         <Button
           title="Historial"
           variant="outline"
           style={styles.action}
           onPress={() => router.push(`/rutina/${id}/historial`)}
-          icon={<Ionicons name="time-outline" size={18} color={colors.foreground} />}
+          icon={
+            <Ionicons name="time-outline" size={18} color={colors.foreground} />
+          }
         />
         {isOwner ? (
           <Button
@@ -169,14 +222,37 @@ export default function RutinaScreen() {
             style={styles.action}
             onPress={onDelete}
             loading={deleting}
-            icon={<Ionicons name="trash-outline" size={18} color={colors.destructive} />}
+            icon={
+              <Ionicons
+                name="trash-outline"
+                size={18}
+                color={colors.destructive}
+              />
+            }
           />
         ) : null}
       </View>
 
       <View style={styles.section}>
-        <SectionLabel>{client ? "Días" : "Elegí un día para entrenar"}</SectionLabel>
-        {days.length > 0 ? (
+        <SectionLabel>
+          {client || isCoach ? "Días" : "Elegí un día para entrenar"}
+        </SectionLabel>
+        {days.length > 0 && isCoach ? (
+          days.map((day, i) => (
+            <Card key={day.id} style={styles.day}>
+              <View style={styles.dayHeader}>
+                <Text style={styles.dayChip}>{i + 1}</Text>
+                <Text style={styles.dayName}>{day.name}</Text>
+              </View>
+              {(exercises?.[i]?.exercises ?? []).map((e, ei) => (
+                <View key={ei} style={styles.exercise}>
+                  <Text style={styles.exerciseName}>{e.name}</Text>
+                  <Text style={styles.exerciseSets}>{e.setsReps}</Text>
+                </View>
+              ))}
+            </Card>
+          ))
+        ) : days.length > 0 ? (
           days.map((day, i) => (
             <Tile
               key={day.id}
@@ -201,10 +277,63 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: 16, paddingBottom: 40, gap: 20 },
   section: { gap: 10 },
+  day: { padding: 14, gap: 8 },
+  dayHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 2,
+  },
+  dayChip: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    textAlign: "center",
+    lineHeight: 26,
+    overflow: "hidden",
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+    color: colors.primary,
+    backgroundColor: "rgba(249,115,22,0.15)",
+  },
+  dayName: {
+    flex: 1,
+    fontFamily: fonts.semibold,
+    fontSize: 15,
+    color: colors.foreground,
+  },
+  exercise: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  exerciseName: {
+    flex: 1,
+    fontFamily: fonts.regular,
+    fontSize: 14,
+    color: colors.foreground,
+  },
+  exerciseSets: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.mutedForeground,
+  },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   action: { minHeight: 40, paddingHorizontal: 14, flexGrow: 1 },
-  studentRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
-  current: { alignSelf: "flex-start", color: colors.primary, backgroundColor: "rgba(249,115,22,0.15)" },
+  studentRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 8,
+  },
+  current: {
+    alignSelf: "flex-start",
+    color: colors.primary,
+    backgroundColor: "rgba(249,115,22,0.15)",
+  },
   badge: {
     fontFamily: fonts.semibold,
     fontSize: 11,

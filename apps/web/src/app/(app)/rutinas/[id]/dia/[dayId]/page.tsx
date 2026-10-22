@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { getTrainingDay } from "@brabus/supabase";
 
@@ -12,7 +12,9 @@ export default async function TrainDayPage({
   params: Promise<{ id: string; dayId: string }>;
 }) {
   const { id: routineId, dayId } = await params;
-  const { userId } = await requireProfile();
+  const { userId, profile } = await requireProfile();
+  // El coach no entrena: ve los días desde el detalle de la rutina.
+  if (profile.is_coach) redirect(`/rutinas/${routineId}`);
 
   // Cada entrenamiento arranca de cero (precargado con la última sesión).
   const data = await getTrainingDay(await createClient(), {
