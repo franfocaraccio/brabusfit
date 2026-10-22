@@ -1,7 +1,13 @@
 import { dayRange, formatRange } from "@brabus/shared";
 
 import type { BrabusClient } from "./client";
-import { fullName, type Person } from "./routines";
+import {
+  CLIENT_NAME_SELECT,
+  clientName,
+  fullName,
+  type ClientNameRow,
+  type Person,
+} from "./routines";
 
 /** Rutina que se muestra en el inicio del alumno ("Tu rutina"). */
 export type HomeRoutine = {
@@ -158,5 +164,83 @@ export async function getStudentHome(
       dayCount: count ?? 0,
       lastDayName: sessions.find((s) => s.routine_id === routine.id)?.day?.name ?? null,
     },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Inicio del coach
+// ---------------------------------------------------------------------------
+
+export type CoachHomeClient = {
+  id: string;
+  name: string;
+  /** Cuenta vinculada con acceso activo (puede entrenar con la app). */
+  studentId: string | null;
+  createdAt: string;
+  archivedAt: string | null;
+};
+
+export type CoachHome = {
+  /** Todas las fichas, archivadas incluidas (para la evolución de clientes). */
+  clients: CoachHomeClient[];
+  /** Clientes activos sin rutina vigente / sin plan vigente. */
+  noRoutine: { id: string; name: string }[];
+  noPlan: { id: string; name: string }[];
+  /** Entrenamientos de sus clientes en sus rutinas, de los últimos 8 días. */
+  sessions: { userId: string; finishedAt: string }[];
+};
+
+/** Datos del inicio del coach: pendientes, quién entrenó y sus clientes. */
+export async function getCoachHome(client: BrabusClient, coachId: string): Promise<CoachHome> {
+  const since = new Date();
+  since.setDate(since.getDate() - 8);
+
+  const [clientsRes, routinesRes, plansRes, sessionsRes] = await Promise.all([
+    client
+      .from("coach_students")
+      .select(`${CLIENT_NAME_SELECT}, created_at`)
+      .eq("coach_id", coachId),
+    client
+      .from("routines")
+      .select("client_id")
+      .eq("owner_id", coachId)
+      .eq("is_current", true),
+    client
+      .from("nutrition_plans")
+      .select("client_id")
+      .eq("owner_id", coachId)
+      .eq("is_current", true),
+    // RLS: solo las de alumnos con vínculo activo.
+    client
+      .from("workout_sessions")
+      .select("user_id, finished_at, routine:routines!inner(owner_id)")
+      .eq("status", "finished")
+      .eq("routine.owner_id", coachId)
+      .neq("user_id", coachId)
+      .gte("finished_at", since.toISOString()),
+  ]);
+
+  const rows = (clientsRes.data ?? []) as unknown as (ClientNameRow & { created_at: string })[];
+  const clients = rows
+    .map((c) => ({
+      id: c.id,
+      name: clientName(c),
+      studentId: c.status === "active" ? c.student_id : null,
+      createdAt: c.created_at,
+      archivedAt: c.archived_at,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, "es"));
+
+  const withRoutine = new Set((routinesRes.data ?? []).map((r) => r.client_id));
+  const withPlan = new Set((plansRes.data ?? []).map((p) => p.client_id));
+  const active = clients.filter((c) => c.archivedAt === null);
+
+  return {
+    clients,
+    noRoutine: active.filter((c) => !withRoutine.has(c.id)).map(({ id, name }) => ({ id, name })),
+    noPlan: active.filter((c) => !withPlan.has(c.id)).map(({ id, name }) => ({ id, name })),
+    sessions: (sessionsRes.data ?? []).flatMap((s) =>
+      s.finished_at ? [{ userId: s.user_id, finishedAt: s.finished_at }] : [],
+    ),
   };
 }

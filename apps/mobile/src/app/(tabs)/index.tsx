@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router, useFocusEffect, type Href } from "expo-router";
-import { useCallback, useState, type ComponentProps } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -13,33 +13,35 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { longDate } from "@brabus/shared";
 import {
+  getCoachHome,
   getStudentHome,
+  type CoachHome as CoachHomeData,
   type StudentHome as StudentHomeData,
 } from "@brabus/supabase";
 
+import { CoachHome } from "@/components/coach-home";
 import { StudentHome } from "@/components/student-home";
-import { Tile } from "@/components/tile";
 import { Muted } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
 import { colors, fonts } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
 import { useCoaches } from "@/providers/coaches";
 
-type IconName = ComponentProps<typeof Ionicons>["name"];
-
-/** Inicio (igual que /dashboard en la web): métricas para el alumno, accesos para el coach. */
+/** Inicio (igual que /dashboard en la web): métricas del alumno o panel del coach. */
 export default function InicioScreen() {
   const { session, profile } = useAuth();
   const { pending } = useCoaches();
   const isCoach = profile?.is_coach ?? false;
   const [home, setHome] = useState<StudentHomeData | null>(null);
+  const [coachHome, setCoachHome] = useState<CoachHomeData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const insets = useSafeAreaInsets();
 
   const load = useCallback(async () => {
-    if (session && profile && !profile.is_coach) {
-      setHome(await getStudentHome(supabase, session.user.id));
-    }
+    if (!session || !profile) return;
+    if (profile.is_coach)
+      setCoachHome(await getCoachHome(supabase, session.user.id));
+    else setHome(await getStudentHome(supabase, session.user.id));
   }, [session, profile]);
 
   useFocusEffect(
@@ -48,67 +50,25 @@ export default function InicioScreen() {
     }, [load]),
   );
 
-  const tiles: {
-    href: Href;
-    title: string;
-    subtitle: string;
-    icon: IconName;
-    accent?: boolean;
-  }[] = [
-    {
-      href: "/rutina/crear",
-      title: "Crear rutina",
-      subtitle: "Armá una rutina nueva",
-      icon: "add",
-      accent: true,
-    },
-    {
-      href: "/rutinas",
-      title: "Mis rutinas",
-      subtitle: "Ver y entrenar tus rutinas",
-      icon: "barbell",
-    },
-    {
-      href: "/nutricion" as Href,
-      title: "Nutrición",
-      subtitle: isCoach ? "Planes de alimentación" : "Tu plan de alimentación",
-      icon: "nutrition",
-    },
-    ...(isCoach
-      ? [
-          {
-            href: "/clientes" as Href,
-            title: "Clientes",
-            subtitle: "Fichas, rutinas y progreso de tus clientes",
-            icon: "people" as IconName,
-          },
-        ]
-      : []),
-  ];
-
   return (
     <ScrollView
       style={styles.screen}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + 16 }]}
       refreshControl={
-        isCoach ? undefined : (
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={async () => {
-              setRefreshing(true);
-              await load();
-              setRefreshing(false);
-            }}
-            tintColor={colors.primary}
-          />
-        )
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={async () => {
+            setRefreshing(true);
+            await load();
+            setRefreshing(false);
+          }}
+          tintColor={colors.primary}
+        />
       }
     >
       <View style={{ gap: 4 }}>
         <Text style={styles.greeting}>Hola, {profile?.first_name}</Text>
-        <Muted>
-          {isCoach ? "Armales rutinas a tus clientes." : longDate()}
-        </Muted>
+        <Muted>{longDate()}</Muted>
       </View>
 
       {pending.length > 0 ? (
@@ -133,22 +93,15 @@ export default function InicioScreen() {
 
       {!isCoach ? (
         home ? (
-          <StudentHome finishedAt={home.finishedAt} routine={home.routine} plan={home.plan} />
+          <StudentHome
+            finishedAt={home.finishedAt}
+            routine={home.routine}
+            plan={home.plan}
+          />
         ) : null
-      ) : (
-        <View style={{ gap: 10 }}>
-          {tiles.map((t) => (
-            <Tile
-              key={t.title}
-              title={t.title}
-              subtitle={t.subtitle}
-              icon={t.icon}
-              accent={t.accent}
-              onPress={() => router.push(t.href)}
-            />
-          ))}
-        </View>
-      )}
+      ) : coachHome ? (
+        <CoachHome data={coachHome} />
+      ) : null}
     </ScrollView>
   );
 }

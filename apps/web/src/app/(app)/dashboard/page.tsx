@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { ChevronRight, Dumbbell, MailOpen, Plus, Salad, Users } from "lucide-react";
+import { ChevronRight, MailOpen } from "lucide-react";
 
-import { getMyCoaches, getStudentHome } from "@brabus/supabase";
+import { getCoachHome, getMyCoaches, getStudentHome } from "@brabus/supabase";
 
-import { LinkTile } from "@/components/app/link-tile";
+import { CoachHome } from "@/components/app/coach-home";
 import { StudentHome } from "@/components/app/student-home";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -46,57 +46,5 @@ export default async function DashboardPage() {
     );
   }
 
-  const tiles = [
-    {
-      href: "/rutinas/crear",
-      title: "Crear rutina",
-      subtitle: "Armá una rutina nueva",
-      icon: Plus,
-      accent: true,
-    },
-    {
-      href: "/rutinas",
-      title: "Mis rutinas",
-      subtitle: "Ver y entrenar tus rutinas",
-      icon: Dumbbell,
-    },
-    {
-      href: "/nutricion",
-      title: "Nutrición",
-      subtitle: profile.is_coach ? "Planes de alimentación" : "Tu plan de alimentación",
-      icon: Salad,
-    },
-    ...(profile.is_coach
-      ? [
-          {
-            href: "/clientes",
-            title: "Clientes",
-            subtitle: "Fichas, rutinas y progreso de tus clientes",
-            icon: Users,
-          },
-        ]
-      : []),
-  ];
-
-  return (
-    <div className="space-y-6">
-      <div className="animate-rise">
-        <h1 className="text-2xl font-bold tracking-tight">
-          Hola, {profile.first_name}
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          {profile.is_coach
-            ? "Armales rutinas a tus clientes."
-            : "Elegí una rutina y empezá a entrenar."}
-        </p>
-      </div>
-
-
-      <div className="stagger grid gap-3 sm:grid-cols-2">
-        {tiles.map((tile) => (
-          <LinkTile key={tile.href} {...tile} />
-        ))}
-      </div>
-    </div>
-  );
+  return <CoachHome firstName={profile.first_name} data={await getCoachHome(supabase, userId)} />;
 }

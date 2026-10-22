@@ -30,8 +30,11 @@ export type StudentDashboard = {
   daysThisWeek: number;
   /** Últimas 8 semanas, la última es la semana en curso. */
   weeks: WeekSummary[];
-  /** Promedio de días por semana en las semanas completas del período. */
-  average: number;
+  /**
+   * Promedio de días por semana en las semanas completas del período, desde la
+   * primera que entrenó. Null si todavía no tiene ninguna semana completa.
+   */
+  average: number | null;
   /** Semanas seguidas cumpliendo el objetivo (incluye la actual si ya lo cumplió). */
   streak: number;
 };
@@ -76,8 +79,16 @@ export function studentDashboard(
     return days.has(dayKey(d));
   });
 
-  const complete = weeks.slice(0, -1);
-  const average = complete.reduce((n, w) => n + w.days, 0) / complete.length;
+  // Semanas completas desde la primera con entrenamientos (antes no usaba la app).
+  const first = finishedAt.reduce<Date | null>((min, iso) => {
+    const d = new Date(iso);
+    return min === null || d < min ? d : min;
+  }, null);
+  const complete = weeks
+    .slice(0, -1)
+    .filter((w) => first !== null && w.start >= weekStart(first));
+  const average =
+    complete.length > 0 ? complete.reduce((n, w) => n + w.days, 0) / complete.length : null;
 
   let streak = 0;
   if (goal) {
@@ -100,6 +111,69 @@ export function studentDashboard(
     streak,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Inicio del coach
+// ---------------------------------------------------------------------------
+
+/** Días entrenados esta semana (hora local) por usuario. */
+export function trainedThisWeek(
+  sessions: { userId: string; finishedAt: string }[],
+  now = new Date(),
+): Map<string, number> {
+  const start = weekStart(now);
+  const days = new Map<string, Set<string>>();
+  for (const s of sessions) {
+    const d = new Date(s.finishedAt);
+    if (d < start) continue;
+    let set = days.get(s.userId);
+    if (!set) days.set(s.userId, (set = new Set()));
+    set.add(dayKey(d));
+  }
+  return new Map([...days].map(([id, set]) => [id, set.size]));
+}
+
+export const GROWTH_MONTHS = 6;
+
+export type MonthCount = {
+  /** Primer día del mes. */
+  start: Date;
+  /** Clientes activos (no archivados) al cierre del mes, o hoy si es el actual. */
+  count: number;
+  /** Fichas creadas en el mes. */
+  added: number;
+  /** Fichas archivadas en el mes. */
+  removed: number;
+};
+
+/** Clientes activos mes a mes (los últimos 6 meses, el último es el actual). */
+export function clientGrowth(
+  clients: { createdAt: string; archivedAt: string | null }[],
+  now = new Date(),
+): MonthCount[] {
+  const out: MonthCount[] = [];
+  for (let i = GROWTH_MONTHS - 1; i >= 0; i--) {
+    const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const next = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+    const end = i === 0 ? now : next;
+    let count = 0;
+    let added = 0;
+    let removed = 0;
+    for (const c of clients) {
+      const created = new Date(c.createdAt);
+      const archived = c.archivedAt ? new Date(c.archivedAt) : null;
+      if (created < end && (archived === null || archived >= end)) count++;
+      if (created >= start && created < next) added++;
+      if (archived && archived >= start && archived < next) removed++;
+    }
+    out.push({ start, count, added, removed });
+  }
+  return out;
+}
+
+const MONTH_SHORT = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+/** "oct" (para el eje del gráfico). */
+export const shortMonth = (d: Date) => MONTH_SHORT[d.getMonth()];
 
 export const WEEKDAY_INITIALS = ["L", "M", "M", "J", "V", "S", "D"];
 

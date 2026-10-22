@@ -83,7 +83,10 @@ export function StudentHome({
             <span>Consistencia · 8 semanas</span>
             {stats ? (
               <span className="text-foreground">
-                Promedio {stats.average.toLocaleString("es-AR", { maximumFractionDigits: 1 })} / sem
+                Promedio{" "}
+                {stats.average === null
+                  ? "—"
+                  : `${stats.average.toLocaleString("es-AR", { maximumFractionDigits: 1 })} / sem`}
               </span>
             ) : null}
           </div>

@@ -3,23 +3,20 @@
 Ideas y decisiones de arquitectura. Cada sección indica si ya está hecha o
 pendiente.
 
-## Pendientes por sector (actualizado 2026-10-21)
+## Pendientes por sector (actualizado 2026-10-22)
 
 Lista de trabajo vigente, ordenada por sección de la app. El detalle de lo ya
 hecho y las decisiones de diseño están en las secciones de más abajo.
 
 ### Página principal (Inicio)
-- **Vista cliente — dashboard:** entrenamientos completados en la semana
-  (sesiones finalizadas de lunes a domingo) y gráfico de consistencia de las
-  últimas 8 semanas.
-- **Vista coach — dashboard de clientes** (propuesta, a confirmar):
-  - Resumen: clientes vinculados / invitaciones pendientes / no registrados.
-  - Entrenamientos de todos los clientes esta semana + gráfico de 8 semanas.
+- Hecho: inicio del alumno (semana, consistencia 8 semanas, su rutina y su plan)
+  e inicio del coach (rutinas / dietas pendientes, quién entrenó esta semana y
+  clientes activos de los últimos 6 meses).
+- **Vista coach — ideas para sumar:**
   - Alerta "sin entrenar": clientes vinculados sin sesiones hace +7 días.
-  - Ranking de consistencia de la semana (quién entrenó más veces).
   - Récords personales recientes de sus clientes.
-  - Clientes sin rutina asignada o sin plan de nutrición vigente.
   - (Con Reportes) check-ins nuevos para revisar. (Con pagos) cuotas por vencer.
+- **Vista cliente:** últimos entrenamientos y récords recientes.
 
 ### Clientes
 - Pagos / cuotas por cliente (monto, vencimiento, pagado / atrasado).

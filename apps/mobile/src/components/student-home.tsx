@@ -65,7 +65,10 @@ export function StudentHome({
         <View style={styles.rowBetween}>
           <Text style={styles.label}>Consistencia · 8 semanas</Text>
           <Text style={[styles.label, { color: colors.foreground }]}>
-            Promedio {stats.average.toLocaleString("es-AR", { maximumFractionDigits: 1 })} / sem
+            Promedio{" "}
+                {stats.average === null
+                  ? "—"
+                  : `${stats.average.toLocaleString("es-AR", { maximumFractionDigits: 1 })} / sem`}
           </Text>
         </View>
         <View style={[styles.chart, { height: CHART_H }]}>
