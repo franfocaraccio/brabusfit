@@ -9,7 +9,7 @@ Lista de trabajo vigente, ordenada por sección de la app. El detalle de lo ya
 hecho y las decisiones de diseño están en las secciones de más abajo.
 
 ### Página principal (Inicio)
-- Hecho: inicio del alumno (semana, consistencia 8 semanas, su rutina y su plan)
+- Hecho: inicio del alumno (semana, grilla de consistencia, su rutina y su plan)
   e inicio del coach (rutinas / dietas pendientes, quién entrenó esta semana y
   clientes activos de los últimos 6 meses).
 - **Vista coach — ideas para sumar:**
