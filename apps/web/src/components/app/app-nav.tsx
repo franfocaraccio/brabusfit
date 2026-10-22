@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Dumbbell, Home, Salad, TrendingUp, User, Users } from "lucide-react";
+import { Dumbbell, Home, Salad, User, Users } from "lucide-react";
 
 import { Logo } from "@/components/app/logo";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,8 @@ type NavItem = {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  /** Otras rutas que también marcan este ítem como activo. */
+  also?: string[];
 };
 
 export function AppNav({
@@ -25,17 +27,22 @@ export function AppNav({
 
   const items: NavItem[] = [
     { href: "/dashboard", label: "Inicio", icon: Home },
-    { href: "/rutinas", label: "Rutinas", icon: Dumbbell },
+    // Entrenamiento agrupa Rutinas y Progreso.
+    {
+      href: "/rutinas",
+      label: "Entrenamiento",
+      icon: Dumbbell,
+      also: ["/progreso"],
+    },
     { href: "/nutricion", label: "Nutrición", icon: Salad },
-    { href: "/progreso", label: "Progreso", icon: TrendingUp },
-    ...(isCoach
-      ? [{ href: "/clientes", label: "Clientes", icon: Users }]
-      : []),
+    ...(isCoach ? [{ href: "/clientes", label: "Clientes", icon: Users }] : []),
     { href: "/perfil", label: "Perfil", icon: User },
   ];
 
-  const isActive = (href: string) =>
+  const matches = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
+  const isActive = (item: NavItem) =>
+    matches(item.href) || (item.also ?? []).some(matches);
 
   return (
     <>
@@ -45,49 +52,56 @@ export function AppNav({
           <Logo className="text-xl" />
         </div>
         <nav className="flex flex-col gap-1">
-          {items.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                isActive(href)
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-            >
-              <Icon className="size-4" />
-              {label}
-              {href === "/perfil" && pendingInvitations > 0 ? (
-                <Badge count={pendingInvitations} className="ml-auto" />
-              ) : null}
-            </Link>
-          ))}
+          {items.map((item) => {
+            const { href, label, icon: Icon } = item;
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  isActive(item)
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+              >
+                <Icon className="size-4" />
+                {label}
+                {href === "/perfil" && pendingInvitations > 0 ? (
+                  <Badge count={pendingInvitations} className="ml-auto" />
+                ) : null}
+              </Link>
+            );
+          })}
         </nav>
       </aside>
 
       {/* Bottom nav en mobile */}
       <nav className="bg-card fixed inset-x-0 bottom-0 z-40 flex border-t md:hidden">
-        {items.map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              "flex flex-1 flex-col items-center gap-1 py-2.5 text-xs",
-              isActive(href)
-                ? "text-primary"
-                : "text-muted-foreground",
-            )}
-          >
-            <span className="relative">
-              <Icon className="size-5" />
-              {href === "/perfil" && pendingInvitations > 0 ? (
-                <Badge count={pendingInvitations} className="absolute -top-1.5 -right-2.5" />
-              ) : null}
-            </span>
-            {label}
-          </Link>
-        ))}
+        {items.map((item) => {
+          const { href, label, icon: Icon } = item;
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                "flex flex-1 flex-col items-center gap-1 py-2.5 text-xs",
+                isActive(item) ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              <span className="relative">
+                <Icon className="size-5" />
+                {href === "/perfil" && pendingInvitations > 0 ? (
+                  <Badge
+                    count={pendingInvitations}
+                    className="absolute -top-1.5 -right-2.5"
+                  />
+                ) : null}
+              </span>
+              {label}
+            </Link>
+          );
+        })}
       </nav>
     </>
   );

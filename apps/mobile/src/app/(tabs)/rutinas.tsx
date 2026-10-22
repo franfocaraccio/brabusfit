@@ -1,36 +1,39 @@
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 
-import { PlansBrowser, type PlansKind } from "@/components/plans-browser";
+import { MyProgress } from "@/components/my-progress";
+import { PlansBrowser } from "@/components/plans-browser";
 import { Segmented } from "@/components/segmented";
 
-/** Pestaña "Planes": rutinas y nutrición con un selector arriba. */
-export default function PlanesScreen() {
-  // ?vista=nutricion abre directo en Nutrición.
+type View = "routines" | "progress";
+
+/** Pestaña "Entrenamiento": rutinas y progreso con un selector arriba (igual que la web). */
+export default function EntrenamientoScreen() {
+  // ?vista=progreso abre directo en Progreso.
   const { vista } = useLocalSearchParams<{ vista?: string }>();
-  const [kind, setKind] = useState<PlansKind>(vista === "nutricion" ? "nutrition" : "routines");
+  const [view, setView] = useState<View>(vista === "progreso" ? "progress" : "routines");
   // Si la pestaña ya estaba abierta y se llega con otro ?vista=, se cambia.
   const [lastVista, setLastVista] = useState(vista);
   if (vista !== lastVista) {
     setLastVista(vista);
-    if (vista === "nutricion") setKind("nutrition");
+    if (vista === "progreso") setView("progress");
   }
 
-  return (
-    <PlansBrowser
-      key={kind}
-      kind={kind}
-      header={
-        <Segmented
-          fill
-          value={kind}
-          onChange={setKind}
-          options={[
-            { value: "routines", label: "Rutinas" },
-            { value: "nutrition", label: "Nutrición" },
-          ]}
-        />
-      }
+  const header = (
+    <Segmented
+      fill
+      value={view}
+      onChange={setView}
+      options={[
+        { value: "routines", label: "Rutinas" },
+        { value: "progress", label: "Progreso" },
+      ]}
     />
+  );
+
+  return view === "progress" ? (
+    <MyProgress header={header} />
+  ) : (
+    <PlansBrowser kind="routines" header={header} />
   );
 }

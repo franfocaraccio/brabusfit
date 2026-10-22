@@ -1,5 +1,6 @@
 import { getProgressSessions } from "@brabus/supabase";
 
+import { TrainingTabs } from "@/components/app/training-tabs";
 import { ProgressView } from "@/components/progress/progress-view";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -10,8 +11,8 @@ export default async function ProgresoPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Progreso</h1>
+      <div className="space-y-2">
+        <TrainingTabs active="progreso" />
         <p className="text-muted-foreground text-sm">
           Tu evolución por ejercicio, en todas tus rutinas.
         </p>

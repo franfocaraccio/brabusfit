@@ -55,11 +55,16 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" options={{ title: "Inicio", tabBarIcon: icon("home-outline") }} />
       <Tabs.Screen
         name="rutinas"
-        options={{ title: "Planes", tabBarIcon: icon("clipboard-outline") }}
+        // "Entrenamiento" no entra en la barra de 5 pestañas: etiqueta corta abajo.
+        options={{
+          title: "Entrenamiento",
+          tabBarLabel: "Entreno",
+          tabBarIcon: icon("barbell-outline"),
+        }}
       />
       <Tabs.Screen
-        name="progreso"
-        options={{ title: "Progreso", tabBarIcon: icon("trending-up-outline") }}
+        name="nutricion"
+        options={{ title: "Nutrición", tabBarIcon: icon("nutrition-outline") }}
       />
       <Tabs.Screen
         name="clientes"

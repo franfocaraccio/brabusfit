@@ -1,6 +1,6 @@
 import { useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
-import { RefreshControl, ScrollView, StyleSheet } from "react-native";
+import { useCallback, useState, type ReactNode } from "react";
+import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 
 import type { ProgressSession } from "@brabus/shared";
 import { getProgressSessions } from "@brabus/supabase";
@@ -13,7 +13,7 @@ import { colors } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
 
 /** Progreso: evolución por ejercicio en todas las rutinas (igual que /progreso en la web). */
-export default function ProgresoScreen() {
+export function MyProgress({ header }: { header?: ReactNode }) {
   const { session } = useAuth();
   const [sessions, setSessions] = useState<ProgressSession[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -28,7 +28,14 @@ export default function ProgresoScreen() {
     }, [load]),
   );
 
-  if (!sessions) return <Loading />;
+  if (!sessions) {
+    return (
+      <View style={styles.screen}>
+        {header ? <View style={{ padding: 16 }}>{header}</View> : null}
+        <Loading />
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -46,6 +53,7 @@ export default function ProgresoScreen() {
         />
       }
     >
+      {header}
       <Muted>Tu evolución por ejercicio, en todas tus rutinas.</Muted>
       <ProgressView sessions={sessions} />
     </ScrollView>

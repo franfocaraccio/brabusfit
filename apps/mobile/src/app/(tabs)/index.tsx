@@ -32,7 +32,7 @@ export default function InicioScreen() {
       icon: "barbell",
     },
     {
-      href: "/rutinas?vista=nutricion" as Href,
+      href: "/nutricion" as Href,
       title: "Nutrición",
       subtitle: isCoach ? "Planes de alimentación" : "Tu plan de alimentación",
       icon: "nutrition",

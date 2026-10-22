@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 
 import { getRoutinesOverview } from "@brabus/supabase";
 
+import { TrainingTabs } from "@/components/app/training-tabs";
 import { RoutinesBrowser } from "@/components/routines/routines-browser";
 import { buttonVariants } from "@/components/ui/button";
 import { requireProfile } from "@/lib/auth";
@@ -26,17 +27,19 @@ export default async function RutinasPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold tracking-tight">Rutinas</h1>
-        {!hasNothing && (
-          <Link
-            href="/rutinas/crear"
-            className={cn(buttonVariants({ size: "sm" }), "gap-1.5")}
-          >
-            <Plus className="size-4" /> Crear rutina
-          </Link>
-        )}
-      </div>
+      <TrainingTabs
+        active="rutinas"
+        action={
+          !hasNothing && (
+            <Link
+              href="/rutinas/crear"
+              className={cn(buttonVariants({ size: "sm" }), "gap-1.5")}
+            >
+              <Plus className="size-4" /> Crear rutina
+            </Link>
+          )
+        }
+      />
 
       <RoutinesBrowser
         isCoach={profile.is_coach}

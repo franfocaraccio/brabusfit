@@ -110,6 +110,11 @@ export function RoutinesBrowser({
   );
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // Secciones del coach: plantillas contraídas y clientes expandidos por defecto.
+  const [openSections, setOpenSections] = useState({
+    templates: false,
+    clients: true,
+  });
 
   const q = query.trim().toLowerCase();
   const matches = (text: string) => text.toLowerCase().includes(q);
@@ -336,19 +341,42 @@ export function RoutinesBrowser({
     <div className="space-y-6">
       {searchBar}
 
-      <section className="space-y-3">
-        <h2 className="text-muted-foreground text-sm font-semibold">
-          {t.clients}
-        </h2>
-        {renderGroups(clientGroups, t.clientsEmpty)}
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-muted-foreground text-sm font-semibold">
-          Plantillas
-        </h2>
-        {renderGroups(templateGroups, "Todavía no tenés plantillas.")}
-      </section>
+      {(
+        [
+          [
+            "templates",
+            "Plantillas",
+            templateGroups,
+            "Todavía no tenés plantillas.",
+          ],
+          ["clients", t.clients, clientGroups, t.clientsEmpty],
+        ] as const
+      ).map(([key, title, groups, empty]) => {
+        // Buscando, se muestran las dos secciones abiertas.
+        const open = q ? true : openSections[key];
+        return (
+          <section key={key} className="space-y-3">
+            <button
+              type="button"
+              onClick={() => setOpenSections((o) => ({ ...o, [key]: !o[key] }))}
+              className="text-muted-foreground hover:text-foreground flex w-full items-center gap-2 text-left text-sm font-semibold"
+              aria-expanded={open}
+            >
+              {title}
+              <span className="text-xs font-normal">
+                ({groups.reduce((n, g) => n + g.items.length, 0)})
+              </span>
+              <ChevronDown
+                className={cn(
+                  "ml-auto size-4 transition-transform",
+                  open && "rotate-180",
+                )}
+              />
+            </button>
+            {open && renderGroups(groups, empty)}
+          </section>
+        );
+      })}
     </div>
   );
 }

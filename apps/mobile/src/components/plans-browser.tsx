@@ -124,6 +124,8 @@ export function PlansBrowser({ kind, header }: { kind: PlansKind; header?: React
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // Secciones del coach: plantillas contraídas y clientes expandidos por defecto.
+  const [openSections, setOpenSections] = useState({ templates: false, clients: true });
 
   const load = useCallback(async () => {
     if (!session) return;
@@ -410,14 +412,35 @@ export function PlansBrowser({ kind, header }: { kind: PlansKind; header?: React
 
           {isCoach ? (
             <>
-              <View style={styles.section}>
-                <SectionLabel>{t.clients}</SectionLabel>
-                {renderGroups(clientGroups, t.clientsEmpty)}
-              </View>
-              <View style={styles.section}>
-                <SectionLabel>Plantillas</SectionLabel>
-                {renderGroups(templateGroups, "Todavía no tenés plantillas.")}
-              </View>
+              {(
+                [
+                  ["templates", "Plantillas", templateGroups, "Todavía no tenés plantillas."],
+                  ["clients", t.clients, clientGroups, t.clientsEmpty],
+                ] as const
+              ).map(([key, title, groups, empty]) => {
+                // Buscando, se muestran las dos secciones abiertas.
+                const isOpen = q ? true : openSections[key];
+                const count = groups.reduce((n, g) => n + g.items.length, 0);
+                return (
+                  <View key={key} style={styles.section}>
+                    <Pressable
+                      onPress={() => setOpenSections((o) => ({ ...o, [key]: !o[key] }))}
+                      style={styles.sectionToggle}
+                      accessibilityRole="button"
+                      accessibilityState={{ expanded: isOpen }}
+                      hitSlop={8}
+                    >
+                      <SectionLabel>{`${title} (${count})`}</SectionLabel>
+                      <Ionicons
+                        name={isOpen ? "chevron-up" : "chevron-down"}
+                        size={18}
+                        color={colors.mutedForeground}
+                      />
+                    </Pressable>
+                    {isOpen ? renderGroups(groups, empty) : null}
+                  </View>
+                );
+              })}
             </>
           ) : ownFlat.length > 0 || kind === "routines" || coachList.length === 0 ? (
             <View style={styles.section}>
@@ -496,6 +519,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   section: { gap: 10 },
+  sectionToggle: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   group: { gap: 8 },
   groupItems: { gap: 8, paddingLeft: 12 },
   folder: {
