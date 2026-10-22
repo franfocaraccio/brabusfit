@@ -9,6 +9,7 @@ import {
   BarlowCondensed_600SemiBold,
   BarlowCondensed_700Bold,
 } from "@expo-google-fonts/barlow-condensed";
+import { Unbounded_700Bold } from "@expo-google-fonts/unbounded";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
@@ -28,6 +29,7 @@ export default function RootLayout() {
     Barlow_700Bold,
     BarlowCondensed_600SemiBold,
     BarlowCondensed_700Bold,
+    Unbounded_700Bold,
   });
 
   return (

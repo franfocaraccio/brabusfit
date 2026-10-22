@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { GoogleButton } from "@/components/auth/google-button";
 import { LoginForm } from "@/components/auth/login-form";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,27 +20,38 @@ export default async function LoginPage({
         : null;
 
   return (
-    <Card>
-      <CardContent className="space-y-4 pt-6">
-        {check_email ? (
-          <p className="rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-600 dark:text-emerald-400">
-            Te enviamos un email para confirmar tu cuenta. Revisá tu casilla.
-          </p>
-        ) : null}
-        {errorMessage ? (
-          <p className="text-destructive text-sm">{errorMessage}</p>
-        ) : null}
+    <>
+      <Card>
+        <CardContent className="space-y-4">
+          {check_email ? (
+            <p className="rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-600 dark:text-emerald-400">
+              Te enviamos un email para confirmar tu cuenta. Revisá tu casilla.
+            </p>
+          ) : null}
+          {errorMessage ? (
+            <p className="text-destructive text-sm">{errorMessage}</p>
+          ) : null}
 
-        <GoogleButton />
+          <GoogleButton />
 
-        <div className="flex items-center gap-3">
-          <Separator className="flex-1" />
-          <span className="text-muted-foreground text-xs">o</span>
-          <Separator className="flex-1" />
-        </div>
+          <div className="flex items-center gap-3">
+            <Separator className="flex-1" />
+            <span className="text-muted-foreground text-xs">o</span>
+            <Separator className="flex-1" />
+          </div>
 
-        <LoginForm />
-      </CardContent>
-    </Card>
+          <LoginForm />
+        </CardContent>
+      </Card>
+      <p className="text-muted-foreground mt-5 text-center text-sm">
+        ¿No tenés cuenta?{" "}
+        <Link
+          href="/signup"
+          className="text-foreground font-medium hover:underline"
+        >
+          Crear cuenta
+        </Link>
+      </p>
+    </>
   );
 }

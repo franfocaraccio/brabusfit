@@ -19,8 +19,9 @@ import { colors, fonts, radius } from "@/lib/theme";
 // ---------------------------------------------------------------------------
 
 export function Logo({ size = 28 }: { size?: number }) {
+  // Unbounded es ancha: se achica para ocupar lo mismo que el logo anterior.
   return (
-    <Text style={[styles.logo, { fontSize: size }]}>
+    <Text style={[styles.logo, { fontSize: Math.round(size * 0.72) }]}>
       BRABUS <Text style={{ color: colors.primary }}>FIT</Text>
     </Text>
   );
@@ -178,7 +179,7 @@ export function SectionLabel({ children }: { children: ReactNode }) {
 
 const styles = StyleSheet.create({
   logo: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.logo,
     color: colors.foreground,
     letterSpacing: 0.5,
   },

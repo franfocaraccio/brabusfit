@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Barlow, Barlow_Condensed } from "next/font/google";
+import { Barlow, Barlow_Condensed, Unbounded } from "next/font/google";
 
 import { Toaster } from "@/components/ui/sonner";
 
@@ -15,6 +15,13 @@ const barlowCondensed = Barlow_Condensed({
   variable: "--font-heading",
   subsets: ["latin"],
   weight: ["500", "600", "700"],
+});
+
+// Solo para el logo.
+const unbounded = Unbounded({
+  variable: "--font-logo",
+  subsets: ["latin"],
+  weight: ["700"],
 });
 
 export const metadata: Metadata = {
@@ -38,7 +45,7 @@ export default function RootLayout({
     <html
       lang="es"
       suppressHydrationWarning
-      className={`dark ${barlow.variable} ${barlowCondensed.variable} h-full antialiased`}
+      className={`dark ${barlow.variable} ${barlowCondensed.variable} ${unbounded.variable} h-full antialiased`}
     >
       <body
         suppressHydrationWarning

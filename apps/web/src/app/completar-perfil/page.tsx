@@ -15,7 +15,7 @@ export default async function CompletarPerfilPage() {
     <div className="flex min-h-dvh flex-col items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <Logo className="text-3xl" />
+          <Logo className="text-2xl" />
           <h1 className="mt-4 text-xl font-bold tracking-tight">
             Completá tu perfil
           </h1>

@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 
 import { GoogleButton } from "@/components/google-button";
 import { Button, Card, Logo, Muted, TextField } from "@/components/ui";
@@ -37,6 +38,16 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      {/* Brillo de la marca detrás del logo (igual que el login web). */}
+      <Svg style={styles.glow} pointerEvents="none">
+        <Defs>
+          <RadialGradient id="glow" cx="50%" cy="0%" rx="60%" ry="55%">
+            <Stop offset="0" stopColor={colors.primary} stopOpacity={0.35} />
+            <Stop offset="1" stopColor={colors.primary} stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Rect x="0" y="0" width="100%" height="100%" fill="url(#glow)" />
+      </Svg>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -47,7 +58,7 @@ export default function LoginScreen() {
         >
           <View style={styles.header}>
             <Logo size={40} />
-            <Muted>Tus rutinas, en un solo lugar.</Muted>
+            <Muted>Tu entrenamiento, en un solo lugar</Muted>
           </View>
 
           <Card style={styles.card}>
@@ -79,6 +90,7 @@ export default function LoginScreen() {
               onPress={signIn}
               disabled={!canSubmit}
               loading={loading}
+              style={{ minHeight: 44 }}
             />
           </Card>
 
@@ -96,6 +108,7 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  glow: { position: "absolute", top: 0, left: 0, right: 0, height: 420 },
   container: {
     flexGrow: 1,
     justifyContent: "center",
@@ -111,5 +124,5 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: 14,
   },
-  link: { color: colors.primary, fontFamily: fonts.semibold },
+  link: { color: colors.foreground, fontFamily: fonts.semibold },
 });

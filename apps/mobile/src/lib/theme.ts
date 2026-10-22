@@ -22,6 +22,7 @@ export const fonts = {
   bold: "Barlow_700Bold",
   heading: "BarlowCondensed_700Bold",
   headingSemibold: "BarlowCondensed_600SemiBold",
+  logo: "Unbounded_700Bold",
 } as const;
 
 export const radius = { sm: 8, md: 12, lg: 16 } as const;

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useActionState, useState } from "react";
 
 import { signUpAction, type AuthResult } from "@/lib/actions/auth";
@@ -97,18 +96,13 @@ export function SignupForm() {
 
       <Button
         type="submit"
+        size="sm"
         className="w-full"
         disabled={pending || !usernameValid}
       >
         {pending ? "Creando cuenta…" : "Crear cuenta"}
       </Button>
 
-      <p className="text-muted-foreground text-center text-sm">
-        ¿Ya tenés cuenta?{" "}
-        <Link href="/login" className="text-primary font-medium underline">
-          Ingresar
-        </Link>
-      </p>
     </form>
   );
 }

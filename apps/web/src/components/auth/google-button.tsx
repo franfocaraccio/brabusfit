@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 export function GoogleButton() {
   return (
     <form action={signInWithGoogle}>
-      <Button type="submit" variant="outline" className="w-full">
+      <Button type="submit" variant="outline" size="sm" className="w-full">
         <svg className="size-4" viewBox="0 0 24 24" aria-hidden="true">
           <path
             fill="#4285F4"

@@ -116,6 +116,13 @@
   }
 }
 
+/* Logo (Unbounded). */
+.font-logo {
+  font-family: var(--font-logo);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
 /* Utilidad para títulos atléticos en mayúsculas (marca, secciones). */
 .font-display {
   font-family: var(--font-heading);

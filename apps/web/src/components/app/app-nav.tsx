@@ -42,7 +42,7 @@ export function AppNav({
       {/* Sidebar en desktop */}
       <aside className="bg-card hidden w-56 shrink-0 flex-col border-r p-4 md:flex">
         <div className="mb-6 px-2">
-          <Logo className="text-2xl" />
+          <Logo className="text-xl" />
         </div>
         <nav className="flex flex-col gap-1">
           {items.map(({ href, label, icon: Icon }) => (

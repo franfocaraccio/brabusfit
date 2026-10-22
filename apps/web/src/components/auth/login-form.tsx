@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useActionState } from "react";
 
 import { signInAction, type AuthResult } from "@/lib/actions/auth";
@@ -25,6 +24,7 @@ export function LoginForm() {
           autoComplete="email"
           required
           placeholder="tu@email.com"
+          className="h-9"
         />
       </div>
       <div className="space-y-2">
@@ -35,6 +35,7 @@ export function LoginForm() {
           type="password"
           autoComplete="current-password"
           required
+          className="h-9"
         />
       </div>
 
@@ -42,16 +43,9 @@ export function LoginForm() {
         <p className="text-destructive text-sm">{state.error}</p>
       ) : null}
 
-      <Button type="submit" className="w-full" disabled={pending}>
+      <Button type="submit" size="sm" className="w-full" disabled={pending}>
         {pending ? "Ingresando…" : "Ingresar"}
       </Button>
-
-      <p className="text-muted-foreground text-center text-sm">
-        ¿No tenés cuenta?{" "}
-        <Link href="/signup" className="text-primary font-medium underline">
-          Crear cuenta
-        </Link>
-      </p>
     </form>
   );
 }
