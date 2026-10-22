@@ -28,7 +28,7 @@ export async function updateProfile(
 ): Promise<{ error?: string }> {
   const result = await db.updateProfile(await createClient(), input);
   if (!result.ok) return { error: result.error };
-  revalidatePath("/perfil");
+  revalidatePath("/ajustes", "layout");
   return {};
 }
 

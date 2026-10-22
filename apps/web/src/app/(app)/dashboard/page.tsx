@@ -17,7 +17,7 @@ export default async function DashboardPage() {
 
   const invitationsBanner = pendingInvitations > 0 && (
     <Link
-      href="/perfil#coaches"
+      href="/ajustes/coaches"
       className="border-primary/40 bg-primary/10 hover:bg-primary/15 flex items-center gap-3 rounded-xl border p-4 transition-colors"
     >
       <MailOpen className="text-primary size-5 shrink-0" />

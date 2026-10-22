@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Dumbbell, Home, Salad, User, Users } from "lucide-react";
+import {
+  ClipboardList,
+  Dumbbell,
+  Home,
+  Salad,
+  Settings,
+  Users,
+} from "lucide-react";
 
 import { Logo } from "@/components/app/logo";
 import { cn } from "@/lib/utils";
@@ -20,7 +27,7 @@ export function AppNav({
   pendingInvitations = 0,
 }: {
   isCoach: boolean;
-  /** Invitaciones de coaches sin responder: globito en "Perfil". */
+  /** Invitaciones de coaches sin responder: globito en "Ajustes". */
   pendingInvitations?: number;
 }) {
   const pathname = usePathname();
@@ -32,7 +39,7 @@ export function AppNav({
         { href: "/clientes", label: "Clientes", icon: Users },
         { href: "/rutinas", label: "Rutinas", icon: Dumbbell },
         { href: "/nutricion", label: "Nutrición", icon: Salad },
-        { href: "/perfil", label: "Perfil", icon: User },
+        { href: "/ajustes", label: "Ajustes", icon: Settings },
       ]
     : [
         { href: "/dashboard", label: "Inicio", icon: Home },
@@ -44,7 +51,9 @@ export function AppNav({
           also: ["/progreso"],
         },
         { href: "/nutricion", label: "Nutrición", icon: Salad },
-        { href: "/perfil", label: "Perfil", icon: User },
+        // Reportes (check-in): todavía en "Próximamente".
+        { href: "/reportes", label: "Reportes", icon: ClipboardList },
+        { href: "/ajustes", label: "Ajustes", icon: Settings },
       ];
 
   const matches = (href: string) =>
@@ -75,7 +84,7 @@ export function AppNav({
               >
                 <Icon className="size-4" />
                 {label}
-                {href === "/perfil" && pendingInvitations > 0 ? (
+                {href === "/ajustes" && pendingInvitations > 0 ? (
                   <Badge count={pendingInvitations} className="ml-auto" />
                 ) : null}
               </Link>
@@ -99,7 +108,7 @@ export function AppNav({
             >
               <span className="relative">
                 <Icon className="size-5" />
-                {href === "/perfil" && pendingInvitations > 0 ? (
+                {href === "/ajustes" && pendingInvitations > 0 ? (
                   <Badge
                     count={pendingInvitations}
                     className="absolute -top-1.5 -right-2.5"

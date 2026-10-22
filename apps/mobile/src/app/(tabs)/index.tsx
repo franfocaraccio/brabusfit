@@ -73,7 +73,7 @@ export default function InicioScreen() {
 
       {pending.length > 0 ? (
         <Pressable
-          onPress={() => router.push("/perfil")}
+          onPress={() => router.push("/ajustes/coaches")}
           style={styles.banner}
           accessibilityRole="button"
         >

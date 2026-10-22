@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { leaveCoach, respondInvitation, type MyCoach } from "@brabus/supabase";
 
-import { Button, Card, Muted, SectionLabel } from "@/components/ui";
+import { Button, Card, Muted } from "@/components/ui";
 import { confirm, notify } from "@/lib/confirm";
 import { supabase } from "@/lib/supabase";
 import { colors, fonts } from "@/lib/theme";
@@ -33,7 +33,6 @@ export function MyCoaches() {
 
   return (
     <Card style={styles.card}>
-      <SectionLabel>Mis coaches</SectionLabel>
       {coaches.length === 0 ? (
         <Muted>Todavía no entrenás con ningún coach. Cuando uno te agregue, vas a ver la invitación acá.</Muted>
       ) : (

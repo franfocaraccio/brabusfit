@@ -84,10 +84,20 @@ export default function TabsLayout() {
         options={{ title: "Nutrición", tabBarIcon: icon("nutrition-outline") }}
       />
       <Tabs.Screen
-        name="perfil"
+        name="reportes"
+        // Alumno: check-in (todavía "Próximamente"). El coach los verá en cada cliente.
         options={{
-          title: "Perfil",
-          tabBarIcon: icon("person-outline"),
+          title: "Reportes",
+          tabBarIcon: icon("clipboard-outline"),
+          href: isCoach ? null : undefined,
+        }}
+      />
+      <Tabs.Screen
+        name="ajustes"
+        options={{
+          title: "Configuración",
+          tabBarLabel: "Ajustes",
+          tabBarIcon: icon("settings-outline"),
           // Invitaciones de coaches sin responder.
           tabBarBadge: pending.length > 0 ? pending.length : undefined,
           tabBarBadgeStyle: {

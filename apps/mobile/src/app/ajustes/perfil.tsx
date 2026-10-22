@@ -9,32 +9,50 @@ import {
   View,
 } from "react-native";
 
-import { displayDateError, formatDisplayDate, parseDisplayDate } from "@brabus/shared";
+import {
+  displayDateError,
+  formatDisplayDate,
+  parseDisplayDate,
+} from "@brabus/shared";
 import { updateProfile } from "@brabus/supabase";
 
-import { Col, DateField, DecimalField, ErrorText, FieldHint, Row } from "@/components/forms";
-import { MyCoaches } from "@/components/my-coaches";
+import {
+  Col,
+  DateField,
+  DecimalField,
+  ErrorText,
+  FieldHint,
+  Row,
+} from "@/components/forms";
 import { Button, Card, Muted, SectionLabel, TextField } from "@/components/ui";
-import { confirm } from "@/lib/confirm";
 import { supabase } from "@/lib/supabase";
 import { colors, fonts } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
 
-/** Mi perfil: datos personales editables + cuenta (email y rol fijos). */
+/** Ajustes → Mi perfil: datos personales editables + cuenta (email y rol fijos). */
 export default function PerfilScreen() {
-  const { session, profile, refreshProfile, signOut } = useAuth();
+  const { session, profile, refreshProfile } = useAuth();
 
   const [firstName, setFirstName] = useState(profile?.first_name ?? "");
   const [lastName, setLastName] = useState(profile?.last_name ?? "");
-  const [birthDate, setBirthDate] = useState(formatDisplayDate(profile?.birth_date));
-  const [heightCm, setHeightCm] = useState(profile?.height_cm?.toString().replace(".", ",") ?? "");
-  const [weightKg, setWeightKg] = useState(profile?.weight_kg?.toString().replace(".", ",") ?? "");
+  const [birthDate, setBirthDate] = useState(
+    formatDisplayDate(profile?.birth_date),
+  );
+  const [heightCm, setHeightCm] = useState(
+    profile?.height_cm?.toString().replace(".", ",") ?? "",
+  );
+  const [weightKg, setWeightKg] = useState(
+    profile?.weight_kg?.toString().replace(".", ",") ?? "",
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
   const canSave =
-    !saving && firstName.trim() !== "" && lastName.trim() !== "" && !displayDateError(birthDate);
+    !saving &&
+    firstName.trim() !== "" &&
+    lastName.trim() !== "" &&
+    !displayDateError(birthDate);
 
   const save = async () => {
     setSaving(true);
@@ -52,19 +70,12 @@ export default function PerfilScreen() {
       setError(result.error);
       return;
     }
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+      () => {},
+    );
     setSaved(true);
     refreshProfile();
   };
-
-  const onSignOut = () =>
-    confirm({
-      title: "Cerrar sesión",
-      message: "¿Querés salir de tu cuenta?",
-      confirmText: "Salir",
-      destructive: true,
-      onConfirm: signOut,
-    });
 
   return (
     <KeyboardAvoidingView
@@ -77,8 +88,6 @@ export default function PerfilScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        {!profile?.is_coach ? <MyCoaches /> : null}
-
         <Card style={styles.card}>
           <SectionLabel>Datos personales</SectionLabel>
           <Row>
@@ -137,26 +146,48 @@ export default function PerfilScreen() {
           </Row>
 
           {error ? <ErrorText>{error}</ErrorText> : null}
-          {saved ? <FieldHint tone="success">Perfil actualizado</FieldHint> : null}
+          {saved ? (
+            <FieldHint tone="success">Perfil actualizado</FieldHint>
+          ) : null}
 
-          <Button title="Guardar cambios" onPress={save} disabled={!canSave} loading={saving} />
+          <Button
+            title="Guardar cambios"
+            onPress={save}
+            disabled={!canSave}
+            loading={saving}
+          />
         </Card>
 
         <Card style={styles.card}>
           <SectionLabel>Cuenta</SectionLabel>
           <InfoRow label="Email" value={session?.user.email ?? ""} />
-          <InfoRow label="Usuario" value={profile?.username ? `@${profile.username}` : "—"} />
-          <InfoRow label="Rol" value={profile?.is_coach ? "Coach" : "Alumno"} last />
-          <Muted style={{ fontSize: 12 }}>El email y el rol no se pueden modificar.</Muted>
+          <InfoRow
+            label="Usuario"
+            value={profile?.username ? `@${profile.username}` : "—"}
+          />
+          <InfoRow
+            label="Rol"
+            value={profile?.is_coach ? "Coach" : "Alumno"}
+            last
+          />
+          <Muted style={{ fontSize: 12 }}>
+            El email y el rol no se pueden modificar.
+          </Muted>
         </Card>
-
-        <Button title="Cerrar sesión" variant="destructive" onPress={onSignOut} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-function InfoRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
+function InfoRow({
+  label,
+  value,
+  last,
+}: {
+  label: string;
+  value: string;
+  last?: boolean;
+}) {
   return (
     <View style={[styles.infoRow, !last && styles.infoRowBorder]}>
       <Text style={styles.infoLabel}>{label}</Text>
@@ -179,6 +210,15 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   infoRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
-  infoLabel: { fontFamily: fonts.regular, fontSize: 14, color: colors.mutedForeground },
-  infoValue: { fontFamily: fonts.medium, fontSize: 14, color: colors.foreground, flexShrink: 1 },
+  infoLabel: {
+    fontFamily: fonts.regular,
+    fontSize: 14,
+    color: colors.mutedForeground,
+  },
+  infoValue: {
+    fontFamily: fonts.medium,
+    fontSize: 14,
+    color: colors.foreground,
+    flexShrink: 1,
+  },
 });
