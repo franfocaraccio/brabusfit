@@ -121,7 +121,7 @@ export function StudentHome({
             ) : null}
           </div>
           {stats ? (
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-wrap gap-x-6 gap-y-1">
               <Stat
                 label="Promedio"
                 value={
@@ -136,10 +136,6 @@ export function StudentHome({
                   value={`${stats.streak} ${stats.streak === 1 ? "semana" : "semanas"}`}
                 />
               ) : null}
-              <Stat
-                label="Días entrenados"
-                value={String(stats.weeks.reduce((n, w) => n + w.days, 0))}
-              />
             </div>
           ) : null}
         </Card>
@@ -191,10 +187,9 @@ export function StudentHome({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <p className="text-muted-foreground text-xs">{label}</p>
-      <p className="font-semibold">{value}</p>
-    </div>
+    <p className="text-muted-foreground text-sm">
+      {label} <span className="text-foreground font-semibold">{value}</span>
+    </p>
   );
 }
 

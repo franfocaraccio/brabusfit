@@ -109,10 +109,6 @@ export function StudentHome({
                 value={`${stats.streak} ${stats.streak === 1 ? "semana" : "semanas"}`}
               />
             ) : null}
-            <Stat
-              label="Días entrenados"
-              value={String(stats.weeks.reduce((n, w) => n + w.days, 0))}
-            />
           </View>
         </View>
       </Card>
@@ -179,10 +175,9 @@ export function StudentHome({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <View>
-      <Text style={styles.label}>{label}</Text>
-      <Text style={styles.statValue}>{value}</Text>
-    </View>
+    <Text style={[styles.label, { fontSize: 13 }]}>
+      {label} <Text style={styles.statValue}>{value}</Text>
+    </Text>
   );
 }
 
@@ -378,10 +373,10 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
   },
   consistency: { gap: 14 },
-  consistencyStats: { flexDirection: "row", justifyContent: "space-between" },
+  consistencyStats: { flexDirection: "row", flexWrap: "wrap", columnGap: 20, rowGap: 4 },
   statValue: {
     fontFamily: fonts.semibold,
-    fontSize: 16,
+    fontSize: 13,
     color: colors.foreground,
   },
   grid: { gap: CELL_GAP },
