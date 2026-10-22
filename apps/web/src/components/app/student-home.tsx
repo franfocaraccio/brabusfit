@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 
 const noop = () => () => {};
 
-/** Inicio del alumno: semana en curso, consistencia de 8 semanas, su rutina y su plan. */
+/** Inicio del alumno: semana en curso, consistencia de 16 semanas, su rutina y su plan. */
 export function StudentHome({
   firstName,
   finishedAt,
@@ -50,7 +50,7 @@ export function StudentHome({
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
         <Card className="space-y-3 p-4">
           <div className="text-muted-foreground flex items-baseline justify-between text-xs">
             <span>Semana en curso</span>
@@ -93,12 +93,12 @@ export function StudentHome({
 
         <Card className="space-y-2 p-4">
           <p className="text-muted-foreground text-xs">
-            Consistencia · 8 semanas
+            Consistencia · 16 semanas
           </p>
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center gap-x-10 gap-y-4">
             <ConsistencyGrid weeks={stats?.weeks ?? []} />
             {stats ? (
-              <div className="space-y-2.5">
+              <div className="flex gap-8 sm:flex-col sm:gap-2.5">
                 <Stat
                   label="Promedio"
                   value={

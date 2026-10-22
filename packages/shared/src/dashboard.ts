@@ -4,7 +4,7 @@
  * dos sesiones el mismo día valen una.
  */
 
-export const CONSISTENCY_WEEKS = 8;
+export const CONSISTENCY_WEEKS = 16;
 
 /** Lunes 00:00 (hora local) de la semana de `d`. */
 export function weekStart(d: Date): Date {
@@ -32,7 +32,7 @@ export type StudentDashboard = {
   /** Índice de hoy en `thisWeek` (0 = lunes). */
   todayIndex: number;
   daysThisWeek: number;
-  /** Últimas 8 semanas, la última es la semana en curso. */
+  /** Últimas 16 semanas, la última es la semana en curso. */
   weeks: WeekSummary[];
   /**
    * Promedio de días por semana en las semanas completas del período, desde la

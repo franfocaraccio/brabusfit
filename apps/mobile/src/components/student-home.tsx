@@ -20,7 +20,7 @@ import type { HomePlan, HomeRoutine } from "@brabus/supabase";
 import { Card, Muted } from "@/components/ui";
 import { colors, fonts } from "@/lib/theme";
 
-/** Inicio del alumno (igual que StudentHome de la web): semana, 8 semanas, su rutina y su plan. */
+/** Inicio del alumno (igual que StudentHome de la web): semana, 16 semanas, su rutina y su plan. */
 export function StudentHome({
   finishedAt,
   routine,
@@ -74,7 +74,7 @@ export function StudentHome({
       </Card>
 
       <Card style={styles.card}>
-        <Text style={styles.label}>Consistencia · 8 semanas</Text>
+        <Text style={styles.label}>Consistencia · 16 semanas</Text>
         <View style={styles.consistency}>
           <ConsistencyGrid weeks={stats.weeks} />
           <View style={styles.consistencyStats}>
@@ -350,8 +350,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.mutedForeground,
   },
-  consistency: { flexDirection: "row", alignItems: "center", gap: 20 },
-  consistencyStats: { flex: 1, gap: 10 },
+  consistency: { gap: 14 },
+  consistencyStats: { flexDirection: "row", justifyContent: "space-between" },
   statValue: {
     fontFamily: fonts.semibold,
     fontSize: 16,
