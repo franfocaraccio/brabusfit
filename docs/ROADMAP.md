@@ -3,6 +3,65 @@
 Ideas y decisiones de arquitectura. Cada sección indica si ya está hecha o
 pendiente.
 
+## Pendientes por sector (actualizado 2026-10-21)
+
+Lista de trabajo vigente, ordenada por sección de la app. El detalle de lo ya
+hecho y las decisiones de diseño están en las secciones de más abajo.
+
+### Página principal (Inicio)
+- **Vista cliente — dashboard:** entrenamientos completados en la semana
+  (sesiones finalizadas de lunes a domingo) y gráfico de consistencia de las
+  últimas 8 semanas.
+- **Vista coach — dashboard de clientes** (propuesta, a confirmar):
+  - Resumen: clientes vinculados / invitaciones pendientes / no registrados.
+  - Entrenamientos de todos los clientes esta semana + gráfico de 8 semanas.
+  - Alerta "sin entrenar": clientes vinculados sin sesiones hace +7 días.
+  - Ranking de consistencia de la semana (quién entrenó más veces).
+  - Récords personales recientes de sus clientes.
+  - Clientes sin rutina asignada o sin plan de nutrición vigente.
+  - (Con Reportes) check-ins nuevos para revisar. (Con pagos) cuotas por vencer.
+
+### Clientes
+- Pagos / cuotas por cliente (monto, vencimiento, pagado / atrasado).
+
+### Entrenamiento (rutinas y progreso)
+- Foto ilustrativa por ejercicio (en el catálogo; Supabase Storage).
+- Vista coach: en las **plantillas** no se pueden cargar entrenamientos (pesos
+  y repeticiones) ni ver historial: son solo para armar rutinas.
+- Reordenar ejercicios y días (el ícono de "arrastrar" del editor web hoy es
+  decorativo).
+- Botón "Duplicar plantilla" (la base ya lo soporta: `copy_routine`).
+- Alertas de progresión (ej. mismo peso N semanas con reps en el tope → subir).
+- Videos de ejercicios (Storage, servicio de video o links de YouTube).
+
+### Nutrición
+- Catálogo de alimentos con macros (completa kcal/P/C/G solo).
+- Lista de compras generada desde el plan.
+- Que el alumno pueda armar / editar sus planes (`STUDENTS_CAN_EDIT_PLANS` +
+  chequeo en `save_full_plan`).
+
+### Reportes (check-in) — próximo módulo
+- Definir modelo: campos fijos o formulario personalizado por coach (JSONB).
+- Posibles campos: peso, pasos, medidas, fotos, cumplimiento de rutina,
+  cumplimiento de nutrición, comentarios.
+- Evolución del peso (gráfico) y fotos de progreso (bucket privado en Storage).
+- Recordatorio semanal (pg_cron / Vercel Cron).
+
+### App mobile y publicación
+- Builds propias + tiendas (EAS Build/Submit; Apple USD 99/año, Google USD 25).
+  Habilita: login nativo con Google, notificaciones push, cámara, pasos
+  (Apple Health / Google Fit).
+
+### Otros
+- **Suscripciones:** prueba gratis (trial) y pago directo; el coach paga, el
+  alumno usa gratis. Stripe + límites por plan (ver sección 4).
+- Emails reales (confirmación, invitaciones): requiere dominio propio + Resend.
+- Staging separado de producción (hoy descartado).
+- Al tener uso real: Supabase Pro (el free pausa proyectos inactivos) y Vercel
+  Pro (Hobby no permite uso comercial).
+- Limpieza técnica: borrar `exercises.name`; actualizar parches de Expo
+  (`expo`, `expo-router`).
+
 ---
 
 ## 1. App mobile (Android + iPhone) — ✅ base hecha
