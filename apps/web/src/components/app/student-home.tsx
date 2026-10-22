@@ -8,7 +8,9 @@ import {
   WEEKDAY_INITIALS,
   longDate,
   shortDate,
+  shortMonth,
   studentDashboard,
+  type WeekSummary,
 } from "@brabus/shared";
 import type { HomePlan, HomeRoutine } from "@brabus/supabase";
 
@@ -31,16 +33,21 @@ export function StudentHome({
 }) {
   // Las fechas dependen de la hora local del navegador (el servidor está en UTC):
   // se calculan recién en el cliente.
-  const mounted = useSyncExternalStore(noop, () => true, () => false);
+  const mounted = useSyncExternalStore(
+    noop,
+    () => true,
+    () => false,
+  );
   const goal = routine && routine.dayCount > 0 ? routine.dayCount : null;
   const stats = mounted ? studentDashboard(finishedAt, goal) : null;
-  const max = Math.max(goal ?? 0, ...(stats?.weeks.map((w) => w.days) ?? [0]), 1);
 
   return (
     <div className="space-y-4">
       <div className="animate-rise">
         <h1 className="text-2xl font-bold tracking-tight">Hola, {firstName}</h1>
-        <p className="text-muted-foreground min-h-5 text-sm">{mounted ? longDate() : ""}</p>
+        <p className="text-muted-foreground min-h-5 text-sm">
+          {mounted ? longDate() : ""}
+        </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -51,7 +58,9 @@ export function StudentHome({
           </div>
           <p className="text-3xl font-semibold">
             {stats?.daysThisWeek ?? "–"}
-            {goal ? <span className="text-muted-foreground text-base"> / {goal}</span> : null}
+            {goal ? (
+              <span className="text-muted-foreground text-base"> / {goal}</span>
+            ) : null}
           </p>
           <div className="flex justify-between">
             {WEEKDAY_INITIALS.map((d, i) => {
@@ -68,7 +77,11 @@ export function StudentHome({
                       : today
                         ? "border-primary text-foreground border-[1.5px]"
                         : "bg-muted",
-                    !done && !today && (future ? "text-muted-foreground/50" : "text-muted-foreground"),
+                    !done &&
+                      !today &&
+                      (future
+                        ? "text-muted-foreground/50"
+                        : "text-muted-foreground"),
                   )}
                 >
                   {d}
@@ -90,33 +103,7 @@ export function StudentHome({
               </span>
             ) : null}
           </div>
-          <div className="relative flex h-24 items-end gap-2 border-b">
-            {goal ? (
-              <div
-                className="border-muted-foreground/60 absolute inset-x-0 border-t border-dashed"
-                style={{ bottom: `${(goal / max) * 100}%` }}
-              />
-            ) : null}
-            {(stats?.weeks ?? []).map((w, i, all) => {
-              const current = i === all.length - 1;
-              const below = goal !== null && !current && w.days < goal;
-              return (
-                <div
-                  key={i}
-                  title={`Semana del ${shortDate(w.start)}: ${w.days} ${w.days === 1 ? "día" : "días"}`}
-                  className={cn(
-                    "flex-1 rounded-t",
-                    current ? "bg-primary/55" : below ? "bg-primary/35" : "bg-primary",
-                  )}
-                  style={{ height: `${Math.max((w.days / max) * 100, w.days ? 6 : 2)}%` }}
-                />
-              );
-            })}
-          </div>
-          <div className="text-muted-foreground flex justify-between text-[11px]">
-            <span>{stats ? shortDate(stats.weeks[0].start) : ""}</span>
-            <span>esta</span>
-          </div>
+          <ConsistencyGrid weeks={stats?.weeks ?? []} />
           {goal && stats ? (
             <p className="text-muted-foreground text-xs">
               {stats.streak > 0
@@ -131,8 +118,12 @@ export function StudentHome({
         <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-orange-500 via-orange-700 to-[#3b1405] p-5">
           <div className="pointer-events-none absolute -top-8 -right-8 size-36 rounded-full bg-white/10" />
           <div className="pointer-events-none absolute right-10 -bottom-14 size-32 rounded-full bg-white/5" />
-          <p className="text-[11px] font-semibold tracking-widest text-white/75">TU RUTINA</p>
-          <p className="mt-1 text-xl font-semibold text-white">{routine.name}</p>
+          <p className="text-[11px] font-semibold tracking-widest text-white/75">
+            TU RUTINA
+          </p>
+          <p className="mt-1 text-xl font-semibold text-white">
+            {routine.name}
+          </p>
           <p className="mb-4 text-sm text-white/80">
             {routine.lastDayName
               ? `Último entrenamiento: ${routine.lastDayName}`
@@ -150,10 +141,13 @@ export function StudentHome({
       ) : (
         <Card className="p-5 text-center">
           <p className="text-muted-foreground text-sm">
-            Todavía no tenés una rutina. Cuando tu coach te arme una, o crees la tuya, va a
-            aparecer acá.
+            Todavía no tenés una rutina. Cuando tu coach te arme una, o crees la
+            tuya, va a aparecer acá.
           </p>
-          <Link href="/rutinas" className="text-primary mt-2 inline-block text-sm font-medium">
+          <Link
+            href="/rutinas"
+            className="text-primary mt-2 inline-block text-sm font-medium"
+          >
             Ir a Entrenamiento
           </Link>
         </Card>
@@ -164,8 +158,67 @@ export function StudentHome({
   );
 }
 
+/** Grilla tipo GitHub: una columna por semana, una fila por día (L a D). */
+function ConsistencyGrid({ weeks }: { weeks: WeekSummary[] }) {
+  return (
+    <div className="flex gap-1.5 pt-1">
+      <div className="text-muted-foreground grid grid-rows-[auto_repeat(7,1fr)] gap-1 text-[10px]">
+        <span className="h-4" />
+        {WEEKDAY_INITIALS.map((d, i) => (
+          <span key={i} className="flex items-center">
+            {i % 2 === 0 ? d : ""}
+          </span>
+        ))}
+      </div>
+      {weeks.map((w, wi) => {
+        const month =
+          wi === 0 || w.start.getMonth() !== weeks[wi - 1].start.getMonth()
+            ? shortMonth(w.start)
+            : "";
+        return (
+          <div
+            key={wi}
+            className="grid flex-1 grid-rows-[auto_repeat(7,1fr)] gap-1"
+          >
+            <span className="text-muted-foreground h-4 text-[10px] whitespace-nowrap">
+              {month}
+            </span>
+            {w.daily.map((state, di) => {
+              const date = new Date(w.start);
+              date.setDate(date.getDate() + di);
+              return (
+                <span
+                  key={di}
+                  title={
+                    state === "future"
+                      ? undefined
+                      : `${shortDate(date)}: ${state === "done" ? "entrenaste" : "sin entrenar"}`
+                  }
+                  className={cn(
+                    "aspect-square rounded-[4px]",
+                    state === "done"
+                      ? "bg-primary"
+                      : state === "rest"
+                        ? "bg-muted"
+                        : "border-muted border",
+                  )}
+                />
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 const MACROS = [
-  { key: "protein", label: "Proteínas", kcalPerGram: 4, color: "bg-orange-500" },
+  {
+    key: "protein",
+    label: "Proteínas",
+    kcalPerGram: 4,
+    color: "bg-orange-500",
+  },
   { key: "carbs", label: "Carbohidratos", kcalPerGram: 4, color: "bg-sky-400" },
   { key: "fat", label: "Grasas", kcalPerGram: 9, color: "bg-violet-400" },
 ] as const;
@@ -181,10 +234,14 @@ function PlanCard({ plan }: { plan: HomePlan }) {
     <Card className="space-y-3 p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-muted-foreground text-[11px] font-semibold tracking-widest">TU PLAN</p>
+          <p className="text-muted-foreground text-[11px] font-semibold tracking-widest">
+            TU PLAN
+          </p>
           <p className="mt-1 truncate text-lg font-semibold">{plan.name}</p>
           {plan.coachName ? (
-            <p className="text-muted-foreground text-sm">Armado por {plan.coachName}</p>
+            <p className="text-muted-foreground text-sm">
+              Armado por {plan.coachName}
+            </p>
           ) : null}
         </div>
         <Salad className="text-primary size-5 shrink-0" />
@@ -193,7 +250,10 @@ function PlanCard({ plan }: { plan: HomePlan }) {
       {plan.kcal ? (
         <p className="text-2xl font-semibold">
           {plan.kcal}
-          <span className="text-muted-foreground text-sm font-normal"> kcal por día</span>
+          <span className="text-muted-foreground text-sm font-normal">
+            {" "}
+            kcal por día
+          </span>
         </p>
       ) : null}
 
@@ -204,7 +264,9 @@ function PlanCard({ plan }: { plan: HomePlan }) {
               <div
                 key={m.key}
                 className={m.color}
-                style={{ width: `${((macros[m.key] * m.kcalPerGram) / total) * 100}%` }}
+                style={{
+                  width: `${((macros[m.key] * m.kcalPerGram) / total) * 100}%`,
+                }}
               />
             ))}
           </div>
@@ -213,7 +275,9 @@ function PlanCard({ plan }: { plan: HomePlan }) {
               <span key={m.key} className="inline-flex items-center gap-1.5">
                 <span className={cn("size-2 rounded-full", m.color)} />
                 {m.label}{" "}
-                <span className="text-foreground font-medium">{Math.round(macros[m.key])} g</span>
+                <span className="text-foreground font-medium">
+                  {Math.round(macros[m.key])} g
+                </span>
               </span>
             ))}
           </div>
@@ -222,7 +286,8 @@ function PlanCard({ plan }: { plan: HomePlan }) {
 
       {plan.meals.length > 0 ? (
         <p className="text-muted-foreground text-sm">
-          {plan.meals.length} {plan.meals.length === 1 ? "comida" : "comidas"}: {plan.meals.join(" · ")}
+          {plan.meals.length} {plan.meals.length === 1 ? "comida" : "comidas"}:{" "}
+          {plan.meals.join(" · ")}
         </p>
       ) : null}
 

@@ -1,9 +1,20 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from "react-native-svg";
+import Svg, {
+  Circle,
+  Defs,
+  LinearGradient,
+  Rect,
+  Stop,
+} from "react-native-svg";
 
-import { WEEKDAY_INITIALS, shortDate, studentDashboard } from "@brabus/shared";
+import {
+  WEEKDAY_INITIALS,
+  shortMonth,
+  studentDashboard,
+  type WeekSummary,
+} from "@brabus/shared";
 import type { HomePlan, HomeRoutine } from "@brabus/supabase";
 
 import { Card, Muted } from "@/components/ui";
@@ -21,8 +32,6 @@ export function StudentHome({
 }) {
   const goal = routine && routine.dayCount > 0 ? routine.dayCount : null;
   const stats = studentDashboard(finishedAt, goal);
-  const max = Math.max(goal ?? 0, ...stats.weeks.map((w) => w.days), 1);
-  const CHART_H = 96;
 
   return (
     <View style={{ gap: 12 }}>
@@ -43,7 +52,10 @@ export function StudentHome({
             return (
               <View
                 key={i}
-                style={[styles.dot, done ? styles.dotDone : today ? styles.dotToday : null]}
+                style={[
+                  styles.dot,
+                  done ? styles.dotDone : today ? styles.dotToday : null,
+                ]}
               >
                 <Text
                   style={[
@@ -66,36 +78,12 @@ export function StudentHome({
           <Text style={styles.label}>Consistencia · 8 semanas</Text>
           <Text style={[styles.label, { color: colors.foreground }]}>
             Promedio{" "}
-                {stats.average === null
-                  ? "—"
-                  : `${stats.average.toLocaleString("es-AR", { maximumFractionDigits: 1 })} / sem`}
+            {stats.average === null
+              ? "—"
+              : `${stats.average.toLocaleString("es-AR", { maximumFractionDigits: 1 })} / sem`}
           </Text>
         </View>
-        <View style={[styles.chart, { height: CHART_H }]}>
-          {goal ? (
-            <View style={[styles.goalLine, { bottom: (goal / max) * CHART_H }]} />
-          ) : null}
-          {stats.weeks.map((w, i, all) => {
-            const current = i === all.length - 1;
-            const below = goal !== null && !current && w.days < goal;
-            return (
-              <View
-                key={i}
-                style={[
-                  styles.bar,
-                  {
-                    height: Math.max((w.days / max) * CHART_H, w.days ? 6 : 2),
-                    opacity: current ? 0.55 : below ? 0.35 : 1,
-                  },
-                ]}
-              />
-            );
-          })}
-        </View>
-        <View style={styles.rowBetween}>
-          <Text style={styles.axis}>{shortDate(stats.weeks[0].start)}</Text>
-          <Text style={styles.axis}>esta</Text>
-        </View>
+        <ConsistencyGrid weeks={stats.weeks} />
         {goal ? (
           <Text style={styles.label}>
             {stats.streak > 0
@@ -115,7 +103,13 @@ export function StudentHome({
                 <Stop offset="1" stopColor="#3b1405" />
               </LinearGradient>
             </Defs>
-            <Rect x="0" y="0" width="100%" height="100%" fill="url(#routineGradient)" />
+            <Rect
+              x="0"
+              y="0"
+              width="100%"
+              height="100%"
+              fill="url(#routineGradient)"
+            />
             <Circle cx="92%" cy="5%" r="70" fill="rgba(255,255,255,0.08)" />
             <Circle cx="78%" cy="110%" r="60" fill="rgba(255,255,255,0.05)" />
           </Svg>
@@ -130,7 +124,10 @@ export function StudentHome({
           </Text>
           <Pressable
             onPress={() => router.push(`/rutina/${routine.id}`)}
-            style={({ pressed }) => [styles.continue, pressed && { opacity: 0.85 }]}
+            style={({ pressed }) => [
+              styles.continue,
+              pressed && { opacity: 0.85 },
+            ]}
             accessibilityRole="button"
           >
             <Text style={styles.continueText}>Continuar</Text>
@@ -140,8 +137,8 @@ export function StudentHome({
       ) : (
         <Card style={[styles.card, { alignItems: "center" }]}>
           <Muted style={{ textAlign: "center" }}>
-            Todavía no tenés una rutina. Cuando tu coach te arme una, o crees la tuya, va a
-            aparecer acá.
+            Todavía no tenés una rutina. Cuando tu coach te arme una, o crees la
+            tuya, va a aparecer acá.
           </Muted>
           <Pressable onPress={() => router.push("/rutinas")} hitSlop={8}>
             <Text style={{ fontFamily: fonts.semibold, color: colors.primary }}>
@@ -152,6 +149,45 @@ export function StudentHome({
       )}
 
       {plan ? <PlanCard plan={plan} /> : null}
+    </View>
+  );
+}
+
+/** Grilla tipo GitHub: una columna por semana, una fila por día (L a D). */
+function ConsistencyGrid({ weeks }: { weeks: WeekSummary[] }) {
+  return (
+    <View style={styles.grid}>
+      <View style={styles.gridRow}>
+        <View style={styles.gridLabel} />
+        {weeks.map((w, wi) => (
+          <Text key={wi} style={styles.gridMonth} numberOfLines={1}>
+            {wi === 0 || w.start.getMonth() !== weeks[wi - 1].start.getMonth()
+              ? shortMonth(w.start)
+              : ""}
+          </Text>
+        ))}
+      </View>
+      {WEEKDAY_INITIALS.map((d, di) => (
+        <View key={di} style={styles.gridRow}>
+          <Text style={styles.gridLabel}>{di % 2 === 0 ? d : ""}</Text>
+          {weeks.map((w, wi) => {
+            const state = w.daily[di];
+            return (
+              <View
+                key={wi}
+                style={[
+                  styles.cell,
+                  state === "done"
+                    ? { backgroundColor: colors.primary }
+                    : state === "rest"
+                      ? { backgroundColor: colors.muted }
+                      : { borderWidth: 1, borderColor: colors.muted },
+                ]}
+              />
+            );
+          })}
+        </View>
+      ))}
     </View>
   );
 }
@@ -173,11 +209,15 @@ function PlanCard({ plan }: { plan: HomePlan }) {
     <Card style={[styles.card, { padding: 18 }]}>
       <View style={[styles.rowBetween, { alignItems: "flex-start" }]}>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.kicker, { color: colors.mutedForeground }]}>TU PLAN</Text>
+          <Text style={[styles.kicker, { color: colors.mutedForeground }]}>
+            TU PLAN
+          </Text>
           <Text style={styles.planName} numberOfLines={1}>
             {plan.name}
           </Text>
-          {plan.coachName ? <Text style={styles.label}>Armado por {plan.coachName}</Text> : null}
+          {plan.coachName ? (
+            <Text style={styles.label}>Armado por {plan.coachName}</Text>
+          ) : null}
         </View>
         <Ionicons name="nutrition-outline" size={20} color={colors.primary} />
       </View>
@@ -195,17 +235,27 @@ function PlanCard({ plan }: { plan: HomePlan }) {
             {MACROS.map((m) => (
               <View
                 key={m.key}
-                style={{ flex: macros[m.key] * m.kcalPerGram, backgroundColor: m.color }}
+                style={{
+                  flex: macros[m.key] * m.kcalPerGram,
+                  backgroundColor: m.color,
+                }}
               />
             ))}
           </View>
           <View style={styles.legend}>
             {MACROS.map((m) => (
               <View key={m.key} style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: m.color }]} />
+                <View
+                  style={[styles.legendDot, { backgroundColor: m.color }]}
+                />
                 <Text style={styles.label}>
                   {m.label}{" "}
-                  <Text style={{ fontFamily: fonts.medium, color: colors.foreground }}>
+                  <Text
+                    style={{
+                      fontFamily: fonts.medium,
+                      color: colors.foreground,
+                    }}
+                  >
                     {Math.round(macros[m.key])} g
                   </Text>
                 </Text>
@@ -217,7 +267,8 @@ function PlanCard({ plan }: { plan: HomePlan }) {
 
       {plan.meals.length > 0 ? (
         <Text style={[styles.label, { fontSize: 13 }]}>
-          {plan.meals.length} {plan.meals.length === 1 ? "comida" : "comidas"}: {plan.meals.join(" · ")}
+          {plan.meals.length} {plan.meals.length === 1 ? "comida" : "comidas"}:{" "}
+          {plan.meals.join(" · ")}
         </Text>
       ) : null}
 
@@ -227,7 +278,13 @@ function PlanCard({ plan }: { plan: HomePlan }) {
         style={styles.planLink}
         accessibilityRole="button"
       >
-        <Text style={{ fontFamily: fonts.semibold, fontSize: 14, color: colors.primary }}>
+        <Text
+          style={{
+            fontFamily: fonts.semibold,
+            fontSize: 14,
+            color: colors.primary,
+          }}
+        >
           Ver plan
         </Text>
         <Ionicons name="arrow-forward" size={16} color={colors.primary} />
@@ -238,10 +295,22 @@ function PlanCard({ plan }: { plan: HomePlan }) {
 
 const styles = StyleSheet.create({
   card: { padding: 14, gap: 10 },
-  rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  label: { fontFamily: fonts.regular, fontSize: 12, color: colors.mutedForeground },
+  rowBetween: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  label: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    color: colors.mutedForeground,
+  },
   big: { fontFamily: fonts.semibold, fontSize: 30, color: colors.foreground },
-  bigGoal: { fontFamily: fonts.regular, fontSize: 16, color: colors.mutedForeground },
+  bigGoal: {
+    fontFamily: fonts.regular,
+    fontSize: 16,
+    color: colors.mutedForeground,
+  },
   dot: {
     width: 34,
     height: 34,
@@ -251,25 +320,36 @@ const styles = StyleSheet.create({
     backgroundColor: colors.muted,
   },
   dotDone: { backgroundColor: colors.primary },
-  dotToday: { backgroundColor: "transparent", borderWidth: 1.5, borderColor: colors.primary },
-  dotText: { fontFamily: fonts.medium, fontSize: 12, color: colors.mutedForeground },
-  chart: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+  dotToday: {
+    backgroundColor: "transparent",
+    borderWidth: 1.5,
+    borderColor: colors.primary,
   },
-  goalLine: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    borderTopWidth: 1,
-    borderStyle: "dashed",
-    borderColor: colors.mutedForeground,
+  dotText: {
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    color: colors.mutedForeground,
   },
-  bar: { flex: 1, backgroundColor: colors.primary, borderTopLeftRadius: 4, borderTopRightRadius: 4 },
-  axis: { fontFamily: fonts.regular, fontSize: 11, color: colors.mutedForeground },
+  grid: { gap: 5, paddingTop: 2 },
+  gridRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  gridLabel: {
+    width: 12,
+    fontFamily: fonts.regular,
+    fontSize: 10,
+    color: colors.mutedForeground,
+  },
+  gridMonth: {
+    flex: 1,
+    fontFamily: fonts.regular,
+    fontSize: 10,
+    color: colors.mutedForeground,
+  },
+  cell: { flex: 1, aspectRatio: 1, borderRadius: 4 },
+  axis: {
+    fontFamily: fonts.regular,
+    fontSize: 11,
+    color: colors.mutedForeground,
+  },
   routine: { borderRadius: 18, overflow: "hidden", padding: 18, gap: 4 },
   kicker: {
     fontFamily: fonts.semibold,
@@ -295,10 +375,25 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   continueText: { fontFamily: fonts.semibold, fontSize: 14, color: "#c2410c" },
-  planName: { fontFamily: fonts.bold, fontSize: 18, color: colors.foreground, marginTop: 2 },
-  macroBar: { flexDirection: "row", height: 8, borderRadius: 4, overflow: "hidden" },
+  planName: {
+    fontFamily: fonts.bold,
+    fontSize: 18,
+    color: colors.foreground,
+    marginTop: 2,
+  },
+  macroBar: {
+    flexDirection: "row",
+    height: 8,
+    borderRadius: 4,
+    overflow: "hidden",
+  },
   legend: { flexDirection: "row", flexWrap: "wrap", columnGap: 14, rowGap: 4 },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
-  planLink: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start" },
+  planLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+  },
 });

@@ -20,7 +20,11 @@ export type WeekSummary = {
   start: Date;
   /** Días con al menos un entrenamiento. */
   days: number;
+  /** Lunes..domingo: entrenó, no entrenó, o todavía no llegó (semana en curso). */
+  daily: DayState[];
 };
+
+export type DayState = "done" | "rest" | "future";
 
 export type StudentDashboard = {
   /** 7 valores (lunes..domingo): ¿entrenó ese día de esta semana? */
@@ -67,10 +71,18 @@ export function studentDashboard(
     return s;
   };
 
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const daily = (start: Date): DayState[] =>
+    Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      return d > today ? "future" : days.has(dayKey(d)) ? "done" : "rest";
+    });
+
   const weeks: WeekSummary[] = [];
   for (let i = CONSISTENCY_WEEKS - 1; i >= 0; i--) {
     const start = weekAt(i);
-    weeks.push({ start, days: countWeek(start) });
+    weeks.push({ start, days: countWeek(start), daily: daily(start) });
   }
 
   const thisWeek = Array.from({ length: 7 }, (_, i) => {
