@@ -12,14 +12,8 @@ hecho y las decisiones de diseño están en las secciones de más abajo.
 - Hecho: inicio del alumno (semana, grilla de consistencia, su rutina y su plan)
   e inicio del coach (rutinas / dietas pendientes, quién entrenó esta semana y
   clientes activos de los últimos 6 meses).
-- **Vista coach — ideas para sumar:**
-  - Alerta "sin entrenar": clientes vinculados sin sesiones hace +7 días.
-  - Récords personales recientes de sus clientes.
+- **Vista coach — para sumar más adelante:**
   - (Con Reportes) check-ins nuevos para revisar. (Con pagos) cuotas por vencer.
-- **Vista cliente:** últimos entrenamientos y récords recientes.
-- **Vista cliente — revisar el gráfico de consistencia** (hoy grilla tipo GitHub).
-  Alternativas vistas: columnas con pista de 7 días, apiladas por tipo de día
-  de la rutina, columnas con meta, anillos semanales, semanas cumplidas (racha).
 
 ### Clientes
 - Pagos / cuotas por cliente (monto, vencimiento, pagado / atrasado).
@@ -33,8 +27,6 @@ hecho y las decisiones de diseño están en las secciones de más abajo.
 - Videos de ejercicios (Storage, servicio de video o links de YouTube).
 
 ### Nutrición
-- Catálogo de alimentos con macros (completa kcal/P/C/G solo).
-- Lista de compras generada desde el plan.
 - Que el alumno pueda armar / editar sus planes (`STUDENTS_CAN_EDIT_PLANS` +
   chequeo en `save_full_plan`).
 
@@ -55,8 +47,6 @@ hecho y las decisiones de diseño están en las secciones de más abajo.
   alumno usa gratis. Stripe + límites por plan (ver sección 4).
 - Emails reales (confirmación, invitaciones): requiere dominio propio + Resend.
 - Staging separado de producción (hoy descartado).
-- Al tener uso real: Supabase Pro (el free pausa proyectos inactivos) y Vercel
-  Pro (Hobby no permite uso comercial).
 - Limpieza técnica: borrar `exercises.name`; actualizar parches de Expo
   (`expo`, `expo-router`).
 
