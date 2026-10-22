@@ -4,18 +4,20 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 
 import { WEEKDAY_INITIALS, shortDate, studentDashboard } from "@brabus/shared";
-import type { HomeRoutine } from "@brabus/supabase";
+import type { HomePlan, HomeRoutine } from "@brabus/supabase";
 
 import { Card, Muted } from "@/components/ui";
 import { colors, fonts } from "@/lib/theme";
 
-/** Inicio del alumno (igual que StudentHome de la web): semana, 8 semanas y su rutina. */
+/** Inicio del alumno (igual que StudentHome de la web): semana, 8 semanas, su rutina y su plan. */
 export function StudentHome({
   finishedAt,
   routine,
+  plan,
 }: {
   finishedAt: string[];
   routine: HomeRoutine | null;
+  plan: HomePlan | null;
 }) {
   const goal = routine && routine.dayCount > 0 ? routine.dayCount : null;
   const stats = studentDashboard(finishedAt, goal);
@@ -145,7 +147,89 @@ export function StudentHome({
           </Pressable>
         </Card>
       )}
+
+      {plan ? <PlanCard plan={plan} /> : null}
     </View>
+  );
+}
+
+const MACROS = [
+  { key: "protein", label: "Proteínas", kcalPerGram: 4, color: colors.primary },
+  { key: "carbs", label: "Carbohidratos", kcalPerGram: 4, color: "#38bdf8" },
+  { key: "fat", label: "Grasas", kcalPerGram: 9, color: "#a78bfa" },
+] as const;
+
+/** "Tu plan": el plan de nutrición vigente, con calorías, macros y comidas. */
+function PlanCard({ plan }: { plan: HomePlan }) {
+  const macros = plan.macros;
+  const total = macros
+    ? MACROS.reduce((sum, m) => sum + macros[m.key] * m.kcalPerGram, 0)
+    : 0;
+
+  return (
+    <Card style={[styles.card, { padding: 18 }]}>
+      <View style={[styles.rowBetween, { alignItems: "flex-start" }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.kicker, { color: colors.mutedForeground }]}>TU PLAN</Text>
+          <Text style={styles.planName} numberOfLines={1}>
+            {plan.name}
+          </Text>
+          {plan.coachName ? <Text style={styles.label}>Armado por {plan.coachName}</Text> : null}
+        </View>
+        <Ionicons name="nutrition-outline" size={20} color={colors.primary} />
+      </View>
+
+      {plan.kcal ? (
+        <Text style={[styles.big, { fontSize: 24 }]}>
+          {plan.kcal}
+          <Text style={[styles.bigGoal, { fontSize: 13 }]}> kcal por día</Text>
+        </Text>
+      ) : null}
+
+      {macros && total > 0 ? (
+        <View style={{ gap: 8 }}>
+          <View style={styles.macroBar}>
+            {MACROS.map((m) => (
+              <View
+                key={m.key}
+                style={{ flex: macros[m.key] * m.kcalPerGram, backgroundColor: m.color }}
+              />
+            ))}
+          </View>
+          <View style={styles.legend}>
+            {MACROS.map((m) => (
+              <View key={m.key} style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: m.color }]} />
+                <Text style={styles.label}>
+                  {m.label}{" "}
+                  <Text style={{ fontFamily: fonts.medium, color: colors.foreground }}>
+                    {Math.round(macros[m.key])} g
+                  </Text>
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {plan.meals.length > 0 ? (
+        <Text style={[styles.label, { fontSize: 13 }]}>
+          {plan.meals.length} {plan.meals.length === 1 ? "comida" : "comidas"}: {plan.meals.join(" · ")}
+        </Text>
+      ) : null}
+
+      <Pressable
+        onPress={() => router.push(`/nutricion/${plan.id}`)}
+        hitSlop={8}
+        style={styles.planLink}
+        accessibilityRole="button"
+      >
+        <Text style={{ fontFamily: fonts.semibold, fontSize: 14, color: colors.primary }}>
+          Ver plan
+        </Text>
+        <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+      </Pressable>
+    </Card>
   );
 }
 
@@ -208,4 +292,10 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   continueText: { fontFamily: fonts.semibold, fontSize: 14, color: "#c2410c" },
+  planName: { fontFamily: fonts.bold, fontSize: 18, color: colors.foreground, marginTop: 2 },
+  macroBar: { flexDirection: "row", height: 8, borderRadius: 4, overflow: "hidden" },
+  legend: { flexDirection: "row", flexWrap: "wrap", columnGap: 14, rowGap: 4 },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  planLink: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start" },
 });

@@ -131,7 +131,7 @@ export default function InicioScreen() {
 
       {!isCoach ? (
         home ? (
-          <StudentHome finishedAt={home.finishedAt} routine={home.routine} />
+          <StudentHome finishedAt={home.finishedAt} routine={home.routine} plan={home.plan} />
         ) : null
       ) : (
         <View style={{ gap: 10 }}>

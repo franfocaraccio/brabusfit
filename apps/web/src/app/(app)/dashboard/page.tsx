@@ -30,7 +30,7 @@ export default async function DashboardPage() {
     </Link>
   );
 
-  // Alumno: métricas de la semana, consistencia y su rutina.
+  // Alumno: métricas de la semana, consistencia, su rutina y su plan.
   if (!profile.is_coach) {
     const home = await getStudentHome(supabase, userId);
     return (
@@ -40,6 +40,7 @@ export default async function DashboardPage() {
           firstName={profile.first_name}
           finishedAt={home.finishedAt}
           routine={home.routine}
+          plan={home.plan}
         />
       </div>
     );

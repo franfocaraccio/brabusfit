@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Salad } from "lucide-react";
 
 import {
   WEEKDAY_INITIALS,
@@ -10,22 +10,24 @@ import {
   shortDate,
   studentDashboard,
 } from "@brabus/shared";
-import type { HomeRoutine } from "@brabus/supabase";
+import type { HomePlan, HomeRoutine } from "@brabus/supabase";
 
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 const noop = () => () => {};
 
-/** Inicio del alumno: semana en curso, consistencia de 8 semanas y su rutina. */
+/** Inicio del alumno: semana en curso, consistencia de 8 semanas, su rutina y su plan. */
 export function StudentHome({
   firstName,
   finishedAt,
   routine,
+  plan,
 }: {
   firstName: string;
   finishedAt: string[];
   routine: HomeRoutine | null;
+  plan: HomePlan | null;
 }) {
   // Las fechas dependen de la hora local del navegador (el servidor está en UTC):
   // se calculan recién en el cliente.
@@ -153,6 +155,80 @@ export function StudentHome({
           </Link>
         </Card>
       )}
+
+      {plan ? <PlanCard plan={plan} /> : null}
     </div>
+  );
+}
+
+const MACROS = [
+  { key: "protein", label: "Proteínas", kcalPerGram: 4, color: "bg-orange-500" },
+  { key: "carbs", label: "Carbohidratos", kcalPerGram: 4, color: "bg-sky-400" },
+  { key: "fat", label: "Grasas", kcalPerGram: 9, color: "bg-violet-400" },
+] as const;
+
+/** "Tu plan": el plan de nutrición vigente, con calorías, macros y comidas. */
+function PlanCard({ plan }: { plan: HomePlan }) {
+  const macros = plan.macros;
+  const total = macros
+    ? MACROS.reduce((sum, m) => sum + macros[m.key] * m.kcalPerGram, 0)
+    : 0;
+
+  return (
+    <Card className="space-y-3 p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-muted-foreground text-[11px] font-semibold tracking-widest">TU PLAN</p>
+          <p className="mt-1 truncate text-lg font-semibold">{plan.name}</p>
+          {plan.coachName ? (
+            <p className="text-muted-foreground text-sm">Armado por {plan.coachName}</p>
+          ) : null}
+        </div>
+        <Salad className="text-primary size-5 shrink-0" />
+      </div>
+
+      {plan.kcal ? (
+        <p className="text-2xl font-semibold">
+          {plan.kcal}
+          <span className="text-muted-foreground text-sm font-normal"> kcal por día</span>
+        </p>
+      ) : null}
+
+      {macros && total > 0 ? (
+        <div className="space-y-2">
+          <div className="flex h-2 overflow-hidden rounded-full">
+            {MACROS.map((m) => (
+              <div
+                key={m.key}
+                className={m.color}
+                style={{ width: `${((macros[m.key] * m.kcalPerGram) / total) * 100}%` }}
+              />
+            ))}
+          </div>
+          <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            {MACROS.map((m) => (
+              <span key={m.key} className="inline-flex items-center gap-1.5">
+                <span className={cn("size-2 rounded-full", m.color)} />
+                {m.label}{" "}
+                <span className="text-foreground font-medium">{Math.round(macros[m.key])} g</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {plan.meals.length > 0 ? (
+        <p className="text-muted-foreground text-sm">
+          {plan.meals.length} {plan.meals.length === 1 ? "comida" : "comidas"}: {plan.meals.join(" · ")}
+        </p>
+      ) : null}
+
+      <Link
+        href={`/nutricion/${plan.id}`}
+        className="text-primary inline-flex items-center gap-1.5 text-sm font-semibold"
+      >
+        Ver plan <ArrowRight className="size-4" />
+      </Link>
+    </Card>
   );
 }
