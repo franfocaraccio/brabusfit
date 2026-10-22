@@ -187,6 +187,17 @@ const MONTH_SHORT = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "se
 /** "oct" (para el eje del gráfico). */
 export const shortMonth = (d: Date) => MONTH_SHORT[d.getMonth()];
 
+/**
+ * Etiquetas de mes para la grilla de consistencia: el mes donde empieza cada
+ * semana, solo cuando cambia. Si dos quedan pegadas se omite la primera (como GitHub).
+ */
+export function monthLabels(weeks: { start: Date }[]): string[] {
+  const labels = weeks.map((w, i) =>
+    i === 0 || w.start.getMonth() !== weeks[i - 1].start.getMonth() ? shortMonth(w.start) : "",
+  );
+  return labels.map((l, i) => (l && labels[i + 1] ? "" : l));
+}
+
 export const WEEKDAY_INITIALS = ["L", "M", "M", "J", "V", "S", "D"];
 
 const WEEKDAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];

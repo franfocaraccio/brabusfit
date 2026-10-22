@@ -11,7 +11,7 @@ import Svg, {
 
 import {
   WEEKDAY_INITIALS,
-  shortMonth,
+  monthLabels,
   studentDashboard,
   type WeekSummary,
 } from "@brabus/shared";
@@ -74,23 +74,30 @@ export function StudentHome({
       </Card>
 
       <Card style={styles.card}>
-        <View style={styles.rowBetween}>
-          <Text style={styles.label}>Consistencia · 8 semanas</Text>
-          <Text style={[styles.label, { color: colors.foreground }]}>
-            Promedio{" "}
-            {stats.average === null
-              ? "—"
-              : `${stats.average.toLocaleString("es-AR", { maximumFractionDigits: 1 })} / sem`}
-          </Text>
+        <Text style={styles.label}>Consistencia · 8 semanas</Text>
+        <View style={styles.consistency}>
+          <ConsistencyGrid weeks={stats.weeks} />
+          <View style={styles.consistencyStats}>
+            <Stat
+              label="Promedio"
+              value={
+                stats.average === null
+                  ? "—"
+                  : `${stats.average.toLocaleString("es-AR", { maximumFractionDigits: 1 })} / sem`
+              }
+            />
+            {goal ? (
+              <Stat
+                label="Racha"
+                value={`${stats.streak} ${stats.streak === 1 ? "semana" : "semanas"}`}
+              />
+            ) : null}
+            <Stat
+              label="Días entrenados"
+              value={String(stats.weeks.reduce((n, w) => n + w.days, 0))}
+            />
+          </View>
         </View>
-        <ConsistencyGrid weeks={stats.weeks} />
-        {goal ? (
-          <Text style={styles.label}>
-            {stats.streak > 0
-              ? `Racha: ${stats.streak} ${stats.streak === 1 ? "semana" : "semanas"} cumpliendo el objetivo`
-              : "Cumplí el objetivo de la semana para empezar una racha"}
-          </Text>
-        ) : null}
       </Card>
 
       {routine ? (
@@ -153,18 +160,28 @@ export function StudentHome({
   );
 }
 
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <View>
+      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.statValue}>{value}</Text>
+    </View>
+  );
+}
+
 /** Grilla tipo GitHub: una columna por semana, una fila por día (L a D). */
 function ConsistencyGrid({ weeks }: { weeks: WeekSummary[] }) {
+  const months = monthLabels(weeks);
   return (
     <View style={styles.grid}>
       <View style={styles.gridRow}>
         <View style={styles.gridLabel} />
         {weeks.map((w, wi) => (
-          <Text key={wi} style={styles.gridMonth} numberOfLines={1}>
-            {wi === 0 || w.start.getMonth() !== weeks[wi - 1].start.getMonth()
-              ? shortMonth(w.start)
-              : ""}
-          </Text>
+          <View key={wi} style={styles.gridMonthBox}>
+            <Text style={styles.gridMonth}>
+              {months[wi]}
+            </Text>
+          </View>
         ))}
       </View>
       {WEEKDAY_INITIALS.map((d, di) => (
@@ -293,6 +310,9 @@ function PlanCard({ plan }: { plan: HomePlan }) {
   );
 }
 
+const CELL = 14;
+const CELL_GAP = 3;
+
 const styles = StyleSheet.create({
   card: { padding: 14, gap: 10 },
   rowBetween: {
@@ -330,21 +350,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.mutedForeground,
   },
-  grid: { gap: 5, paddingTop: 2 },
-  gridRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  consistency: { flexDirection: "row", alignItems: "center", gap: 20 },
+  consistencyStats: { flex: 1, gap: 10 },
+  statValue: {
+    fontFamily: fonts.semibold,
+    fontSize: 16,
+    color: colors.foreground,
+  },
+  grid: { gap: CELL_GAP },
+  gridRow: { flexDirection: "row", alignItems: "center", gap: CELL_GAP },
   gridLabel: {
     width: 12,
     fontFamily: fonts.regular,
-    fontSize: 10,
+    fontSize: 9,
+    lineHeight: CELL,
     color: colors.mutedForeground,
   },
+  gridMonthBox: { width: CELL, height: 13 },
   gridMonth: {
-    flex: 1,
+    position: "absolute",
+    left: 0,
+    width: 30,
     fontFamily: fonts.regular,
-    fontSize: 10,
+    fontSize: 9,
     color: colors.mutedForeground,
   },
-  cell: { flex: 1, aspectRatio: 1, borderRadius: 4 },
+  cell: { width: CELL, height: CELL, borderRadius: 3 },
   axis: {
     fontFamily: fonts.regular,
     fontSize: 11,

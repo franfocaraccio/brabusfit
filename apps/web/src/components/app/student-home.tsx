@@ -8,7 +8,7 @@ import {
   WEEKDAY_INITIALS,
   longDate,
   shortDate,
-  shortMonth,
+  monthLabels,
   studentDashboard,
   type WeekSummary,
 } from "@brabus/shared";
@@ -92,25 +92,34 @@ export function StudentHome({
         </Card>
 
         <Card className="space-y-2 p-4">
-          <div className="text-muted-foreground flex items-baseline justify-between text-xs">
-            <span>Consistencia · 8 semanas</span>
+          <p className="text-muted-foreground text-xs">
+            Consistencia · 8 semanas
+          </p>
+          <div className="flex items-center gap-6">
+            <ConsistencyGrid weeks={stats?.weeks ?? []} />
             {stats ? (
-              <span className="text-foreground">
-                Promedio{" "}
-                {stats.average === null
-                  ? "—"
-                  : `${stats.average.toLocaleString("es-AR", { maximumFractionDigits: 1 })} / sem`}
-              </span>
+              <div className="space-y-2.5">
+                <Stat
+                  label="Promedio"
+                  value={
+                    stats.average === null
+                      ? "—"
+                      : `${stats.average.toLocaleString("es-AR", { maximumFractionDigits: 1 })} / sem`
+                  }
+                />
+                {goal ? (
+                  <Stat
+                    label="Racha"
+                    value={`${stats.streak} ${stats.streak === 1 ? "semana" : "semanas"}`}
+                  />
+                ) : null}
+                <Stat
+                  label="Días entrenados"
+                  value={String(stats.weeks.reduce((n, w) => n + w.days, 0))}
+                />
+              </div>
             ) : null}
           </div>
-          <ConsistencyGrid weeks={stats?.weeks ?? []} />
-          {goal && stats ? (
-            <p className="text-muted-foreground text-xs">
-              {stats.streak > 0
-                ? `Racha: ${stats.streak} ${stats.streak === 1 ? "semana" : "semanas"} cumpliendo el objetivo`
-                : "Cumplí el objetivo de la semana para empezar una racha"}
-            </p>
-          ) : null}
         </Card>
       </div>
 
@@ -158,29 +167,33 @@ export function StudentHome({
   );
 }
 
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-muted-foreground text-xs">{label}</p>
+      <p className="font-semibold">{value}</p>
+    </div>
+  );
+}
+
 /** Grilla tipo GitHub: una columna por semana, una fila por día (L a D). */
 function ConsistencyGrid({ weeks }: { weeks: WeekSummary[] }) {
+  const months = monthLabels(weeks);
   return (
-    <div className="flex gap-1.5 pt-1">
-      <div className="text-muted-foreground grid grid-rows-[auto_repeat(7,1fr)] gap-1 text-[10px]">
-        <span className="h-4" />
+    <div className="flex shrink-0 gap-[3px]">
+      <div className="text-muted-foreground flex flex-col gap-[3px] pr-1 text-[9px]">
+        <span className="h-[13px]" />
         {WEEKDAY_INITIALS.map((d, i) => (
-          <span key={i} className="flex items-center">
+          <span key={i} className="flex h-3.5 items-center">
             {i % 2 === 0 ? d : ""}
           </span>
         ))}
       </div>
       {weeks.map((w, wi) => {
-        const month =
-          wi === 0 || w.start.getMonth() !== weeks[wi - 1].start.getMonth()
-            ? shortMonth(w.start)
-            : "";
+        const month = months[wi];
         return (
-          <div
-            key={wi}
-            className="grid flex-1 grid-rows-[auto_repeat(7,1fr)] gap-1"
-          >
-            <span className="text-muted-foreground h-4 text-[10px] whitespace-nowrap">
+          <div key={wi} className="flex w-3.5 flex-col gap-[3px]">
+            <span className="text-muted-foreground h-[13px] overflow-visible text-[9px] whitespace-nowrap">
               {month}
             </span>
             {w.daily.map((state, di) => {
@@ -195,7 +208,7 @@ function ConsistencyGrid({ weeks }: { weeks: WeekSummary[] }) {
                       : `${shortDate(date)}: ${state === "done" ? "entrenaste" : "sin entrenar"}`
                   }
                   className={cn(
-                    "aspect-square rounded-[4px]",
+                    "size-3.5 rounded-[3px]",
                     state === "done"
                       ? "bg-primary"
                       : state === "rest"
