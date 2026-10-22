@@ -40,7 +40,7 @@ import { colors, fonts, radius } from "@/lib/theme";
 // Etiqueta del acceso a la app
 // ---------------------------------------------------------------------------
 
-/** Vinculado / Invitación pendiente / Usuario no registrado / Sin invitar. */
+/** Vinculado / Invitación pendiente / Usuario no registrado. */
 export function AccessBadge({ status }: { status: ClientStatus }) {
   return (
     <Text

@@ -235,7 +235,7 @@ export default function ClienteScreen() {
             aceptar.
           </Text>
         </Card>
-      ) : detail.status === "unregistered" ? (
+      ) : detail.status === "unregistered" && appAccess === "pending" ? (
         <Card style={[styles.pending, styles.unregistered]}>
           <Text style={styles.pendingText}>
             <Text style={{ fontFamily: fonts.semibold }}>Usuario no registrado. </Text>

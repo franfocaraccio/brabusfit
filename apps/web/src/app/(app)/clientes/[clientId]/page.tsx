@@ -193,7 +193,7 @@ export default async function ClienteDetailPage({
           </p>
         </Card>
       )}
-      {detail.status === "unregistered" && (
+      {detail.status === "unregistered" && appAccess === "pending" && (
         <Card className="border-sky-500/40 bg-sky-500/10 p-4">
           <p className="text-sm">
             <span className="font-semibold">Usuario no registrado.</span> Lo invitaste con{" "}

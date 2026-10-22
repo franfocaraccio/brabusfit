@@ -19,7 +19,7 @@ function subtitle(c: ClientSummary) {
   }`;
 }
 
-/** Vinculado / Invitación pendiente / Usuario no registrado / Sin invitar. */
+/** Vinculado / Invitación pendiente / Usuario no registrado. */
 export function AccessBadge({ status }: { status: ClientStatus }) {
   return (
     <span
@@ -28,7 +28,6 @@ export function AccessBadge({ status }: { status: ClientStatus }) {
         status === "linked" && "bg-emerald-500/15 text-emerald-500",
         status === "invited" && "bg-amber-500/15 text-amber-500",
         status === "unregistered" && "bg-sky-500/15 text-sky-400",
-        status === "none" && "bg-muted text-muted-foreground",
       )}
     >
       {CLIENT_STATUS_LABEL[status]}
