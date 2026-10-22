@@ -65,7 +65,7 @@ export default async function RutinaDetailPage({
                 {client.name}
               </Link>
             </span>
-            <AccessBadge access={client.appAccess} />
+            <AccessBadge status={client.status} />
             {client.archived ? (
               <span className="bg-muted rounded px-1.5 text-[10px] font-semibold">Archivado</span>
             ) : null}

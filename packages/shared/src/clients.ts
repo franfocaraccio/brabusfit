@@ -60,10 +60,28 @@ export const sexLabel = (v: ClientSex | null | undefined) => labelOf(CLIENT_SEXE
 export const goalLabel = (v: ClientGoal | null | undefined) => labelOf(CLIENT_GOALS, v);
 export const levelLabel = (v: ClientLevel | null | undefined) => labelOf(CLIENT_LEVELS, v);
 
-export const APP_ACCESS_LABEL: Record<AppAccess, string> = {
-  none: "Sin app",
-  pending: "Invitación pendiente",
-  active: "Con app",
+/**
+ * Estado de la ficha frente a la app, como lo ve el coach:
+ * - linked: aceptó la invitación (vinculado).
+ * - invited: tiene cuenta y todavía no aceptó.
+ * - unregistered: se lo invitó por email pero todavía no se registró.
+ * - none: el coach nunca lo invitó (o se le quitó el acceso).
+ * Se calcula en cada carga: cuando el invitado se registra, la base le asigna
+ * la cuenta y pasa solo de "unregistered" a "invited".
+ */
+export type ClientStatus = "linked" | "invited" | "unregistered" | "none";
+
+export function clientStatus(access: AppAccess, hasAccount: boolean): ClientStatus {
+  if (access === "active") return "linked";
+  if (access === "pending") return hasAccount ? "invited" : "unregistered";
+  return "none";
+}
+
+export const CLIENT_STATUS_LABEL: Record<ClientStatus, string> = {
+  linked: "Vinculado",
+  invited: "Invitación pendiente",
+  unregistered: "Usuario no registrado",
+  none: "Sin invitar",
 };
 
 /** Edad en años a partir de YYYY-MM-DD (null si no hay fecha). */

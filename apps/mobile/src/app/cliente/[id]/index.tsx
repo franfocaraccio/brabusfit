@@ -186,7 +186,7 @@ export default function ClienteScreen() {
       <View style={{ gap: 6 }}>
         <Title>{name}</Title>
         <View style={styles.badges}>
-          <AccessBadge access={appAccess} />
+          <AccessBadge status={detail.status} />
           {detail.archived ? <Text style={styles.archived}>Archivado</Text> : null}
           {detail.username ? <Muted style={{ fontSize: 13 }}>@{detail.username}</Muted> : null}
         </View>
@@ -227,12 +227,20 @@ export default function ClienteScreen() {
         />
       </View>
 
-      {appAccess === "pending" ? (
+      {detail.status === "invited" ? (
         <Card style={styles.pending}>
           <Text style={styles.pendingText}>
             <Text style={{ fontFamily: fonts.semibold }}>Invitación pendiente. </Text>
-            Ya podés armarle rutinas: las va a ver cuando acepte. Su progreso aparece después de
+            Ya tiene cuenta: va a ver lo que le armes cuando acepte. Su progreso aparece después de
             aceptar.
+          </Text>
+        </Card>
+      ) : detail.status === "unregistered" ? (
+        <Card style={[styles.pending, styles.unregistered]}>
+          <Text style={styles.pendingText}>
+            <Text style={{ fontFamily: fonts.semibold }}>Usuario no registrado. </Text>
+            Lo invitaste con {data.email}, pero todavía no creó su cuenta. Cuando se registre con ese
+            email le va a aparecer la invitación.
           </Text>
         </Card>
       ) : null}
@@ -480,6 +488,10 @@ const styles = StyleSheet.create({
     padding: 14,
     borderColor: "rgba(245,158,11,0.4)",
     backgroundColor: "rgba(245,158,11,0.1)",
+  },
+  unregistered: {
+    borderColor: "rgba(14,165,233,0.4)",
+    backgroundColor: "rgba(14,165,233,0.1)",
   },
   pendingText: { fontFamily: fonts.regular, fontSize: 14, color: colors.foreground },
   note: { padding: 14, gap: 4 },

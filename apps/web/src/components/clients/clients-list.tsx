@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ChevronRight, Search, Users } from "lucide-react";
 
-import { APP_ACCESS_LABEL, formatDate } from "@brabus/shared";
+import { CLIENT_STATUS_LABEL, formatDate, type ClientStatus } from "@brabus/shared";
 import type { ClientSummary } from "@brabus/supabase";
 
 import { Card } from "@/components/ui/card";
@@ -19,17 +19,19 @@ function subtitle(c: ClientSummary) {
   }`;
 }
 
-export function AccessBadge({ access }: { access: ClientSummary["appAccess"] }) {
+/** Vinculado / Invitación pendiente / Usuario no registrado / Sin invitar. */
+export function AccessBadge({ status }: { status: ClientStatus }) {
   return (
     <span
       className={cn(
-        "shrink-0 rounded px-1.5 text-[10px] font-semibold",
-        access === "active" && "bg-emerald-500/15 text-emerald-500",
-        access === "pending" && "bg-amber-500/15 text-amber-500",
-        access === "none" && "bg-muted text-muted-foreground",
+        "shrink-0 rounded px-1.5 text-[10px] font-semibold whitespace-nowrap",
+        status === "linked" && "bg-emerald-500/15 text-emerald-500",
+        status === "invited" && "bg-amber-500/15 text-amber-500",
+        status === "unregistered" && "bg-sky-500/15 text-sky-400",
+        status === "none" && "bg-muted text-muted-foreground",
       )}
     >
-      {access === "pending" ? "Pendiente" : APP_ACCESS_LABEL[access]}
+      {CLIENT_STATUS_LABEL[status]}
     </span>
   );
 }
@@ -109,7 +111,7 @@ export function ClientsList({ clients }: { clients: ClientSummary[] }) {
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2">
                   <span className="truncate text-sm font-semibold">{c.name}</span>
-                  <AccessBadge access={c.appAccess} />
+                  <AccessBadge status={c.status} />
                 </span>
                 <span className="text-muted-foreground block truncate text-xs">
                   {c.username ? `@${c.username} · ` : c.phone ? `${c.phone} · ` : ""}

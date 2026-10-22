@@ -139,7 +139,7 @@ export default function ClientesScreen() {
                       <Text style={styles.name} numberOfLines={1}>
                         {c.name}
                       </Text>
-                      <AccessBadge access={c.appAccess} />
+                      <AccessBadge status={c.status} />
                     </View>
                     <Text style={styles.meta} numberOfLines={1}>
                       {c.username ? `@${c.username} · ` : c.phone ? `${c.phone} · ` : ""}

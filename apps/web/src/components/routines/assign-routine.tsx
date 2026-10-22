@@ -6,7 +6,7 @@ import { useState, useTransition } from "react";
 import { Copy, Dumbbell, FilePlus2, Salad, Search, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
-import { APP_ACCESS_LABEL } from "@brabus/shared";
+import { CLIENT_STATUS_LABEL } from "@brabus/shared";
 
 import type { ClientSummary, FolderLite, RoutineLite } from "@brabus/supabase";
 
@@ -102,7 +102,7 @@ export function AssignRoutine({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{st.name}</span>
                   <span className="text-muted-foreground block truncate text-xs">
-                    {APP_ACCESS_LABEL[st.appAccess]}
+                    {CLIENT_STATUS_LABEL[st.status]}
                     {kind === "routines"
                       ? ` · ${st.routineCount} ${st.routineCount === 1 ? "rutina" : "rutinas"}`
                       : ""}

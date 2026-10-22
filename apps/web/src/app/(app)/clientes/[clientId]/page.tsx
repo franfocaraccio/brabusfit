@@ -157,7 +157,7 @@ export default async function ClienteDetailPage({
           <div>
             <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold tracking-tight">
               {name}
-              <AccessBadge access={appAccess} />
+              <AccessBadge status={detail.status} />
               {detail.archived ? (
                 <span className="bg-muted text-muted-foreground rounded px-1.5 text-[10px] font-semibold">
                   Archivado
@@ -185,11 +185,20 @@ export default async function ClienteDetailPage({
         />
       </div>
 
-      {appAccess === "pending" && (
+      {detail.status === "invited" && (
         <Card className="border-amber-500/40 bg-amber-500/10 p-4">
           <p className="text-sm">
-            <span className="font-semibold">Invitación pendiente.</span> Ya podés armarle rutinas:
-            las va a ver cuando acepte. Su progreso aparece después de aceptar.
+            <span className="font-semibold">Invitación pendiente.</span> Ya tiene cuenta: va a ver
+            lo que le armes cuando acepte. Su progreso aparece después de aceptar.
+          </p>
+        </Card>
+      )}
+      {detail.status === "unregistered" && (
+        <Card className="border-sky-500/40 bg-sky-500/10 p-4">
+          <p className="text-sm">
+            <span className="font-semibold">Usuario no registrado.</span> Lo invitaste con{" "}
+            {data.email}, pero todavía no creó su cuenta. Cuando se registre con ese email le va a
+            aparecer la invitación.
           </p>
         </Card>
       )}

@@ -4,8 +4,10 @@ import {
   ok,
   validateClient,
   type ActionResult,
+  clientStatus,
   type AppAccess,
   type ClientInput,
+  type ClientStatus,
   type InviteStatus,
   type LinkStatus,
   type Tables,
@@ -41,6 +43,8 @@ export type ClientSummary = {
   studentId: string | null;
   username: string | null;
   appAccess: AppAccess;
+  /** Vinculado / Invitación pendiente / Usuario no registrado / Sin invitar. */
+  status: ClientStatus;
   archived: boolean;
   /** Rutinas que el coach le armó. */
   routineCount: number;
@@ -91,6 +95,7 @@ export async function getClients(client: BrabusClient, coachId: string): Promise
       studentId: c.student_id,
       username: c.account?.username ?? null,
       appAccess: c.status,
+      status: clientStatus(c.status, c.student_id !== null),
       archived: c.archived_at !== null,
       routineCount: routineCount.get(c.id) ?? 0,
       lastActivity:
@@ -123,6 +128,7 @@ export type ClientDetail = {
   username: string | null;
   studentId: string | null;
   appAccess: AppAccess;
+  status: ClientStatus;
   archived: boolean;
   createdAt: string;
   /** Rutinas que el coach le armó. */
@@ -183,6 +189,7 @@ export async function getClient(
     username: c.account?.username ?? null,
     studentId: c.student_id,
     appAccess: c.status,
+    status: clientStatus(c.status, c.student_id !== null),
     archived: c.archived_at !== null,
     createdAt: c.created_at,
     routines: (routinesRes.data ?? []) as { id: string; name: string }[],

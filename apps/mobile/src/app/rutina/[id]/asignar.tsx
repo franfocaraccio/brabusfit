@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { APP_ACCESS_LABEL } from "@brabus/shared";
+import { CLIENT_STATUS_LABEL } from "@brabus/shared";
 import { copyRoutine, getClients, type ClientSummary } from "@brabus/supabase";
 
 import { Loading } from "@/components/loading";
@@ -67,7 +67,7 @@ export default function AsignarScreen() {
                   {c.name}
                 </Text>
                 <Text style={styles.meta} numberOfLines={1}>
-                  {APP_ACCESS_LABEL[c.appAccess]}
+                  {CLIENT_STATUS_LABEL[c.status]}
                   {` · ${c.routineCount} ${c.routineCount === 1 ? "rutina" : "rutinas"}`}
                 </Text>
               </View>

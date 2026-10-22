@@ -105,7 +105,7 @@ export default function PlanScreen() {
                   {client.name}
                 </Text>
               </Muted>
-              <AccessBadge access={client.appAccess} />
+              <AccessBadge status={client.status} />
             </>
           ) : null}
         </View>

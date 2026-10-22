@@ -92,7 +92,7 @@ export default function RutinaScreen() {
                 {client.name}
               </Text>
             </Muted>
-            <AccessBadge access={client.appAccess} />
+            <AccessBadge status={client.status} />
             {client.archived ? <Text style={styles.badge}>Archivado</Text> : null}
           </View>
         ) : null}

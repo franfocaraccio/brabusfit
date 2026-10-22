@@ -16,9 +16,11 @@ import { getUserId, type BrabusClient } from "./client";
 import {
   CLIENT_NAME_SELECT,
   clientName,
+  clientRef,
   fullName,
   getClientOf,
   type ClientNameRow,
+  type ClientRef,
   type FolderLite,
   type Person,
 } from "./routines";
@@ -195,7 +197,7 @@ export type PlanDetail = {
   plan: NutritionPlan;
   ownerName: string | null;
   /** Cliente del plan (solo para su coach), o null si es plantilla / plan propio. */
-  client: { id: string; name: string; appAccess: AppAccess; archived: boolean } | null;
+  client: ClientRef | null;
   meals: PlanMeal[];
 };
 
@@ -237,9 +239,7 @@ export async function getPlanDetail(
   return {
     plan,
     ownerName: fullName(owner),
-    client: c
-      ? { id: c.id, name: clientName(c), appAccess: c.status, archived: c.archived_at !== null }
-      : null,
+    client: c ? clientRef(c) : null,
     meals: byPos((mealsData ?? []) as unknown as MealRow[]).map((m) => ({
       id: m.id,
       name: m.name,

@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
-  APP_ACCESS_LABEL,
+  CLIENT_STATUS_LABEL,
   CLIENT_GOALS,
   CLIENT_LEVELS,
   CLIENT_SEXES,
@@ -23,8 +23,8 @@ import {
   formatDisplayDate,
   parseDisplayDate,
   usernameError,
-  type AppAccess,
   type ClientInput,
+  type ClientStatus,
   type InviteStatus,
 } from "@brabus/shared";
 import { checkInviteClient, inviteClient, saveClient } from "@brabus/supabase";
@@ -40,16 +40,18 @@ import { colors, fonts, radius } from "@/lib/theme";
 // Etiqueta del acceso a la app
 // ---------------------------------------------------------------------------
 
-export function AccessBadge({ access }: { access: AppAccess }) {
+/** Vinculado / Invitación pendiente / Usuario no registrado / Sin invitar. */
+export function AccessBadge({ status }: { status: ClientStatus }) {
   return (
     <Text
       style={[
         styles.badge,
-        access === "active" && styles.badgeActive,
-        access === "pending" && styles.badgePending,
+        status === "linked" && styles.badgeActive,
+        status === "invited" && styles.badgePending,
+        status === "unregistered" && styles.badgeUnregistered,
       ]}
     >
-      {access === "pending" ? "Pendiente" : APP_ACCESS_LABEL[access]}
+      {CLIENT_STATUS_LABEL[status]}
     </Text>
   );
 }
@@ -426,6 +428,7 @@ const styles = StyleSheet.create({
   },
   badgeActive: { color: "#10b981", backgroundColor: "rgba(16,185,129,0.15)" },
   badgePending: { color: "#f59e0b", backgroundColor: "rgba(245,158,11,0.15)" },
+  badgeUnregistered: { color: "#38bdf8", backgroundColor: "rgba(14,165,233,0.15)" },
   factCard: { padding: 14, flexDirection: "row", flexWrap: "wrap", rowGap: 12 },
   fact: { width: "50%", paddingRight: 8, gap: 2 },
   factLabel: { fontFamily: fonts.regular, fontSize: 12, color: colors.mutedForeground },

@@ -5,7 +5,9 @@ import {
   type ActionResult,
   type CatalogEntry,
   type Folder,
+  clientStatus,
   type AppAccess,
+  type ClientStatus,
   type Routine,
   type RoutineExport,
   type RoutinePayload,
@@ -183,11 +185,28 @@ export type ClientNameRow = {
   last_name: string;
   student_email: string | null;
   status: AppAccess;
+  student_id: string | null;
   archived_at: string | null;
   account: Person | null;
 };
 export const CLIENT_NAME_SELECT =
-  "id, first_name, last_name, student_email, status, archived_at, account:profiles!coach_students_student_id_fkey(first_name, last_name)";
+  "id, first_name, last_name, student_email, status, student_id, archived_at, account:profiles!coach_students_student_id_fkey(first_name, last_name)";
+/** Cliente de una rutina o plan (solo lo ve su coach). */
+export type ClientRef = {
+  id: string;
+  name: string;
+  appAccess: AppAccess;
+  status: ClientStatus;
+  archived: boolean;
+};
+export const clientRef = (c: ClientNameRow): ClientRef => ({
+  id: c.id,
+  name: clientName(c),
+  appAccess: c.status,
+  status: clientStatus(c.status, c.student_id !== null),
+  archived: c.archived_at !== null,
+});
+
 export const clientName = (c: ClientNameRow) =>
   fullName(c) ?? fullName(c.account) ?? c.student_email ?? "Cliente";
 
@@ -381,7 +400,7 @@ export type RoutineDetail = {
   routine: Routine;
   ownerName: string | null;
   /** Cliente de la rutina (solo para su coach), o null si es plantilla / rutina propia. */
-  client: { id: string; name: string; appAccess: AppAccess; archived: boolean } | null;
+  client: ClientRef | null;
   days: RoutineDayLite[];
 };
 
@@ -417,9 +436,7 @@ export async function getRoutineDetail(
   return {
     routine,
     ownerName: fullName(owner),
-    client: c
-      ? { id: c.id, name: clientName(c), appAccess: c.status, archived: c.archived_at !== null }
-      : null,
+    client: c ? clientRef(c) : null,
     days,
   };
 }

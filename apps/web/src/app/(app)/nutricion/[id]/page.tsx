@@ -63,7 +63,7 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
                 {client.name}
               </Link>
             </span>
-            <AccessBadge access={client.appAccess} />
+            <AccessBadge status={client.status} />
           </p>
         )}
         {canAssign && (
