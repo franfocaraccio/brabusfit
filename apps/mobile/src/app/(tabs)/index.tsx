@@ -9,6 +9,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { longDate } from "@brabus/shared";
 import {
@@ -33,6 +34,7 @@ export default function InicioScreen() {
   const isCoach = profile?.is_coach ?? false;
   const [home, setHome] = useState<StudentHomeData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const load = useCallback(async () => {
     if (session && profile && !profile.is_coach) {
@@ -87,7 +89,7 @@ export default function InicioScreen() {
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + 16 }]}
       refreshControl={
         isCoach ? undefined : (
           <RefreshControl

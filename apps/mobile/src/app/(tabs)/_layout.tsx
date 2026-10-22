@@ -52,7 +52,11 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: colors.background },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: "Inicio", tabBarIcon: icon("home-outline") }} />
+      <Tabs.Screen
+        name="index"
+        // Sin barra de título: el saludo ya hace de encabezado.
+        options={{ title: "Inicio", headerShown: false, tabBarIcon: icon("home-outline") }}
+      />
       <Tabs.Screen
         name="rutinas"
         // "Entrenamiento" no entra en la barra de 5 pestañas: etiqueta corta abajo.
