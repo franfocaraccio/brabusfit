@@ -5,7 +5,6 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -19,19 +18,23 @@ import { Loading } from "@/components/loading";
 import { Segmented } from "@/components/segmented";
 import { Button, Card, Muted } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
-import { colors, fonts, radius } from "@/lib/theme";
+import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
 
 function subtitle(c: ClientSummary) {
   const routines = `${c.routineCount} ${c.routineCount === 1 ? "rutina" : "rutinas"}`;
   if (c.appAccess !== "active") return routines;
   return `${routines} · ${
-    c.lastActivity ? `última actividad ${formatDate(c.lastActivity)}` : "sin entrenamientos aún"
+    c.lastActivity
+      ? `última actividad ${formatDate(c.lastActivity)}`
+      : "sin entrenamientos aún"
   }`;
 }
 
 /** Clientes del coach (igual que /clientes en la web). */
 export default function ClientesScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const { session } = useAuth();
   const [clients, setClients] = useState<ClientSummary[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -79,18 +82,31 @@ export default function ClientesScreen() {
         />
       }
     >
-      <Muted>La ficha de cada cliente, sus rutinas y su progreso (si usa la app).</Muted>
+      <Muted>
+        La ficha de cada cliente, sus rutinas y su progreso (si usa la app).
+      </Muted>
       <Button
         title="Nuevo cliente"
         onPress={() => router.push("/cliente/nuevo")}
-        icon={<Ionicons name="person-add-outline" size={18} color={colors.primaryForeground} />}
+        icon={
+          <Ionicons
+            name="person-add-outline"
+            size={18}
+            color={colors.primaryForeground}
+          />
+        }
       />
 
       {clients.length === 0 ? (
         <Card style={styles.empty}>
-          <Ionicons name="people-outline" size={32} color={colors.mutedForeground} />
+          <Ionicons
+            name="people-outline"
+            size={32}
+            color={colors.mutedForeground}
+          />
           <Muted style={{ textAlign: "center" }}>
-            Todavía no tenés clientes. Creá su ficha: no hace falta que usen la app.
+            Todavía no tenés clientes. Creá su ficha: no hace falta que usen la
+            app.
           </Muted>
         </Card>
       ) : (
@@ -112,7 +128,10 @@ export default function ClientesScreen() {
             value={view}
             onChange={setView}
             options={[
-              { value: "activos", label: `Activos (${clients.length - archivedCount})` },
+              {
+                value: "activos",
+                label: `Activos (${clients.length - archivedCount})`,
+              },
               { value: "archivados", label: `Archivados (${archivedCount})` },
             ]}
           />
@@ -142,11 +161,19 @@ export default function ClientesScreen() {
                       <AccessBadge status={c.status} />
                     </View>
                     <Text style={styles.meta} numberOfLines={1}>
-                      {c.username ? `@${c.username} · ` : c.phone ? `${c.phone} · ` : ""}
+                      {c.username
+                        ? `@${c.username} · `
+                        : c.phone
+                          ? `${c.phone} · `
+                          : ""}
                       {subtitle(c)}
                     </Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
+                  <Ionicons
+                    name="chevron-forward"
+                    size={18}
+                    color={colors.mutedForeground}
+                  />
                 </Pressable>
               ))}
             </Card>
@@ -157,7 +184,7 @@ export default function ClientesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: 16, paddingBottom: 40, gap: 14 },
   empty: { padding: 24, gap: 12, alignItems: "center" },
@@ -170,7 +197,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.input,
-    backgroundColor: "rgba(43,51,61,0.4)",
+    backgroundColor: colors.field,
   },
   searchInput: {
     flex: 1,
@@ -182,6 +209,15 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14 },
   rowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  name: { flexShrink: 1, fontFamily: fonts.semibold, fontSize: 15, color: colors.foreground },
-  meta: { fontFamily: fonts.regular, fontSize: 12, color: colors.mutedForeground },
-});
+  name: {
+    flexShrink: 1,
+    fontFamily: fonts.semibold,
+    fontSize: 15,
+    color: colors.foreground,
+  },
+  meta: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    color: colors.mutedForeground,
+  },
+}));

@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
 import {
   buildProgress,
@@ -15,7 +15,7 @@ import { BarChart, LineChart } from "@/components/charts";
 import { Segmented } from "@/components/segmented";
 import { OptionList, Sheet } from "@/components/sheet";
 import { Card, Muted } from "@/components/ui";
-import { colors, fonts, radius } from "@/lib/theme";
+import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
 
 /**
  * Gráficos de evolución (igual que ProgressView de la web): ejercicio,
@@ -28,6 +28,8 @@ export function ProgressView({
   sessions: ProgressSession[];
   emptyText?: string;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const [key, setKey] = useState<string | null>(null);
   const [period, setPeriod] = useState<Period>(DEFAULT_PERIOD);
   const [picker, setPicker] = useState(false);
@@ -54,11 +56,19 @@ export function ProgressView({
         accessibilityRole="button"
         accessibilityLabel="Elegir ejercicio"
       >
-        <Ionicons name="barbell-outline" size={18} color={colors.mutedForeground} />
+        <Ionicons
+          name="barbell-outline"
+          size={18}
+          color={colors.mutedForeground}
+        />
         <Text style={styles.selectText} numberOfLines={1}>
           {selected.name}
         </Text>
-        <Ionicons name="chevron-down" size={18} color={colors.mutedForeground} />
+        <Ionicons
+          name="chevron-down"
+          size={18}
+          color={colors.mutedForeground}
+        />
       </Pressable>
 
       <Segmented
@@ -83,7 +93,11 @@ export function ProgressView({
       <ChartCard spec={charts.volume} kind="bar" />
       <ChartCard spec={frequency} kind="bar" />
 
-      <Sheet visible={picker} onClose={() => setPicker(false)} title="Ejercicio">
+      <Sheet
+        visible={picker}
+        onClose={() => setPicker(false)}
+        title="Ejercicio"
+      >
         <OptionList
           value={selected.key}
           options={exercises.map((e) => ({ value: e.key, label: e.name }))}
@@ -98,6 +112,7 @@ export function ProgressView({
 }
 
 function ChartCard({ spec, kind }: { spec: ChartSpec; kind: "line" | "bar" }) {
+  const styles = useStyles();
   return (
     <Card style={styles.chartCard}>
       <View>
@@ -117,7 +132,7 @@ function ChartCard({ spec, kind }: { spec: ChartSpec; kind: "line" | "bar" }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   empty: { padding: 24, alignItems: "center", gap: 10 },
   select: {
     flexDirection: "row",
@@ -128,15 +143,40 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.input,
-    backgroundColor: "rgba(43,51,61,0.4)",
+    backgroundColor: colors.field,
   },
-  selectText: { flex: 1, fontFamily: fonts.medium, fontSize: 16, color: colors.foreground },
+  selectText: {
+    flex: 1,
+    fontFamily: fonts.medium,
+    fontSize: 16,
+    color: colors.foreground,
+  },
   records: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   record: { flexGrow: 1, flexBasis: "45%", padding: 12, gap: 2 },
-  recordLabel: { fontFamily: fonts.medium, fontSize: 12, color: colors.mutedForeground },
-  recordValue: { fontFamily: fonts.bold, fontSize: 18, color: colors.foreground },
-  recordDetail: { fontFamily: fonts.regular, fontSize: 12, color: colors.mutedForeground },
+  recordLabel: {
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    color: colors.mutedForeground,
+  },
+  recordValue: {
+    fontFamily: fonts.bold,
+    fontSize: 18,
+    color: colors.foreground,
+  },
+  recordDetail: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    color: colors.mutedForeground,
+  },
   chartCard: { padding: 14, gap: 8 },
-  chartTitle: { fontFamily: fonts.semibold, fontSize: 15, color: colors.foreground },
-  chartSubtitle: { fontFamily: fonts.regular, fontSize: 12, color: colors.mutedForeground },
-});
+  chartTitle: {
+    fontFamily: fonts.semibold,
+    fontSize: 15,
+    color: colors.foreground,
+  },
+  chartSubtitle: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    color: colors.mutedForeground,
+  },
+}));

@@ -6,7 +6,6 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -29,7 +28,7 @@ import { Tile } from "@/components/tile";
 import { Button, Card, Muted, SectionLabel, TextField } from "@/components/ui";
 import { confirm, notify } from "@/lib/confirm";
 import { supabase } from "@/lib/supabase";
-import { colors, fonts, radius } from "@/lib/theme";
+import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
 
 const ROOT_GROUP = "__root__";
@@ -39,7 +38,12 @@ type Overview = {
   folders: FolderLite[];
   /** Plantillas (coach) o rutinas/planes propios (alumno). */
   routines: (Item & { folder_id: string | null })[];
-  clients: { clientId: string; name: string; archived: boolean; items: Item[] }[];
+  clients: {
+    clientId: string;
+    name: string;
+    archived: boolean;
+    items: Item[];
+  }[];
   fromCoaches: (Item & { coachName: string | null })[];
 };
 
@@ -84,7 +88,10 @@ const TEXT = {
   },
 };
 
-async function loadOverview(kind: PlansKind, userId: string): Promise<Overview> {
+async function loadOverview(
+  kind: PlansKind,
+  userId: string,
+): Promise<Overview> {
   if (kind === "nutrition") {
     const o = await getNutritionOverview(supabase, userId);
     return {
@@ -113,7 +120,15 @@ type Group = {
 };
 
 /** Plantillas en carpetas + lo de cada cliente (coach), o lo del alumno. */
-export function PlansBrowser({ kind, header }: { kind: PlansKind; header?: ReactNode }) {
+export function PlansBrowser({
+  kind,
+  header,
+}: {
+  kind: PlansKind;
+  header?: ReactNode;
+}) {
+  const colors = useColors();
+  const styles = useStyles();
   const { session, profile } = useAuth();
   const isCoach = profile?.is_coach ?? false;
   const t = TEXT[kind];
@@ -125,7 +140,10 @@ export function PlansBrowser({ kind, header }: { kind: PlansKind; header?: React
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   // Secciones del coach: plantillas contraídas y clientes expandidos por defecto.
-  const [openSections, setOpenSections] = useState({ templates: false, clients: true });
+  const [openSections, setOpenSections] = useState({
+    templates: false,
+    clients: true,
+  });
 
   const load = useCallback(async () => {
     if (!session) return;
@@ -213,7 +231,7 @@ export function PlansBrowser({ kind, header }: { kind: PlansKind; header?: React
       <View style={styles.screen}>
         {header ? <View style={{ padding: 16 }}>{header}</View> : null}
         <View style={styles.center}>
-          <ActivityIndicator color={colors.primary} />
+          <ActivityIndicator color={colors.primaryText} />
         </View>
       </View>
     );
@@ -221,12 +239,15 @@ export function PlansBrowser({ kind, header }: { kind: PlansKind; header?: React
 
   const { folders, routines, clients, fromCoaches } = data;
   const coachList = fromCoaches.filter(
-    (s) => !q || matches(s.name) || (s.coachName ? matches(s.coachName) : false),
+    (s) =>
+      !q || matches(s.name) || (s.coachName ? matches(s.coachName) : false),
   );
 
   // Coach: rutinas por cliente + plantillas en carpetas. Alumno: lista plana.
   const visible = (groups: Group[]) =>
-    groups.filter((g) => !q || matches(g.name) || g.items.some((r) => matches(r.name)));
+    groups.filter(
+      (g) => !q || matches(g.name) || g.items.some((r) => matches(r.name)),
+    );
 
   const clientGroups = visible(
     clients.map((c) => ({
@@ -274,7 +295,9 @@ export function PlansBrowser({ kind, header }: { kind: PlansKind; header?: React
     ) : (
       groups.map((g) => {
         const nameMatch = !q || matches(g.name);
-        const items = nameMatch ? g.items : g.items.filter((r) => matches(r.name));
+        const items = nameMatch
+          ? g.items
+          : g.items.filter((r) => matches(r.name));
         const isOpen = q ? true : expanded.has(g.id);
         return (
           <View key={g.id} style={styles.group}>
@@ -290,16 +313,26 @@ export function PlansBrowser({ kind, header }: { kind: PlansKind; header?: React
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={styles.folderTitleRow}>
-                    <Text style={[styles.folderName, { flexShrink: 1 }]} numberOfLines={1}>
+                    <Text
+                      style={[styles.folderName, { flexShrink: 1 }]}
+                      numberOfLines={1}
+                    >
                       {g.name}
                     </Text>
                     {g.badge ? (
-                      <Text style={[styles.badge, g.badge.pending && styles.badgePending]}>
+                      <Text
+                        style={[
+                          styles.badge,
+                          g.badge.pending && styles.badgePending,
+                        ]}
+                      >
                         {g.badge.text}
                       </Text>
                     ) : null}
                   </View>
-                  <Text style={styles.folderCount}>{countLabel(g.items.length)}</Text>
+                  <Text style={styles.folderCount}>
+                    {countLabel(g.items.length)}
+                  </Text>
                 </View>
                 <Ionicons
                   name={isOpen ? "chevron-up" : "chevron-down"}
@@ -315,7 +348,11 @@ export function PlansBrowser({ kind, header }: { kind: PlansKind; header?: React
                   accessibilityLabel="Eliminar carpeta"
                   style={styles.folderTrash}
                 >
-                  <Ionicons name="trash-outline" size={18} color={colors.mutedForeground} />
+                  <Ionicons
+                    name="trash-outline"
+                    size={18}
+                    color={colors.mutedForeground}
+                  />
                 </Pressable>
               ) : null}
             </View>
@@ -352,9 +389,19 @@ export function PlansBrowser({ kind, header }: { kind: PlansKind; header?: React
           <Muted style={{ textAlign: "center" }}>{t.empty}</Muted>
           {canCreate ? (
             <Button
-              title={isCoach ? "Crear mi primera plantilla" : (t.firstOwn ?? t.createLabel)}
+              title={
+                isCoach
+                  ? "Crear mi primera plantilla"
+                  : (t.firstOwn ?? t.createLabel)
+              }
               onPress={() => router.push(t.create as Href)}
-              icon={<Ionicons name="add" size={18} color={colors.primaryForeground} />}
+              icon={
+                <Ionicons
+                  name="add"
+                  size={18}
+                  color={colors.primaryForeground}
+                />
+              }
             />
           ) : (
             <Muted style={{ textAlign: "center" }}>{t.mineEmpty}</Muted>
@@ -366,13 +413,23 @@ export function PlansBrowser({ kind, header }: { kind: PlansKind; header?: React
             <Button
               title={t.createLabel}
               onPress={() => router.push(t.create as Href)}
-              icon={<Ionicons name="add" size={18} color={colors.primaryForeground} />}
+              icon={
+                <Ionicons
+                  name="add"
+                  size={18}
+                  color={colors.primaryForeground}
+                />
+              }
             />
           ) : null}
 
           <View style={styles.searchRow}>
             <View style={styles.search}>
-              <Ionicons name="search" size={18} color={colors.mutedForeground} />
+              <Ionicons
+                name="search"
+                size={18}
+                color={colors.mutedForeground}
+              />
               <TextInput
                 value={query}
                 onChangeText={setQuery}
@@ -391,8 +448,17 @@ export function PlansBrowser({ kind, header }: { kind: PlansKind; header?: React
                 accessibilityRole="button"
                 accessibilityLabel="Nueva carpeta"
               >
-                <Ionicons name="folder-open-outline" size={20} color={colors.foreground} />
-                <Ionicons name="add" size={14} color={colors.primary} style={styles.folderPlus} />
+                <Ionicons
+                  name="folder-open-outline"
+                  size={20}
+                  color={colors.foreground}
+                />
+                <Ionicons
+                  name="add"
+                  size={14}
+                  color={colors.primaryText}
+                  style={styles.folderPlus}
+                />
               </Pressable>
             ) : null}
           </View>
@@ -414,7 +480,12 @@ export function PlansBrowser({ kind, header }: { kind: PlansKind; header?: React
             <>
               {(
                 [
-                  ["templates", "Plantillas", templateGroups, "Todavía no tenés plantillas."],
+                  [
+                    "templates",
+                    "Plantillas",
+                    templateGroups,
+                    "Todavía no tenés plantillas.",
+                  ],
                   ["clients", t.clients, clientGroups, t.clientsEmpty],
                 ] as const
               ).map(([key, title, groups, empty]) => {
@@ -424,7 +495,9 @@ export function PlansBrowser({ kind, header }: { kind: PlansKind; header?: React
                 return (
                   <View key={key} style={styles.section}>
                     <Pressable
-                      onPress={() => setOpenSections((o) => ({ ...o, [key]: !o[key] }))}
+                      onPress={() =>
+                        setOpenSections((o) => ({ ...o, [key]: !o[key] }))
+                      }
                       style={styles.sectionToggle}
                       accessibilityRole="button"
                       accessibilityState={{ expanded: isOpen }}
@@ -442,20 +515,28 @@ export function PlansBrowser({ kind, header }: { kind: PlansKind; header?: React
                 );
               })}
             </>
-          ) : ownFlat.length > 0 || kind === "routines" || coachList.length === 0 ? (
+          ) : ownFlat.length > 0 ||
+            kind === "routines" ||
+            coachList.length === 0 ? (
             <View style={styles.section}>
               <SectionLabel>{t.mine}</SectionLabel>
               {ownFlat.length > 0 ? (
                 ownFlat.map((r) => tile(r))
               ) : (
-                <Muted>{q ? "No se encontraron resultados." : t.mineEmpty}</Muted>
+                <Muted>
+                  {q ? "No se encontraron resultados." : t.mineEmpty}
+                </Muted>
               )}
             </View>
           ) : null}
         </>
       )}
 
-      <Sheet visible={folderSheet} onClose={closeFolderSheet} title="Nueva carpeta">
+      <Sheet
+        visible={folderSheet}
+        onClose={closeFolderSheet}
+        title="Nueva carpeta"
+      >
         <TextField
           label="Nombre"
           value={folderName}
@@ -476,7 +557,7 @@ export function PlansBrowser({ kind, header }: { kind: PlansKind; header?: React
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: 16, paddingBottom: 40, gap: 20 },
   center: {
@@ -497,7 +578,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   folderPlus: { position: "absolute", right: 8, top: 8 },
-  folderToggle: { flex: 1, flexDirection: "row", alignItems: "center", gap: 12 },
+  folderToggle: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
   folderTrash: { paddingLeft: 4 },
   search: {
     flex: 1,
@@ -509,7 +595,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.input,
-    backgroundColor: "rgba(43,51,61,0.4)",
+    backgroundColor: colors.field,
   },
   searchInput: {
     flex: 1,
@@ -519,7 +605,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   section: { gap: 10 },
-  sectionToggle: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  sectionToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   group: { gap: 8 },
   groupItems: { gap: 8, paddingLeft: 12 },
   folder: {
@@ -530,7 +620,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: "rgba(244,246,250,0.08)",
+    borderColor: colors.overlay,
   },
   folderIcon: {
     width: 40,
@@ -540,8 +630,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  folderName: { fontFamily: fonts.semibold, fontSize: 16, color: colors.foreground },
-  folderCount: { fontFamily: fonts.regular, fontSize: 13, color: colors.mutedForeground },
+  folderName: {
+    fontFamily: fonts.semibold,
+    fontSize: 16,
+    color: colors.foreground,
+  },
+  folderCount: {
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    color: colors.mutedForeground,
+  },
   folderTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   badge: {
     fontFamily: fonts.semibold,
@@ -554,4 +652,4 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   badgePending: { color: "#f59e0b", backgroundColor: "rgba(245,158,11,0.15)" },
-});
+}));

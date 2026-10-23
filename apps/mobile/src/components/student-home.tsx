@@ -20,7 +20,7 @@ import {
 import type { HomePlan, HomeRoutine } from "@brabus/supabase";
 
 import { Card, Muted } from "@/components/ui";
-import { colors, fonts } from "@/lib/theme";
+import { fonts, makeStyles, useColors } from "@/lib/theme";
 
 /** Inicio del alumno (igual que StudentHome de la web): semana, consistencia, su rutina y su plan. */
 export function StudentHome({
@@ -32,6 +32,8 @@ export function StudentHome({
   routine: HomeRoutine | null;
   plan: HomePlan | null;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const goal = routine && routine.dayCount > 0 ? routine.dayCount : null;
   // La grilla muestra las semanas que entran en el ancho de la tarjeta.
   const [gridWidth, setGridWidth] = useState(0);
@@ -161,7 +163,7 @@ export function StudentHome({
             tuya, va a aparecer acá.
           </Muted>
           <Pressable onPress={() => router.push("/rutinas")} hitSlop={8}>
-            <Text style={{ fontFamily: fonts.semibold, color: colors.primary }}>
+            <Text style={{ fontFamily: fonts.semibold, color: colors.primaryText }}>
               Ir a Entrenamiento
             </Text>
           </Pressable>
@@ -174,6 +176,7 @@ export function StudentHome({
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
+  const styles = useStyles();
   return (
     <Text style={[styles.label, { fontSize: 13 }]}>
       {label} <Text style={styles.statValue}>{value}</Text>
@@ -189,6 +192,8 @@ function ConsistencyGrid({
   weeks: WeekSummary[];
   cell: number;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const months = monthLabels(weeks);
   return (
     <View style={styles.grid}>
@@ -229,13 +234,15 @@ function ConsistencyGrid({
 }
 
 const MACROS = [
-  { key: "protein", label: "Proteínas", kcalPerGram: 4, color: colors.primary },
+  { key: "protein", label: "Proteínas", kcalPerGram: 4, color: "#f97316" },
   { key: "carbs", label: "Carbohidratos", kcalPerGram: 4, color: "#38bdf8" },
   { key: "fat", label: "Grasas", kcalPerGram: 9, color: "#a78bfa" },
 ] as const;
 
 /** "Tu plan": el plan de nutrición vigente, con calorías, macros y comidas. */
 function PlanCard({ plan }: { plan: HomePlan }) {
+  const colors = useColors();
+  const styles = useStyles();
   const macros = plan.macros;
   const total = macros
     ? MACROS.reduce((sum, m) => sum + macros[m.key] * m.kcalPerGram, 0)
@@ -255,7 +262,7 @@ function PlanCard({ plan }: { plan: HomePlan }) {
             <Text style={styles.label}>Armado por {plan.coachName}</Text>
           ) : null}
         </View>
-        <Ionicons name="nutrition-outline" size={20} color={colors.primary} />
+        <Ionicons name="nutrition-outline" size={20} color={colors.primaryText} />
       </View>
 
       {plan.kcal ? (
@@ -318,12 +325,12 @@ function PlanCard({ plan }: { plan: HomePlan }) {
           style={{
             fontFamily: fonts.semibold,
             fontSize: 14,
-            color: colors.primary,
+            color: colors.primaryText,
           }}
         >
           Ver plan
         </Text>
-        <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+        <Ionicons name="arrow-forward" size={16} color={colors.primaryText} />
       </Pressable>
     </Card>
   );
@@ -335,7 +342,7 @@ const LABEL_W = 12;
 /** Alto de la grilla (meses + 7 filas) mientras se mide el ancho. */
 const GRID_H = 13 + 7 * (CELL + CELL_GAP);
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   card: { padding: 14, gap: 10 },
   rowBetween: {
     flexDirection: "row",
@@ -373,7 +380,12 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
   },
   consistency: { gap: 14 },
-  consistencyStats: { flexDirection: "row", flexWrap: "wrap", columnGap: 20, rowGap: 4 },
+  consistencyStats: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    columnGap: 20,
+    rowGap: 4,
+  },
   statValue: {
     fontFamily: fonts.semibold,
     fontSize: 13,
@@ -448,4 +460,4 @@ const styles = StyleSheet.create({
     gap: 6,
     alignSelf: "flex-start",
   },
-});
+}));

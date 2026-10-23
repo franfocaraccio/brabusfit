@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 import {
   dayRange,
@@ -12,17 +12,23 @@ import {
 import type { PlanDetail } from "@brabus/supabase";
 
 import { Card, Muted } from "@/components/ui";
-import { colors, fonts, radius } from "@/lib/theme";
+import { fonts, makeStyles, radius } from "@/lib/theme";
 
 const n = (v: number | null) =>
   v === null ? "" : v.toLocaleString("es-AR", { maximumFractionDigits: 1 });
 
 /** Plan de nutrición en solo lectura (igual que PlanView de la web). */
 export function PlanView({ detail }: { detail: PlanDetail }) {
+  const styles = useStyles();
   const { plan, meals } = detail;
   const day = dayRange(meals);
 
-  const compare: [string, number | null, "kcal" | "protein" | "carbs" | "fat", string][] = [
+  const compare: [
+    string,
+    number | null,
+    "kcal" | "protein" | "carbs" | "fat",
+    string,
+  ][] = [
     ["Calorías", plan.target_kcal, "kcal", "kcal"],
     ["Proteínas", plan.target_protein, "protein", "g"],
     ["Carbohidratos", plan.target_carbs, "carbs", "g"],
@@ -37,7 +43,9 @@ export function PlanView({ detail }: { detail: PlanDetail }) {
           {shown.map(([label, target, key, unit]) => (
             <View key={key} style={styles.cell}>
               <Text style={styles.cellLabel}>{label}</Text>
-              <Text style={styles.cellValue}>{day.hasData ? formatRange(day, key, unit) : "—"}</Text>
+              <Text style={styles.cellValue}>
+                {day.hasData ? formatRange(day, key, unit) : "—"}
+              </Text>
               {target !== null ? (
                 <Text style={styles.cellLabel}>
                   Objetivo {n(target)} {unit}
@@ -63,7 +71,9 @@ export function PlanView({ detail }: { detail: PlanDetail }) {
 
       {meals.length === 0 ? (
         <Card style={styles.block}>
-          <Muted style={{ textAlign: "center" }}>Este plan no tiene comidas.</Muted>
+          <Muted style={{ textAlign: "center" }}>
+            Este plan no tiene comidas.
+          </Muted>
         </Card>
       ) : (
         meals.map((meal) => {
@@ -73,10 +83,14 @@ export function PlanView({ detail }: { detail: PlanDetail }) {
               <View style={styles.mealHeader}>
                 <Text style={styles.mealName}>
                   {meal.name}
-                  {meal.time_label ? <Text style={styles.time}>{`  ${meal.time_label}`}</Text> : null}
+                  {meal.time_label ? (
+                    <Text style={styles.time}>{`  ${meal.time_label}`}</Text>
+                  ) : null}
                 </Text>
                 {range.hasData ? (
-                  <Text style={styles.cellLabel}>{formatRange(range, "kcal", "kcal")}</Text>
+                  <Text style={styles.cellLabel}>
+                    {formatRange(range, "kcal", "kcal")}
+                  </Text>
                 ) : null}
               </View>
 
@@ -96,15 +110,22 @@ export function PlanView({ detail }: { detail: PlanDetail }) {
                           it.fat !== null ? `G ${n(it.fat)}` : null,
                         ].filter(Boolean);
                         return (
-                          <View key={j} style={[styles.row, j > 0 && styles.rowBorder]}>
+                          <View
+                            key={j}
+                            style={[styles.row, j > 0 && styles.rowBorder]}
+                          >
                             <Text style={styles.food}>
                               {it.food}
                               {itemAmount(it) ? (
-                                <Text style={styles.amount}>{`  ${itemAmount(it)}`}</Text>
+                                <Text
+                                  style={styles.amount}
+                                >{`  ${itemAmount(it)}`}</Text>
                               ) : null}
                             </Text>
                             {macros.length > 0 ? (
-                              <Text style={styles.macros}>{macros.join(" · ")}</Text>
+                              <Text style={styles.macros}>
+                                {macros.join(" · ")}
+                              </Text>
                             ) : null}
                           </View>
                         );
@@ -142,23 +163,49 @@ export function PlanView({ detail }: { detail: PlanDetail }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   grid: { padding: 14, flexDirection: "row", flexWrap: "wrap", rowGap: 12 },
   cell: { width: "50%", paddingRight: 8, gap: 2 },
-  cellLabel: { fontFamily: fonts.regular, fontSize: 12, color: colors.mutedForeground },
-  cellValue: { fontFamily: fonts.semibold, fontSize: 15, color: colors.foreground },
+  cellLabel: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    color: colors.mutedForeground,
+  },
+  cellValue: {
+    fontFamily: fonts.semibold,
+    fontSize: 15,
+    color: colors.foreground,
+  },
   block: { padding: 14, gap: 10 },
   text: { fontFamily: fonts.regular, fontSize: 14, color: colors.foreground },
-  mealHeader: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 8 },
-  mealName: { flex: 1, fontFamily: fonts.semibold, fontSize: 16, color: colors.foreground },
-  time: { fontFamily: fonts.semibold, fontSize: 12, color: colors.primary },
-  option: { fontFamily: fonts.semibold, fontSize: 12, color: colors.primary },
+  mealHeader: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  mealName: {
+    flex: 1,
+    fontFamily: fonts.semibold,
+    fontSize: 16,
+    color: colors.foreground,
+  },
+  time: { fontFamily: fonts.semibold, fontSize: 12, color: colors.primaryText },
+  option: { fontFamily: fonts.semibold, fontSize: 12, color: colors.primaryText },
   list: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md },
   row: { paddingHorizontal: 12, paddingVertical: 9, gap: 2 },
   rowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
   food: { fontFamily: fonts.medium, fontSize: 14, color: colors.foreground },
-  amount: { fontFamily: fonts.regular, fontSize: 13, color: colors.mutedForeground },
-  macros: { fontFamily: fonts.regular, fontSize: 12, color: colors.mutedForeground },
+  amount: {
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    color: colors.mutedForeground,
+  },
+  macros: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    color: colors.mutedForeground,
+  },
   total: {
     fontFamily: fonts.regular,
     fontSize: 12,
@@ -167,4 +214,4 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     paddingTop: 8,
   },
-});
+}));

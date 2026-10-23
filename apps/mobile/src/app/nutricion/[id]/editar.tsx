@@ -23,9 +23,10 @@ export default function EditarPlanScreen() {
 
   useEffect(() => {
     if (!session) return;
-    Promise.all([getPlanDetail(supabase, id), getNutritionFolders(supabase, session.user.id)]).then(
-      ([detail, folders]) => setData({ detail, folders }),
-    );
+    Promise.all([
+      getPlanDetail(supabase, id),
+      getNutritionFolders(supabase, session.user.id),
+    ]).then(([detail, folders]) => setData({ detail, folders }));
   }, [id, session]);
 
   if (!data) return <Loading />;
@@ -39,7 +40,9 @@ export default function EditarPlanScreen() {
     <PlanBuilder
       planId={id}
       initial={planToInput(detail)}
-      clientName={detail.plan.client_id ? (detail.client?.name ?? "Cliente") : null}
+      clientName={
+        detail.plan.client_id ? (detail.client?.name ?? "Cliente") : null
+      }
       folders={data.folders}
     />
   );

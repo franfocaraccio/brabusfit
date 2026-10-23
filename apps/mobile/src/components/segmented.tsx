@@ -1,6 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
-import { colors, fonts, radius } from "@/lib/theme";
+import { fonts, makeStyles, radius } from "@/lib/theme";
 
 /** Selector de opciones tipo "pastillas" (período, pestañas). */
 export function Segmented<T extends string>({
@@ -15,6 +15,7 @@ export function Segmented<T extends string>({
   /** Ocupa todo el ancho con opciones del mismo tamaño (muchas opciones en un teléfono). */
   fill?: boolean;
 }) {
+  const styles = useStyles();
   return (
     <View style={[styles.wrap, fill && styles.wrapFill]}>
       {options.map((o) => {
@@ -28,7 +29,11 @@ export function Segmented<T extends string>({
             accessibilityState={{ selected: on }}
           >
             <Text
-              style={[styles.text, fill && styles.textFill, on && styles.textOn]}
+              style={[
+                styles.text,
+                fill && styles.textFill,
+                on && styles.textOn,
+              ]}
               numberOfLines={1}
               adjustsFontSizeToFit={fill}
             >
@@ -41,7 +46,7 @@ export function Segmented<T extends string>({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   wrap: {
     flexDirection: "row",
     alignSelf: "flex-start",
@@ -54,6 +59,10 @@ const styles = StyleSheet.create({
   wrapFill: { alignSelf: "stretch" },
   itemFill: { flex: 1, paddingHorizontal: 4, alignItems: "center" },
   textFill: { fontSize: 13 },
-  text: { fontFamily: fonts.medium, fontSize: 14, color: colors.mutedForeground },
+  text: {
+    fontFamily: fonts.medium,
+    fontSize: 14,
+    color: colors.mutedForeground,
+  },
   textOn: { color: colors.foreground },
-});
+}));

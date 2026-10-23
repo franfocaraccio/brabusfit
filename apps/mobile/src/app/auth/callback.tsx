@@ -1,10 +1,10 @@
 import { Redirect, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 
 import { completeOAuthRedirect } from "@/lib/google-auth";
 import { supabase } from "@/lib/supabase";
-import { colors } from "@/lib/theme";
+import { makeStyles, useColors } from "@/lib/theme";
 
 /**
  * Destino del redirect de Google cuando el sistema abre la app con el link
@@ -12,6 +12,8 @@ import { colors } from "@/lib/theme";
  * y vuelve al inicio; los guards del layout deciden la pantalla.
  */
 export default function AuthCallbackScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const { code } = useLocalSearchParams<{ code?: string }>();
   const [done, setDone] = useState(false);
 
@@ -29,16 +31,16 @@ export default function AuthCallbackScreen() {
 
   return (
     <View style={styles.center}>
-      <ActivityIndicator color={colors.primary} />
+      <ActivityIndicator color={colors.primaryText} />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.background,
   },
-});
+}));

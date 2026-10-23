@@ -1,15 +1,17 @@
 import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 import { Card, Muted } from "@/components/ui";
-import { colors, fonts } from "@/lib/theme";
+import { fonts, makeStyles, useColors } from "@/lib/theme";
 
 /** Reportes (check-in): todavía no está disponible (igual que /reportes en la web). */
 export default function ReportesScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <View style={styles.screen}>
       <Card style={styles.card}>
-        <Ionicons name="clipboard-outline" size={32} color={colors.primary} />
+        <Ionicons name="clipboard-outline" size={32} color={colors.primaryText} />
         <Text style={styles.title}>Próximamente</Text>
         <Muted style={{ textAlign: "center" }}>
           Acá vas a poder cargar tu peso, medidas y fotos, y ver tu evolución.
@@ -19,7 +21,7 @@ export default function ReportesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.background, padding: 16 },
   card: {
     alignItems: "center",
@@ -28,4 +30,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   title: { fontFamily: fonts.semibold, fontSize: 16, color: colors.foreground },
-});
+}));

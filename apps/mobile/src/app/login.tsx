@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -14,9 +13,11 @@ import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import { GoogleButton } from "@/components/google-button";
 import { Button, Card, Logo, Muted, TextField } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
-import { colors, fonts } from "@/lib/theme";
+import { fonts, makeStyles, useColors } from "@/lib/theme";
 
 export default function LoginScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -106,7 +107,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
   glow: { position: "absolute", top: 0, left: 0, right: 0, height: 420 },
   container: {
@@ -125,4 +126,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   link: { color: colors.foreground, fontFamily: fonts.semibold },
-});
+}));

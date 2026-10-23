@@ -15,7 +15,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 
-import { colors, fonts } from "@/lib/theme";
+import { fonts, ThemeProvider, useColors, useTheme } from "@/lib/theme";
 import { AuthProvider, useAuth } from "@/providers/auth";
 import { CoachesProvider } from "@/providers/coaches";
 
@@ -33,16 +33,25 @@ export default function RootLayout() {
   });
 
   return (
-    <AuthProvider>
-      <CoachesProvider>
-        <StatusBar style="light" />
-        <RootNavigator fontsLoaded={fontsLoaded} />
-      </CoachesProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <CoachesProvider>
+          <ThemedStatusBar />
+          <RootNavigator fontsLoaded={fontsLoaded} />
+        </CoachesProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
+/** Hora y batería en blanco sobre el tema oscuro, en negro sobre el claro. */
+function ThemedStatusBar() {
+  const { scheme } = useTheme();
+  return <StatusBar style={scheme === "light" ? "dark" : "light"} />;
+}
+
 function RootNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
+  const colors = useColors();
   const { loading, session, profile } = useAuth();
   const ready = fontsLoaded && !loading;
 
@@ -73,27 +82,61 @@ function RootNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
       </Stack.Protected>
 
       <Stack.Protected guard={signedIn && !onboarded}>
-        <Stack.Screen name="completar-perfil" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="completar-perfil"
+          options={{ headerShown: false }}
+        />
       </Stack.Protected>
 
       <Stack.Protected guard={signedIn && onboarded}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="rutina/crear" options={{ title: "Crear rutina" }} />
         <Stack.Screen name="rutina/[id]/index" options={{ title: "" }} />
-        <Stack.Screen name="rutina/[id]/editar" options={{ title: "Editar rutina" }} />
-        <Stack.Screen name="rutina/[id]/asignar" options={{ title: "Asignar a cliente" }} />
+        <Stack.Screen
+          name="rutina/[id]/editar"
+          options={{ title: "Editar rutina" }}
+        />
+        <Stack.Screen
+          name="rutina/[id]/asignar"
+          options={{ title: "Asignar a cliente" }}
+        />
         <Stack.Screen name="rutina/[id]/dia/[dayId]" options={{ title: "" }} />
-        <Stack.Screen name="rutina/[id]/historial" options={{ title: "Historial" }} />
+        <Stack.Screen
+          name="rutina/[id]/historial"
+          options={{ title: "Historial" }}
+        />
         <Stack.Screen name="sesion/[id]" options={{ title: "Sesión" }} />
-        <Stack.Screen name="nutricion/crear" options={{ title: "Crear plan" }} />
+        <Stack.Screen
+          name="nutricion/crear"
+          options={{ title: "Crear plan" }}
+        />
         <Stack.Screen name="nutricion/[id]/index" options={{ title: "" }} />
-        <Stack.Screen name="nutricion/[id]/editar" options={{ title: "Editar plan" }} />
-        <Stack.Screen name="nutricion/[id]/asignar" options={{ title: "Asignar a cliente" }} />
+        <Stack.Screen
+          name="nutricion/[id]/editar"
+          options={{ title: "Editar plan" }}
+        />
+        <Stack.Screen
+          name="nutricion/[id]/asignar"
+          options={{ title: "Asignar a cliente" }}
+        />
         <Stack.Screen name="ajustes/perfil" options={{ title: "Mi perfil" }} />
-        <Stack.Screen name="ajustes/coaches" options={{ title: "Mis coaches" }} />
-        <Stack.Screen name="cliente/nuevo" options={{ title: "Nuevo cliente" }} />
+        <Stack.Screen
+          name="ajustes/coaches"
+          options={{ title: "Mis coaches" }}
+        />
+        <Stack.Screen
+          name="ajustes/apariencia"
+          options={{ title: "Apariencia" }}
+        />
+        <Stack.Screen
+          name="cliente/nuevo"
+          options={{ title: "Nuevo cliente" }}
+        />
         <Stack.Screen name="cliente/[id]/index" options={{ title: "" }} />
-        <Stack.Screen name="cliente/[id]/editar" options={{ title: "Editar ficha" }} />
+        <Stack.Screen
+          name="cliente/[id]/editar"
+          options={{ title: "Editar ficha" }}
+        />
       </Stack.Protected>
 
       {/* Vuelta del login con Google (si el sistema abre la app con el link). */}

@@ -7,7 +7,7 @@ import { clientGrowth, shortMonth, trainedThisWeek } from "@brabus/shared";
 import type { CoachHome as CoachHomeData } from "@brabus/supabase";
 
 import { Card } from "@/components/ui";
-import { colors, fonts } from "@/lib/theme";
+import { fonts, makeStyles, useColors } from "@/lib/theme";
 
 const PREVIEW = 4;
 const CHART_H = 96;
@@ -45,6 +45,8 @@ function ClientRow({
   onPress: () => void;
   right?: ReactNode;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <Pressable
       onPress={onPress}
@@ -78,11 +80,13 @@ function PendingCard({
   empty: string;
   clients: { id: string; name: string }[];
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <Card style={styles.card}>
       <View style={styles.rowBetween}>
         <Text style={styles.label}>{title}</Text>
-        <Ionicons name={icon} size={16} color={colors.primary} />
+        <Ionicons name={icon} size={16} color={colors.primaryText} />
       </View>
       {clients.length === 0 ? (
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -122,6 +126,7 @@ function PendingCard({
 }
 
 function WeekCard({ data }: { data: CoachHomeData }) {
+  const styles = useStyles();
   const withApp = data.clients.filter(
     (c) => c.archivedAt === null && c.studentId,
   );
@@ -185,6 +190,8 @@ function WeekCard({ data }: { data: CoachHomeData }) {
 }
 
 function GrowthCard({ data }: { data: CoachHomeData }) {
+  const colors = useColors();
+  const styles = useStyles();
   const months = clientGrowth(data.clients);
   const current = months[months.length - 1];
   const delta = current.count - months[0].count;
@@ -242,7 +249,7 @@ function GrowthCard({ data }: { data: CoachHomeData }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   card: { padding: 14, gap: 10 },
   rowBetween: {
     flexDirection: "row",
@@ -277,7 +284,7 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
-  link: { fontFamily: fonts.semibold, fontSize: 14, color: colors.primary },
+  link: { fontFamily: fonts.semibold, fontSize: 14, color: colors.primaryText },
   pill: {
     fontFamily: fonts.regular,
     fontSize: 12,
@@ -287,7 +294,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     overflow: "hidden",
   },
-  pillOn: { color: colors.primary, backgroundColor: "rgba(249,115,22,0.15)" },
+  pillOn: { color: colors.primaryText, backgroundColor: "rgba(249,115,22,0.15)" },
   progress: {
     height: 8,
     borderRadius: 4,
@@ -318,4 +325,4 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.mutedForeground,
   },
-});
+}));

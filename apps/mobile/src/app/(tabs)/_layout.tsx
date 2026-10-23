@@ -7,7 +7,7 @@ import { respondInvitation, type MyCoach } from "@brabus/supabase";
 
 import { notify } from "@/lib/confirm";
 import { supabase } from "@/lib/supabase";
-import { colors, fonts } from "@/lib/theme";
+import { fonts, useColors } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
 import { useCoaches } from "@/providers/coaches";
 
@@ -23,6 +23,7 @@ const shownThisLaunch = new Set<string>();
 
 /** Navegación principal (mismas secciones que el menú de la web). */
 export default function TabsLayout() {
+  const colors = useColors();
   const { profile } = useAuth();
   const { pending, refresh } = useCoaches();
   const isCoach = profile?.is_coach ?? false;
@@ -46,7 +47,7 @@ export default function TabsLayout() {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
         },
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor: colors.primaryText,
         tabBarInactiveTintColor: colors.mutedForeground,
         tabBarLabelStyle: { fontFamily: fonts.medium, fontSize: 12 },
         sceneStyle: { backgroundColor: colors.background },

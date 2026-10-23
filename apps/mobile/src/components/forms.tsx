@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, Text, View, type TextInputProps } from "react-native";
+import { Pressable, Text, View, type TextInputProps } from "react-native";
 
 import {
   displayDateError,
@@ -12,7 +12,7 @@ import { isUsernameAvailable } from "@brabus/supabase";
 
 import { TextField } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
-import { colors, fonts, radius } from "@/lib/theme";
+import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
 
 /** Número con coma o punto (mismo criterio que DecimalInput de la web). */
 export function DecimalField({
@@ -75,7 +75,9 @@ export function UsernameField({
   onValidChange: (valid: boolean) => void;
   initial?: string | null;
 }) {
-  const [status, setStatus] = useState<UsernameStatus>(initial ? "available" : "idle");
+  const [status, setStatus] = useState<UsernameStatus>(
+    initial ? "available" : "idle",
+  );
 
   useEffect(() => {
     if (!value || usernameError(value)) return;
@@ -143,8 +145,14 @@ export function FieldHint({
   children: React.ReactNode;
   tone?: "muted" | "error" | "success";
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const color =
-    tone === "error" ? colors.destructive : tone === "success" ? colors.success : colors.mutedForeground;
+    tone === "error"
+      ? colors.destructive
+      : tone === "success"
+        ? colors.success
+        : colors.mutedForeground;
   return <Text style={[styles.hint, { color }]}>{children}</Text>;
 }
 
@@ -160,6 +168,8 @@ export function CheckRow({
   title: string;
   description?: string;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <Pressable
       accessibilityRole="checkbox"
@@ -168,7 +178,13 @@ export function CheckRow({
       style={styles.checkRow}
     >
       <View style={[styles.checkbox, checked && styles.checkboxOn]}>
-        {checked ? <Ionicons name="checkmark" size={16} color={colors.primaryForeground} /> : null}
+        {checked ? (
+          <Ionicons
+            name="checkmark"
+            size={16}
+            color={colors.primaryForeground}
+          />
+        ) : null}
       </View>
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={styles.checkTitle}>{title}</Text>
@@ -179,11 +195,13 @@ export function CheckRow({
 }
 
 export function ErrorText({ children }: { children: React.ReactNode }) {
+  const styles = useStyles();
   return <Text style={styles.error}>{children}</Text>;
 }
 
 /** Dos campos lado a lado. */
 export function Row({ children }: { children: React.ReactNode }) {
+  const styles = useStyles();
   return <View style={styles.row}>{children}</View>;
 }
 
@@ -191,8 +209,12 @@ export function Col({ children }: { children: React.ReactNode }) {
   return <View style={{ flex: 1 }}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
-  hint: { fontFamily: fonts.regular, fontSize: 13, color: colors.mutedForeground },
+const useStyles = makeStyles((colors) => ({
+  hint: {
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    color: colors.mutedForeground,
+  },
   error: { color: colors.destructive, fontFamily: fonts.regular, fontSize: 14 },
   row: { flexDirection: "row", gap: 12 },
   checkRow: {
@@ -203,7 +225,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: "rgba(32,38,47,0.4)",
+    backgroundColor: colors.subtle,
   },
   checkbox: {
     width: 22,
@@ -216,5 +238,9 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   checkboxOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  checkTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.foreground },
-});
+  checkTitle: {
+    fontFamily: fonts.medium,
+    fontSize: 15,
+    color: colors.foreground,
+  },
+}));

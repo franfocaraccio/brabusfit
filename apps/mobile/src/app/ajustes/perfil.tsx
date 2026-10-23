@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -26,11 +25,12 @@ import {
 } from "@/components/forms";
 import { Button, Card, Muted, SectionLabel, TextField } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
-import { colors, fonts } from "@/lib/theme";
+import { fonts, makeStyles } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
 
 /** Ajustes → Mi perfil: datos personales editables + cuenta (email y rol fijos). */
 export default function PerfilScreen() {
+  const styles = useStyles();
   const { session, profile, refreshProfile } = useAuth();
 
   const [firstName, setFirstName] = useState(profile?.first_name ?? "");
@@ -188,6 +188,7 @@ function InfoRow({
   value: string;
   last?: boolean;
 }) {
+  const styles = useStyles();
   return (
     <View style={[styles.infoRow, !last && styles.infoRowBorder]}>
       <Text style={styles.infoLabel}>{label}</Text>
@@ -198,7 +199,7 @@ function InfoRow({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: 16, paddingBottom: 40, gap: 16 },
   card: { padding: 16, gap: 14 },
@@ -221,4 +222,4 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     flexShrink: 1,
   },
-});
+}));

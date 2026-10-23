@@ -7,7 +7,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -27,7 +26,7 @@ import { ErrorText } from "@/components/forms";
 import { OptionList, Sheet } from "@/components/sheet";
 import { Button, Card, TextField } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
-import { colors, fonts, radius } from "@/lib/theme";
+import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
 
 type ExerciseDraft = {
   key: string;
@@ -93,6 +92,8 @@ export function RoutineBuilder({
   /** Alumno elegido de entrada (viene de su pantalla). */
   initialClientId?: string;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const isEdit = Boolean(initial);
 
@@ -539,6 +540,8 @@ function IconButton({
   onPress: () => void;
   disabled?: boolean;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <Pressable
       onPress={onPress}
@@ -557,7 +560,7 @@ function IconButton({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   exerciseActions: {
     justifyContent: "space-between",
     alignItems: "center",
@@ -580,7 +583,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.input,
-    backgroundColor: "rgba(43,51,61,0.4)",
+    backgroundColor: colors.field,
   },
   selectText: {
     flex: 1,
@@ -598,7 +601,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: "rgba(32,38,47,0.3)",
+    backgroundColor: colors.subtle,
   },
   iconButton: {
     width: 44,
@@ -614,4 +617,4 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     backgroundColor: colors.background,
   },
-});
+}));

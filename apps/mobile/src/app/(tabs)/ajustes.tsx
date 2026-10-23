@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Card } from "@/components/ui";
 import { confirm } from "@/lib/confirm";
-import { colors, fonts } from "@/lib/theme";
+import { fonts, makeStyles, useColors } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
 import { useCoaches } from "@/providers/coaches";
 
@@ -13,6 +13,8 @@ type IconName = ComponentProps<typeof Ionicons>["name"];
 
 /** Ajustes (igual que /ajustes en la web): perfil, coaches, apariencia y salir. */
 export default function AjustesScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const { session, profile, signOut } = useAuth();
   const { pending } = useCoaches();
   const isCoach = profile?.is_coach ?? false;
@@ -70,7 +72,11 @@ export default function AjustesScreen() {
             badge={pending.length}
           />
         ) : null}
-        <SettingsRow icon="color-palette-outline" label="Apariencia" soon />
+        <SettingsRow
+          icon="color-palette-outline"
+          label="Apariencia"
+          href="/ajustes/apariencia"
+        />
       </Card>
 
       <Card style={styles.list}>
@@ -107,6 +113,8 @@ function SettingsRow({
   /** Todavía no disponible: se muestra apagada. */
   soon?: boolean;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <Pressable
       onPress={href ? () => router.push(href) : undefined}
@@ -146,7 +154,7 @@ function SettingsRow({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: 16, paddingBottom: 40, gap: 16 },
   account: { flexDirection: "row", alignItems: "center", gap: 14, padding: 16 },
@@ -161,7 +169,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontFamily: fonts.semibold,
     fontSize: 16,
-    color: colors.primary,
+    color: colors.primaryText,
   },
   name: { fontFamily: fonts.semibold, fontSize: 16, color: colors.foreground },
   sub: {
@@ -169,7 +177,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.mutedForeground,
   },
-  list: { paddingVertical: 0, paddingHorizontal: 0, overflow: "hidden" },
+  list: { paddingVertical: 0, paddingHorizontal: 0 },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -211,4 +219,4 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     overflow: "hidden",
   },
-});
+}));

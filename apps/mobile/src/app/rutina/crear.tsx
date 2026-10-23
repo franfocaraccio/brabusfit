@@ -34,7 +34,11 @@ export default function CrearRutinaScreen() {
       getCatalog(supabase, session.user.id),
       isCoach ? getClients(supabase, session.user.id) : Promise.resolve([]),
     ]).then(([folders, catalog, clients]) =>
-      setData({ folders, catalog, clients: clients.filter((c) => !c.archived) }),
+      setData({
+        folders,
+        catalog,
+        clients: clients.filter((c) => !c.archived),
+      }),
     );
   }, [session, profile, isCoach]);
 

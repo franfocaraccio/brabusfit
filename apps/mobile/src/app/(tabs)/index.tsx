@@ -5,7 +5,6 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -23,12 +22,14 @@ import { CoachHome } from "@/components/coach-home";
 import { StudentHome } from "@/components/student-home";
 import { Muted } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
-import { colors, fonts } from "@/lib/theme";
+import { fonts, makeStyles, useColors } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
 import { useCoaches } from "@/providers/coaches";
 
 /** Inicio (igual que /dashboard en la web): métricas del alumno o panel del coach. */
 export default function InicioScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const { session, profile } = useAuth();
   const { pending } = useCoaches();
   const isCoach = profile?.is_coach ?? false;
@@ -77,7 +78,7 @@ export default function InicioScreen() {
           style={styles.banner}
           accessibilityRole="button"
         >
-          <Ionicons name="mail-open-outline" size={20} color={colors.primary} />
+          <Ionicons name="mail-open-outline" size={20} color={colors.primaryText} />
           <Text style={styles.bannerText}>
             {pending.length === 1
               ? "Tenés 1 invitación pendiente de un coach"
@@ -106,7 +107,7 @@ export default function InicioScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: 16, paddingBottom: 40, gap: 20 },
   greeting: {
@@ -130,4 +131,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.foreground,
   },
-});
+}));

@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -25,9 +24,10 @@ import {
 import { GoogleButton } from "@/components/google-button";
 import { Button, Card, Logo, Muted, TextField } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
-import { colors, fonts } from "@/lib/theme";
+import { fonts, makeStyles } from "@/lib/theme";
 
 export default function SignupScreen() {
+  const styles = useStyles();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [birthDate, setBirthDate] = useState("");
@@ -95,14 +95,26 @@ export default function SignupScreen() {
 
             <Row>
               <Col>
-                <TextField label="Nombre" value={firstName} onChangeText={setFirstName} />
+                <TextField
+                  label="Nombre"
+                  value={firstName}
+                  onChangeText={setFirstName}
+                />
               </Col>
               <Col>
-                <TextField label="Apellido" value={lastName} onChangeText={setLastName} />
+                <TextField
+                  label="Apellido"
+                  value={lastName}
+                  onChangeText={setLastName}
+                />
               </Col>
             </Row>
 
-            <DateField label="Fecha de nacimiento" value={birthDate} onChangeText={setBirthDate} />
+            <DateField
+              label="Fecha de nacimiento"
+              value={birthDate}
+              onChangeText={setBirthDate}
+            />
 
             <Row>
               <Col>
@@ -179,7 +191,7 @@ export default function SignupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
   container: { flexGrow: 1, padding: 20, gap: 20 },
   header: { alignItems: "center", gap: 6 },
@@ -190,5 +202,5 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: 14,
   },
-  link: { color: colors.primary, fontFamily: fonts.semibold },
-});
+  link: { color: colors.primaryText, fontFamily: fonts.semibold },
+}));

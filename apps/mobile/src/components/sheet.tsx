@@ -6,13 +6,12 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { colors, fonts, radius } from "@/lib/theme";
+import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
 
 /** Panel inferior modal (equivalente a los Dialog de la web). */
 export function Sheet({
@@ -28,22 +27,41 @@ export function Sheet({
   description?: string;
   children: ReactNode;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Cerrar" />
-        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <Pressable
+          style={styles.backdrop}
+          onPress={onClose}
+          accessibilityLabel="Cerrar"
+        />
+        <View
+          style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) }]}
+        >
           <View style={styles.handle} />
           <View style={styles.header}>
             <View style={{ flex: 1, gap: 4 }}>
               <Text style={styles.title}>{title}</Text>
-              {description ? <Text style={styles.description}>{description}</Text> : null}
+              {description ? (
+                <Text style={styles.description}>{description}</Text>
+              ) : null}
             </View>
-            <Pressable onPress={onClose} hitSlop={12} accessibilityLabel="Cerrar">
+            <Pressable
+              onPress={onClose}
+              hitSlop={12}
+              accessibilityLabel="Cerrar"
+            >
               <Ionicons name="close" size={24} color={colors.mutedForeground} />
             </Pressable>
           </View>
@@ -70,6 +88,8 @@ export function OptionList<T extends string>({
   value: T | null;
   onSelect: (v: T) => void;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <View style={styles.options}>
       {options.map((o, i) => {
@@ -83,12 +103,18 @@ export function OptionList<T extends string>({
             style={[styles.option, i > 0 && styles.optionBorder]}
           >
             {o.icon ? (
-              <Ionicons name={o.icon} size={18} color={colors.mutedForeground} />
+              <Ionicons
+                name={o.icon}
+                size={18}
+                color={colors.mutedForeground}
+              />
             ) : null}
             <Text style={styles.optionText} numberOfLines={1}>
               {o.label}
             </Text>
-            {selected ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : null}
+            {selected ? (
+              <Ionicons name="checkmark" size={20} color={colors.primaryText} />
+            ) : null}
           </Pressable>
         );
       })}
@@ -96,7 +122,7 @@ export function OptionList<T extends string>({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)" },
   sheet: {
     backgroundColor: colors.card,
@@ -118,7 +144,11 @@ const styles = StyleSheet.create({
   },
   header: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   title: { fontFamily: fonts.heading, fontSize: 24, color: colors.foreground },
-  description: { fontFamily: fonts.regular, fontSize: 14, color: colors.mutedForeground },
+  description: {
+    fontFamily: fonts.regular,
+    fontSize: 14,
+    color: colors.mutedForeground,
+  },
   options: {
     borderRadius: radius.md,
     borderWidth: 1,
@@ -133,5 +163,10 @@ const styles = StyleSheet.create({
     minHeight: 50,
   },
   optionBorder: { borderTopWidth: 1, borderTopColor: colors.border },
-  optionText: { flex: 1, fontFamily: fonts.medium, fontSize: 16, color: colors.foreground },
-});
+  optionText: {
+    flex: 1,
+    fontFamily: fonts.medium,
+    fontSize: 16,
+    color: colors.foreground,
+  },
+}));

@@ -1,10 +1,17 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import Svg, { Circle, G, Line, Polyline, Rect, Text as SvgText } from "react-native-svg";
+import { Pressable, Text, View } from "react-native";
+import Svg, {
+  Circle,
+  G,
+  Line,
+  Polyline,
+  Rect,
+  Text as SvgText,
+} from "react-native-svg";
 
 import { formatAxis, niceScale, type ChartData } from "@brabus/shared";
 
-import { colors, fonts } from "@/lib/theme";
+import { fonts, makeStyles, useColors } from "@/lib/theme";
 
 const HEIGHT = 180;
 const PAD = { top: 12, right: 10, bottom: 24, left: 38 };
@@ -33,24 +40,36 @@ function ChartFrame({
     selected: number;
   }) => React.ReactNode;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const [width, setWidth] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
-  const sel = selected !== null && selected < points.length ? selected : points.length - 1;
+  const sel =
+    selected !== null && selected < points.length
+      ? selected
+      : points.length - 1;
 
   const values = points.map((p) => p.value);
-  const scale = niceScale(Math.min(...values), Math.max(...values), 4, { zeroBased });
+  const scale = niceScale(Math.min(...values), Math.max(...values), 4, {
+    zeroBased,
+  });
   const innerW = Math.max(width - PAD.left - PAD.right, 1);
   const innerH = HEIGHT - PAD.top - PAD.bottom;
   const slot = innerW / Math.max(points.length, 1);
   const x = (i: number) => PAD.left + slot * i + slot / 2;
   const y = (v: number) =>
-    PAD.top + innerH - ((v - scale.min) / (scale.max - scale.min || 1)) * innerH;
+    PAD.top +
+    innerH -
+    ((v - scale.min) / (scale.max - scale.min || 1)) * innerH;
   const shown = labelIndexes(points.length);
 
   return (
     <View style={{ gap: 6 }}>
       <Text style={styles.detail}>{points[sel]?.detail ?? " "}</Text>
-      <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)} style={{ height: HEIGHT }}>
+      <View
+        onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+        style={{ height: HEIGHT }}
+      >
         {width > 0 && (
           <Svg width={width} height={HEIGHT}>
             {scale.ticks.map((t) => (
@@ -95,7 +114,12 @@ function ChartFrame({
         )}
         {/* Zonas táctiles por punto (encima del gráfico) */}
         {width > 0 && (
-          <View style={[styles.touchRow, { left: PAD.left, top: PAD.top, height: innerH }]}>
+          <View
+            style={[
+              styles.touchRow,
+              { left: PAD.left, top: PAD.top, height: innerH },
+            ]}
+          >
             {points.map((_, i) => (
               <Pressable
                 key={i}
@@ -112,6 +136,7 @@ function ChartFrame({
 }
 
 export function LineChart({ points }: { points: ChartData[] }) {
+  const colors = useColors();
   return (
     <ChartFrame
       points={points}
@@ -146,6 +171,7 @@ export function LineChart({ points }: { points: ChartData[] }) {
 }
 
 export function BarChart({ points }: { points: ChartData[] }) {
+  const colors = useColors();
   return (
     <ChartFrame
       points={points}
@@ -169,7 +195,12 @@ export function BarChart({ points }: { points: ChartData[] }) {
   );
 }
 
-const styles = StyleSheet.create({
-  detail: { fontFamily: fonts.semibold, fontSize: 13, color: colors.foreground, minHeight: 17 },
+const useStyles = makeStyles((colors) => ({
+  detail: {
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+    color: colors.foreground,
+    minHeight: 17,
+  },
   touchRow: { position: "absolute", flexDirection: "row" },
-});
+}));

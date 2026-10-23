@@ -14,7 +14,6 @@ import {
   ActivityIndicator,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -46,7 +45,7 @@ import { Button, Muted, TextField } from "@/components/ui";
 import { confirm, notify } from "@/lib/confirm";
 import { authStorage } from "@/lib/storage";
 import { supabase } from "@/lib/supabase";
-import { colors, fonts, radius } from "@/lib/theme";
+import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
 
 type SetRow = { key: string; weight: string; reps: string };
@@ -84,6 +83,8 @@ export default function TrainDayRoute() {
 }
 
 function TrainDayScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const { id: routineId, dayId } = useLocalSearchParams<{
     id: string;
     dayId: string;
@@ -105,7 +106,7 @@ function TrainDayScreen() {
   if (data === undefined) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={colors.primaryText} />
       </View>
     );
   }
@@ -145,6 +146,8 @@ function Trainer({
   dayName: string;
   exercises: TrainingExercise[];
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const [saving, startSaving] = useTransition();
   const [completed, setCompleted] = useState<Record<string, boolean>>({});
   const [openId, setOpenId] = useState<string | null>(null);
@@ -560,6 +563,7 @@ function Trainer({
 }
 
 function HistoryRow({ entry }: { entry: HistoryEntry }) {
+  const styles = useStyles();
   return (
     <View style={styles.historyRow}>
       <Text style={styles.historyDate}>{formatShortDate(entry.date)}</Text>
@@ -568,7 +572,7 @@ function HistoryRow({ entry }: { entry: HistoryEntry }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.background },
   center: {
     flex: 1,
@@ -582,7 +586,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(244,246,250,0.08)",
+    borderColor: colors.overlay,
     overflow: "hidden",
   },
   exerciseHeader: { flexDirection: "row", alignItems: "center" },
@@ -620,7 +624,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontFamily: fonts.regular,
     fontSize: 13,
-    color: "rgba(244,246,250,0.7)",
+    color: colors.mutedForeground,
   },
   exerciseBody: {
     borderTopWidth: 1,
@@ -637,7 +641,7 @@ const styles = StyleSheet.create({
   historyRow: {
     flexDirection: "row",
     gap: 10,
-    backgroundColor: "rgba(32,38,47,0.6)",
+    backgroundColor: colors.subtle,
     borderRadius: radius.sm,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -653,7 +657,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.foreground,
   },
-  seeMore: { fontFamily: fonts.semibold, fontSize: 13, color: colors.primary },
+  seeMore: { fontFamily: fonts.semibold, fontSize: 13, color: colors.primaryText },
   setRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   setLabel: {
     width: 54,
@@ -677,7 +681,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.input,
-    backgroundColor: "rgba(43,51,61,0.4)",
+    backgroundColor: colors.field,
     paddingHorizontal: 14,
     paddingTop: 9,
     paddingBottom: 9,
@@ -694,4 +698,4 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     backgroundColor: colors.background,
   },
-});
+}));

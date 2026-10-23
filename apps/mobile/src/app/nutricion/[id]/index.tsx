@@ -6,7 +6,7 @@ import {
   useLocalSearchParams,
 } from "expo-router";
 import { useCallback, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 
 import { STUDENTS_CAN_EDIT_PLANS } from "@brabus/shared";
 import {
@@ -25,11 +25,13 @@ import { Button, Muted, Title } from "@/components/ui";
 import { confirm, notify } from "@/lib/confirm";
 import { sharePlanPdf, sharePlanXlsx } from "@/lib/export";
 import { supabase } from "@/lib/supabase";
-import { colors, fonts } from "@/lib/theme";
+import { fonts, makeStyles, useColors } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
 
 /** Plan de nutrición (igual que /nutricion/[id] en la web). */
 export default function PlanScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session, profile } = useAuth();
   const [detail, setDetail] = useState<PlanDetail | null | undefined>(
@@ -249,7 +251,7 @@ export default function PlanScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: 16, paddingBottom: 40, gap: 16 },
   metaRow: {
@@ -261,7 +263,7 @@ const styles = StyleSheet.create({
   current: {
     fontFamily: fonts.semibold,
     fontSize: 11,
-    color: colors.primary,
+    color: colors.primaryText,
     backgroundColor: "rgba(249,115,22,0.15)",
     paddingHorizontal: 6,
     paddingVertical: 1,
@@ -270,4 +272,4 @@ const styles = StyleSheet.create({
   },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   action: { minHeight: 40, paddingHorizontal: 14, flexGrow: 1 },
-});
+}));

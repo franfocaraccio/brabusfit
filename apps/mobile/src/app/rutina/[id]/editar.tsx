@@ -19,7 +19,11 @@ export default function EditarRutinaScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session, profile } = useAuth();
   const [data, setData] = useState<
-    | { routine: EditableRoutine | null; folders: FolderLite[]; catalog: CatalogEntry[] }
+    | {
+        routine: EditableRoutine | null;
+        folders: FolderLite[];
+        catalog: CatalogEntry[];
+      }
     | undefined
   >(undefined);
 
@@ -29,7 +33,9 @@ export default function EditarRutinaScreen() {
       getRoutineForEdit(supabase, id, session.user.id),
       getFolders(supabase, session.user.id),
       getCatalog(supabase, session.user.id),
-    ]).then(([routine, folders, catalog]) => setData({ routine, folders, catalog }));
+    ]).then(([routine, folders, catalog]) =>
+      setData({ routine, folders, catalog }),
+    );
   }, [id, session]);
 
   if (!data) return <Loading />;

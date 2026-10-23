@@ -31,7 +31,8 @@ export function CoachesProvider({ children }: { children: ReactNode }) {
   const isCoach = profile?.is_coach ?? false;
 
   const fetchCoaches = useCallback(
-    () => (userId && !isCoach ? getMyCoaches(supabase, userId) : Promise.resolve([])),
+    () =>
+      userId && !isCoach ? getMyCoaches(supabase, userId) : Promise.resolve([]),
     [userId, isCoach],
   );
 
@@ -54,14 +55,21 @@ export function CoachesProvider({ children }: { children: ReactNode }) {
   }, [fetchCoaches]);
 
   const value = useMemo<CoachesState>(
-    () => ({ coaches, pending: coaches.filter((c) => c.status === "pending"), refresh }),
+    () => ({
+      coaches,
+      pending: coaches.filter((c) => c.status === "pending"),
+      refresh,
+    }),
     [coaches, refresh],
   );
-  return <CoachesContext.Provider value={value}>{children}</CoachesContext.Provider>;
+  return (
+    <CoachesContext.Provider value={value}>{children}</CoachesContext.Provider>
+  );
 }
 
 export function useCoaches(): CoachesState {
   const ctx = useContext(CoachesContext);
-  if (!ctx) throw new Error("useCoaches debe usarse dentro de <CoachesProvider>");
+  if (!ctx)
+    throw new Error("useCoaches debe usarse dentro de <CoachesProvider>");
   return ctx;
 }

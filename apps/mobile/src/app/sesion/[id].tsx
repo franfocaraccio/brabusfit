@@ -7,7 +7,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -35,11 +34,17 @@ import { Loading, NotFound } from "@/components/loading";
 import { Button, Card, Muted, TextField, Title } from "@/components/ui";
 import { confirm, notify } from "@/lib/confirm";
 import { supabase } from "@/lib/supabase";
-import { colors, fonts, radius } from "@/lib/theme";
+import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
 
 type Row = { key: string; weight: string; reps: string };
-type LogState = { id: string; exerciseName: string; setsReps: string; note: string; rows: Row[] };
+type LogState = {
+  id: string;
+  exerciseName: string;
+  setsReps: string;
+  note: string;
+  rows: Row[];
+};
 
 let keySeq = 0;
 const newKey = () => `s${++keySeq}`;
@@ -50,21 +55,30 @@ function initialState(s: SessionDetail): LogState[] {
     exerciseName: l.exerciseName,
     setsReps: l.setsReps,
     note: l.note ?? "",
-    rows: (l.sets.length ? setsToRows(l.sets) : [{ weight: "", reps: "" }]).map((r) => ({
-      key: newKey(),
-      ...r,
-    })),
+    rows: (l.sets.length ? setsToRows(l.sets) : [{ weight: "", reps: "" }]).map(
+      (r) => ({
+        key: newKey(),
+        ...r,
+      }),
+    ),
   }));
 }
 
 const toPayload = (logs: LogState[]): SessionLogUpdate[] =>
-  logs.map((l) => ({ log_id: l.id, note: l.note.trim() || null, sets: parseSetRows(l.rows) }));
+  logs.map((l) => ({
+    log_id: l.id,
+    note: l.note.trim() || null,
+    sets: parseSetRows(l.rows),
+  }));
 
 /** Sesión pasada: editable para quien entrenó, solo lectura para el coach. */
 export default function SesionScreen() {
+  const styles = useStyles();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session: auth } = useAuth();
-  const [detail, setDetail] = useState<SessionDetail | null | undefined>(undefined);
+  const [detail, setDetail] = useState<SessionDetail | null | undefined>(
+    undefined,
+  );
 
   useEffect(() => {
     getSessionDetail(supabase, id).then(setDetail);
@@ -89,7 +103,9 @@ export default function SesionScreen() {
         {detail.logs.map((l) => (
           <Card key={l.id} style={styles.card}>
             <Text style={styles.exName}>{l.exerciseName}</Text>
-            <Muted>{summarizeHistory({ sets: l.sets, note: l.note }) || "Sin series"}</Muted>
+            <Muted>
+              {summarizeHistory({ sets: l.sets, note: l.note }) || "Sin series"}
+            </Muted>
           </Card>
         ))}
       </ScrollView>
@@ -99,7 +115,15 @@ export default function SesionScreen() {
   return <SessionEditor session={detail} header={header} />;
 }
 
-function SessionEditor({ session, header }: { session: SessionDetail; header: React.ReactNode }) {
+function SessionEditor({
+  session,
+  header,
+}: {
+  session: SessionDetail;
+  header: React.ReactNode;
+}) {
+  const colors = useColors();
+  const styles = useStyles();
   const [logs, setLogs] = useState<LogState[]>(() => initialState(session));
   const [savedPayload, setSavedPayload] = useState(() =>
     JSON.stringify(toPayload(initialState(session))),
@@ -130,7 +154,9 @@ function SessionEditor({ session, header }: { session: SessionDetail; header: Re
     const result = await updateSession(supabase, session.id, payload);
     setSaving(false);
     if (!result.ok) return setError(result.error);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+      () => {},
+    );
     setSavedPayload(JSON.stringify(payload));
     setSaved(true);
   };
@@ -138,7 +164,8 @@ function SessionEditor({ session, header }: { session: SessionDetail; header: Re
   const onDelete = () =>
     confirm({
       title: "Eliminar sesión",
-      message: "Se eliminará este entrenamiento con todas sus series. Esta acción no se puede deshacer.",
+      message:
+        "Se eliminará este entrenamiento con todas sus series. Esta acción no se puede deshacer.",
       confirmText: "Eliminar",
       destructive: true,
       onConfirm: async () => {
@@ -155,13 +182,18 @@ function SessionEditor({ session, header }: { session: SessionDetail; header: Re
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={90}
       >
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
           {header}
           {logs.map((l) => (
             <Card key={l.id} style={styles.card}>
               <View>
                 <Text style={styles.exName}>{l.exerciseName}</Text>
-                {l.setsReps ? <Text style={styles.exSets}>{l.setsReps}</Text> : null}
+                {l.setsReps ? (
+                  <Text style={styles.exSets}>{l.setsReps}</Text>
+                ) : null}
               </View>
 
               {l.rows.map((row, i) => (
@@ -170,7 +202,9 @@ function SessionEditor({ session, header }: { session: SessionDetail; header: Re
                   <View style={{ flex: 1 }}>
                     <TextField
                       value={row.weight}
-                      onChangeText={(v) => setRow(l.id, row.key, { weight: sanitizeDecimal(v) })}
+                      onChangeText={(v) =>
+                        setRow(l.id, row.key, { weight: sanitizeDecimal(v) })
+                      }
                       placeholder="Peso"
                       keyboardType="decimal-pad"
                       suffix={row.weight.trim() !== "" ? "Kg" : undefined}
@@ -180,7 +214,11 @@ function SessionEditor({ session, header }: { session: SessionDetail; header: Re
                   <View style={{ flex: 1 }}>
                     <TextField
                       value={row.reps}
-                      onChangeText={(v) => setRow(l.id, row.key, { reps: v.replace(/[^0-9]/g, "") })}
+                      onChangeText={(v) =>
+                        setRow(l.id, row.key, {
+                          reps: v.replace(/[^0-9]/g, ""),
+                        })
+                      }
                       placeholder="Reps"
                       keyboardType="number-pad"
                       style={styles.compactInput}
@@ -188,14 +226,21 @@ function SessionEditor({ session, header }: { session: SessionDetail; header: Re
                   </View>
                   <Pressable
                     onPress={() =>
-                      updateLog(l.id, (x) => ({ ...x, rows: x.rows.filter((r) => r.key !== row.key) }))
+                      updateLog(l.id, (x) => ({
+                        ...x,
+                        rows: x.rows.filter((r) => r.key !== row.key),
+                      }))
                     }
                     disabled={l.rows.length === 1}
                     hitSlop={8}
                     accessibilityLabel="Quitar serie"
                     style={{ opacity: l.rows.length === 1 ? 0.3 : 1 }}
                   >
-                    <Ionicons name="trash-outline" size={20} color={colors.foreground} />
+                    <Ionicons
+                      name="trash-outline"
+                      size={20}
+                      color={colors.foreground}
+                    />
                   </Pressable>
                 </View>
               ))}
@@ -209,7 +254,9 @@ function SessionEditor({ session, header }: { session: SessionDetail; header: Re
                     rows: [...x.rows, { key: newKey(), weight: "", reps: "" }],
                   }))
                 }
-                icon={<Ionicons name="add" size={18} color={colors.foreground} />}
+                icon={
+                  <Ionicons name="add" size={18} color={colors.foreground} />
+                }
                 style={{ minHeight: 40 }}
               />
 
@@ -217,7 +264,9 @@ function SessionEditor({ session, header }: { session: SessionDetail; header: Re
                 <Text style={styles.noteLabel}>Detalle (opcional)</Text>
                 <TextInput
                   value={l.note}
-                  onChangeText={(v) => updateLog(l.id, (x) => ({ ...x, note: v }))}
+                  onChangeText={(v) =>
+                    updateLog(l.id, (x) => ({ ...x, note: v }))
+                  }
                   maxLength={NOTE_MAX_LENGTH}
                   placeholder="Ej: hecho en Smith"
                   placeholderTextColor={colors.mutedForeground}
@@ -228,18 +277,28 @@ function SessionEditor({ session, header }: { session: SessionDetail; header: Re
               </View>
             </Card>
           ))}
-          {logs.length === 0 ? <Muted>Esta sesión no tiene ejercicios.</Muted> : null}
+          {logs.length === 0 ? (
+            <Muted>Esta sesión no tiene ejercicios.</Muted>
+          ) : null}
         </ScrollView>
 
         <View style={styles.footer}>
           {error ? <FieldHint tone="error">{error}</FieldHint> : null}
-          {saved && !dirty ? <FieldHint tone="success">Sesión actualizada</FieldHint> : null}
+          {saved && !dirty ? (
+            <FieldHint tone="success">Sesión actualizada</FieldHint>
+          ) : null}
           <View style={{ flexDirection: "row", gap: 10 }}>
             <Button
               title="Eliminar"
               variant="destructive"
               onPress={onDelete}
-              icon={<Ionicons name="trash-outline" size={18} color={colors.destructive} />}
+              icon={
+                <Ionicons
+                  name="trash-outline"
+                  size={18}
+                  color={colors.destructive}
+                />
+              }
               style={{ minHeight: 44 }}
             />
             <Button
@@ -256,22 +315,39 @@ function SessionEditor({ session, header }: { session: SessionDetail; header: Re
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: 16, paddingBottom: 32, gap: 14 },
   card: { padding: 14, gap: 10 },
-  exName: { fontFamily: fonts.semibold, fontSize: 16, color: colors.foreground },
-  exSets: { fontFamily: fonts.regular, fontSize: 13, color: colors.mutedForeground },
+  exName: {
+    fontFamily: fonts.semibold,
+    fontSize: 16,
+    color: colors.foreground,
+  },
+  exSets: {
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    color: colors.mutedForeground,
+  },
   setRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  setLabel: { width: 54, fontFamily: fonts.regular, fontSize: 13, color: colors.mutedForeground },
+  setLabel: {
+    width: 54,
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    color: colors.mutedForeground,
+  },
   compactInput: { minHeight: 40, paddingVertical: 6, fontSize: 15 },
-  noteLabel: { fontFamily: fonts.medium, fontSize: 13, color: colors.mutedForeground },
+  noteLabel: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.mutedForeground,
+  },
   note: {
     minHeight: 38,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.input,
-    backgroundColor: "rgba(43,51,61,0.4)",
+    backgroundColor: colors.field,
     paddingHorizontal: 14,
     paddingTop: 9,
     paddingBottom: 9,
@@ -289,4 +365,4 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     backgroundColor: colors.background,
   },
-});
+}));

@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { ComponentProps, ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
-import { colors, fonts, radius } from "@/lib/theme";
+import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 
@@ -24,16 +24,23 @@ export function Tile({
   right?: ReactNode;
   onPress?: () => void;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [
         styles.tile,
-        pressed && { borderColor: "rgba(249,115,22,0.5)", transform: [{ scale: 0.99 }] },
+        pressed && {
+          borderColor: "rgba(249,115,22,0.5)",
+          transform: [{ scale: 0.99 }],
+        },
       ]}
     >
-      <View style={[styles.chip, accent ? styles.chipAccent : styles.chipMuted]}>
+      <View
+        style={[styles.chip, accent ? styles.chipAccent : styles.chipMuted]}
+      >
         {chip !== undefined ? (
           <Text
             style={[
@@ -62,12 +69,16 @@ export function Tile({
         ) : null}
       </View>
       {right}
-      <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+      <Ionicons
+        name="chevron-forward"
+        size={20}
+        color={colors.mutedForeground}
+      />
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   tile: {
     flexDirection: "row",
     alignItems: "center",
@@ -76,7 +87,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: "rgba(244,246,250,0.08)",
+    borderColor: colors.overlay,
   },
   chip: {
     width: 44,
@@ -90,5 +101,9 @@ const styles = StyleSheet.create({
   chipText: { fontFamily: fonts.bold, fontSize: 16 },
   texts: { flex: 1, gap: 2 },
   title: { fontFamily: fonts.semibold, fontSize: 16, color: colors.foreground },
-  subtitle: { fontFamily: fonts.regular, fontSize: 13, color: colors.mutedForeground },
-});
+  subtitle: {
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    color: colors.mutedForeground,
+  },
+}));

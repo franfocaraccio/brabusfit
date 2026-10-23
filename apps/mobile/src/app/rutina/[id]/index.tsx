@@ -25,10 +25,12 @@ import { Button, Card, Muted, SectionLabel, Title } from "@/components/ui";
 import { confirm, notify } from "@/lib/confirm";
 import { shareRoutinePdf, shareRoutineXlsx } from "@/lib/export";
 import { supabase } from "@/lib/supabase";
-import { colors, fonts } from "@/lib/theme";
+import { fonts, makeStyles, useColors } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
 
 export default function RutinaScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session, profile } = useAuth();
   const [detail, setDetail] = useState<RoutineDetail | null | undefined>(
@@ -300,7 +302,7 @@ export default function RutinaScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: 16, paddingBottom: 40, gap: 20 },
   section: { gap: 10 },
@@ -320,7 +322,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     fontFamily: fonts.semibold,
     fontSize: 13,
-    color: colors.primary,
+    color: colors.primaryText,
     backgroundColor: "rgba(249,115,22,0.15)",
   },
   dayName: {
@@ -358,7 +360,7 @@ const styles = StyleSheet.create({
   },
   current: {
     alignSelf: "flex-start",
-    color: colors.primary,
+    color: colors.primaryText,
     backgroundColor: "rgba(249,115,22,0.15)",
   },
   badge: {
@@ -371,4 +373,4 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     overflow: "hidden",
   },
-});
+}));

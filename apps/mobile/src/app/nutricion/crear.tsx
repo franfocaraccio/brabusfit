@@ -18,9 +18,10 @@ export default function CrearPlanScreen() {
   const { cliente } = useLocalSearchParams<{ cliente?: string }>();
   const { session, profile } = useAuth();
   const isCoach = profile?.is_coach ?? false;
-  const [data, setData] = useState<{ folders: FolderLite[]; clients: ClientSummary[] } | null>(
-    null,
-  );
+  const [data, setData] = useState<{
+    folders: FolderLite[];
+    clients: ClientSummary[];
+  } | null>(null);
 
   useEffect(() => {
     // Espera al perfil: el builder toma clientes y rol solo al montarse.
@@ -34,5 +35,11 @@ export default function CrearPlanScreen() {
   }, [session, profile, isCoach]);
 
   if (!data) return <Loading />;
-  return <PlanBuilder folders={data.folders} clients={data.clients} initialClientId={cliente} />;
+  return (
+    <PlanBuilder
+      folders={data.folders}
+      clients={data.clients}
+      initialClientId={cliente}
+    />
+  );
 }

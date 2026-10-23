@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 
 import {
   findCatalogByName,
@@ -16,7 +16,7 @@ import { ErrorText } from "@/components/forms";
 import { Sheet } from "@/components/sheet";
 import { Button, Muted, TextField } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
-import { colors, fonts, radius } from "@/lib/theme";
+import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
 
 /** Máximo de resultados que se dibujan (el resto aparece al buscar). */
 const MAX_RESULTS = 60;
@@ -36,6 +36,8 @@ export function ExercisePicker({
   onChange: (entry: CatalogEntry) => void;
   onCreated: (entry: CatalogEntry) => void;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [group, setGroup] = useState<MuscleGroup | null>(null);
@@ -77,14 +79,25 @@ export function ExercisePicker({
 
   return (
     <>
-      <Pressable onPress={openPicker} style={styles.trigger} accessibilityRole="button">
+      <Pressable
+        onPress={openPicker}
+        style={styles.trigger}
+        accessibilityRole="button"
+      >
         <Text
-          style={[styles.triggerText, !value && { color: colors.mutedForeground }]}
+          style={[
+            styles.triggerText,
+            !value && { color: colors.mutedForeground },
+          ]}
           numberOfLines={1}
         >
           {value ? value.name : "Elegí un ejercicio"}
         </Text>
-        <Ionicons name="chevron-down" size={18} color={colors.mutedForeground} />
+        <Ionicons
+          name="chevron-down"
+          size={18}
+          color={colors.mutedForeground}
+        />
       </Pressable>
 
       <Sheet
@@ -101,7 +114,11 @@ export function ExercisePicker({
             <GroupChips value={newGroup} onChange={setNewGroup} />
             {error ? <ErrorText>{error}</ErrorText> : null}
             <View style={{ flexDirection: "row", gap: 10 }}>
-              <Button title="Volver" variant="ghost" onPress={() => setCreating(false)} />
+              <Button
+                title="Volver"
+                variant="ghost"
+                onPress={() => setCreating(false)}
+              />
               <Button
                 title="Crear y elegir"
                 onPress={create}
@@ -128,14 +145,18 @@ export function ExercisePicker({
                   onPress={() => pick(e)}
                   style={({ pressed }) => [
                     styles.option,
-                    (pressed || value?.id === e.id) && { backgroundColor: colors.muted },
+                    (pressed || value?.id === e.id) && {
+                      backgroundColor: colors.muted,
+                    },
                   ]}
                 >
                   <Text style={styles.optionText} numberOfLines={1}>
                     {e.name}
                   </Text>
                   {e.owner_id ? <Text style={styles.own}>Propio</Text> : null}
-                  <Text style={styles.optionGroup}>{muscleGroupLabel(e.muscle_group)}</Text>
+                  <Text style={styles.optionGroup}>
+                    {muscleGroupLabel(e.muscle_group)}
+                  </Text>
                 </Pressable>
               ))}
               {results.length === 0 ? (
@@ -154,7 +175,9 @@ export function ExercisePicker({
                   setNewGroup(group);
                   setError(null);
                 }}
-                icon={<Ionicons name="add" size={18} color={colors.foreground} />}
+                icon={
+                  <Ionicons name="add" size={18} color={colors.foreground} />
+                }
               />
             ) : null}
           </View>
@@ -173,12 +196,17 @@ function GroupChips({
   onChange: (g: MuscleGroup | null) => void;
   allowAll?: boolean;
 }) {
+  const styles = useStyles();
   const options: { value: MuscleGroup | null; label: string }[] = [
     ...(allowAll ? [{ value: null, label: "Todos" }] : []),
     ...MUSCLE_GROUPS.filter((g) => allowAll || g.value !== "otros"),
   ];
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ gap: 6 }}
+    >
       {options.map((o) => {
         const on = o.value === value;
         return (
@@ -189,7 +217,9 @@ function GroupChips({
             accessibilityRole="button"
             accessibilityState={{ selected: on }}
           >
-            <Text style={[styles.chipText, on && styles.chipTextOn]}>{o.label}</Text>
+            <Text style={[styles.chipText, on && styles.chipTextOn]}>
+              {o.label}
+            </Text>
           </Pressable>
         );
       })}
@@ -197,7 +227,7 @@ function GroupChips({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   trigger: {
     flexDirection: "row",
     alignItems: "center",
@@ -207,9 +237,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.input,
-    backgroundColor: "rgba(43,51,61,0.4)",
+    backgroundColor: colors.field,
   },
-  triggerText: { flex: 1, fontFamily: fonts.regular, fontSize: 16, color: colors.foreground },
+  triggerText: {
+    flex: 1,
+    fontFamily: fonts.regular,
+    fontSize: 16,
+    color: colors.foreground,
+  },
   option: {
     flexDirection: "row",
     alignItems: "center",
@@ -218,12 +253,21 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     borderRadius: radius.sm,
   },
-  optionText: { flex: 1, fontFamily: fonts.medium, fontSize: 15, color: colors.foreground },
-  optionGroup: { fontFamily: fonts.regular, fontSize: 12, color: colors.mutedForeground },
+  optionText: {
+    flex: 1,
+    fontFamily: fonts.medium,
+    fontSize: 15,
+    color: colors.foreground,
+  },
+  optionGroup: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    color: colors.mutedForeground,
+  },
   own: {
     fontFamily: fonts.semibold,
     fontSize: 10,
-    color: colors.primary,
+    color: colors.primaryText,
     backgroundColor: "rgba(249,115,22,0.15)",
     paddingHorizontal: 6,
     paddingVertical: 1,
@@ -238,6 +282,10 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   chipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { fontFamily: fonts.medium, fontSize: 13, color: colors.mutedForeground },
+  chipText: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.mutedForeground,
+  },
   chipTextOn: { color: colors.primaryForeground },
-});
+}));

@@ -7,7 +7,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -29,12 +28,19 @@ import {
 } from "@brabus/shared";
 import { checkInviteClient, inviteClient, saveClient } from "@brabus/supabase";
 
-import { Col, DateField, DecimalField, ErrorText, FieldHint, Row } from "@/components/forms";
+import {
+  Col,
+  DateField,
+  DecimalField,
+  ErrorText,
+  FieldHint,
+  Row,
+} from "@/components/forms";
 import { Segmented } from "@/components/segmented";
 import { OptionList, Sheet } from "@/components/sheet";
 import { Button, Card, TextField } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
-import { colors, fonts, radius } from "@/lib/theme";
+import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
 
 // ---------------------------------------------------------------------------
 // Etiqueta del acceso a la app
@@ -42,6 +48,7 @@ import { colors, fonts, radius } from "@/lib/theme";
 
 /** Vinculado / Invitación pendiente / Usuario no registrado. */
 export function AccessBadge({ status }: { status: ClientStatus }) {
+  const styles = useStyles();
   return (
     <Text
       style={[
@@ -71,6 +78,8 @@ export function ClientForm({
   initial?: ClientInput;
   emailLocked?: boolean;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const [data, setData] = useState<ClientInput>(initial ?? EMPTY_CLIENT);
   const [birth, setBirth] = useState(formatDisplayDate(initial?.birth_date));
@@ -98,7 +107,9 @@ export function ClientForm({
     });
     setSaving(false);
     if (!result.ok) return setError(result.error);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+      () => {},
+    );
     if (clientId) router.back();
     else router.replace(`/cliente/${result.data.id}`);
   };
@@ -109,11 +120,24 @@ export function ClientForm({
     return (
       <View style={{ gap: 6 }}>
         <Text style={styles.label}>{pickers[key].title}</Text>
-        <Pressable onPress={() => setPicker(key)} style={styles.select} accessibilityRole="button">
-          <Text style={[styles.selectText, !label && { color: colors.mutedForeground }]}>
+        <Pressable
+          onPress={() => setPicker(key)}
+          style={styles.select}
+          accessibilityRole="button"
+        >
+          <Text
+            style={[
+              styles.selectText,
+              !label && { color: colors.mutedForeground },
+            ]}
+          >
             {label ?? "Sin dato"}
           </Text>
-          <Ionicons name="chevron-down" size={18} color={colors.mutedForeground} />
+          <Ionicons
+            name="chevron-down"
+            size={18}
+            color={colors.mutedForeground}
+          />
         </Pressable>
       </View>
     );
@@ -163,9 +187,15 @@ export function ClientForm({
             autoCorrect={false}
             editable={!emailLocked}
           />
-          {emailLocked ? <FieldHint>Es el de su cuenta en la app.</FieldHint> : null}
+          {emailLocked ? (
+            <FieldHint>Es el de su cuenta en la app.</FieldHint>
+          ) : null}
         </View>
-        <DateField label="Fecha de nacimiento" value={birth} onChangeText={setBirth} />
+        <DateField
+          label="Fecha de nacimiento"
+          value={birth}
+          onChangeText={setBirth}
+        />
         {select("sex")}
         <Row>
           <Col>
@@ -207,7 +237,9 @@ export function ClientForm({
         </View>
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <View
+        style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}
+      >
         {error ? <ErrorText>{error}</ErrorText> : null}
         <Button
           title={clientId ? "Guardar cambios" : "Crear cliente"}
@@ -227,7 +259,10 @@ export function ClientForm({
             value={data[picker] || "__none__"}
             options={[
               { value: "__none__", label: "Sin dato" },
-              ...pickers[picker].options.map((o) => ({ value: o.value as string, label: o.label })),
+              ...pickers[picker].options.map((o) => ({
+                value: o.value as string,
+                label: o.label,
+              })),
             ]}
             onSelect={(v) => {
               setData((d) => ({ ...d, [picker]: v === "__none__" ? "" : v }));
@@ -246,12 +281,20 @@ export function ClientForm({
 
 type Mode = "email" | "username";
 
-const FEEDBACK: Partial<Record<InviteStatus, { text: string; tone: "error" | "success" | "muted" }>> = {
+const FEEDBACK: Partial<
+  Record<InviteStatus, { text: string; tone: "error" | "success" | "muted" }>
+> = {
   self: { text: "No podés invitarte a vos mismo.", tone: "error" },
   coach: { text: "No podés invitar a un coach como cliente.", tone: "error" },
   not_found: { text: "No existe un usuario con ese nombre.", tone: "error" },
-  already: { text: "Otro de tus clientes ya usa esa cuenta o email.", tone: "error" },
-  existing: { text: "Usuario encontrado: le va a llegar la invitación.", tone: "success" },
+  already: {
+    text: "Otro de tus clientes ya usa esa cuenta o email.",
+    tone: "error",
+  },
+  existing: {
+    text: "Usuario encontrado: le va a llegar la invitación.",
+    tone: "success",
+  },
   new: {
     text: "Todavía no tiene cuenta: va a ver la invitación cuando se registre con ese email.",
     tone: "muted",
@@ -316,7 +359,8 @@ export function InviteClientSheet({
     setChecking(v.trim() !== "" && looksValid(v, mode));
   };
 
-  const canInvite = !saving && !checking && (status === "existing" || status === "new");
+  const canInvite =
+    !saving && !checking && (status === "existing" || status === "new");
 
   const submit = async () => {
     if (!canInvite) return;
@@ -324,7 +368,9 @@ export function InviteClientSheet({
     const result = await inviteClient(supabase, clientId, mode, value.trim());
     setSaving(false);
     if (!result.ok) return setError(result.error);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+      () => {},
+    );
     onInvited();
     onClose();
   };
@@ -334,7 +380,8 @@ export function InviteClientSheet({
     ? { text: "Verificando…", tone: "muted" as const }
     : v && !looksValid(v, mode)
       ? {
-          text: mode === "username" ? (usernameError(v) ?? "") : "Email inválido.",
+          text:
+            mode === "username" ? (usernameError(v) ?? "") : "Email inválido.",
           tone: "error" as const,
         }
       : status
@@ -367,20 +414,37 @@ export function InviteClientSheet({
           keyboardType={mode === "email" ? "email-address" : "default"}
           onSubmitEditing={submit}
         />
-        {feedback ? <FieldHint tone={feedback.tone}>{feedback.text}</FieldHint> : null}
+        {feedback ? (
+          <FieldHint tone={feedback.tone}>{feedback.text}</FieldHint>
+        ) : null}
       </View>
       {error ? <ErrorText>{error}</ErrorText> : null}
-      <Button title="Invitar" onPress={submit} disabled={!canInvite} loading={saving} />
+      <Button
+        title="Invitar"
+        onPress={submit}
+        disabled={!canInvite}
+        loading={saving}
+      />
     </Sheet>
   );
 }
 
 /** Dato de la ficha (etiqueta + valor) en una grilla. */
-export function Fact({ label, value }: { label: string; value: string | null }) {
+export function Fact({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | null;
+}) {
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <View style={styles.fact}>
       <Text style={styles.factLabel}>{label}</Text>
-      <Text style={[styles.factValue, !value && { color: colors.mutedForeground }]}>
+      <Text
+        style={[styles.factValue, !value && { color: colors.mutedForeground }]}
+      >
         {value ?? "—"}
       </Text>
     </View>
@@ -388,10 +452,11 @@ export function Fact({ label, value }: { label: string; value: string | null }) 
 }
 
 export function FactCard({ children }: { children: React.ReactNode }) {
+  const styles = useStyles();
   return <Card style={styles.factCard}>{children}</Card>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: 16, paddingBottom: 32, gap: 14 },
   footer: {
@@ -412,9 +477,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.input,
-    backgroundColor: "rgba(43,51,61,0.4)",
+    backgroundColor: colors.field,
   },
-  selectText: { flex: 1, fontFamily: fonts.regular, fontSize: 16, color: colors.foreground },
+  selectText: {
+    flex: 1,
+    fontFamily: fonts.regular,
+    fontSize: 16,
+    color: colors.foreground,
+  },
   multiline: { minHeight: 80, textAlignVertical: "top", paddingTop: 12 },
   badge: {
     fontFamily: fonts.semibold,
@@ -428,9 +498,20 @@ const styles = StyleSheet.create({
   },
   badgeActive: { color: "#10b981", backgroundColor: "rgba(16,185,129,0.15)" },
   badgePending: { color: "#f59e0b", backgroundColor: "rgba(245,158,11,0.15)" },
-  badgeUnregistered: { color: "#38bdf8", backgroundColor: "rgba(14,165,233,0.15)" },
+  badgeUnregistered: {
+    color: "#38bdf8",
+    backgroundColor: "rgba(14,165,233,0.15)",
+  },
   factCard: { padding: 14, flexDirection: "row", flexWrap: "wrap", rowGap: 12 },
   fact: { width: "50%", paddingRight: 8, gap: 2 },
-  factLabel: { fontFamily: fonts.regular, fontSize: 12, color: colors.mutedForeground },
-  factValue: { fontFamily: fonts.medium, fontSize: 14, color: colors.foreground },
-});
+  factLabel: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    color: colors.mutedForeground,
+  },
+  factValue: {
+    fontFamily: fonts.medium,
+    fontSize: 14,
+    color: colors.foreground,
+  },
+}));

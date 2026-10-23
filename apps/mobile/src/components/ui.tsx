@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -12,17 +11,27 @@ import {
   type ViewStyle,
 } from "react-native";
 
-import { colors, fonts, radius } from "@/lib/theme";
+import {
+  cardElevation,
+  fonts,
+  makeStyles,
+  radius,
+  useColors,
+  useTheme,
+  type Palette,
+} from "@/lib/theme";
 
 // ---------------------------------------------------------------------------
 // Logo
 // ---------------------------------------------------------------------------
 
 export function Logo({ size = 28 }: { size?: number }) {
+  const colors = useColors();
+  const styles = useStyles();
   // Unbounded es ancha: se achica para ocupar lo mismo que el logo anterior.
   return (
     <Text style={[styles.logo, { fontSize: Math.round(size * 0.72) }]}>
-      BRABUS <Text style={{ color: colors.primary }}>FIT</Text>
+      BRABUS <Text style={{ color: colors.primaryText }}>FIT</Text>
     </Text>
   );
 }
@@ -31,7 +40,8 @@ export function Logo({ size = 28 }: { size?: number }) {
 // Button
 // ---------------------------------------------------------------------------
 
-type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "destructive";
+type ButtonVariant =
+  "primary" | "secondary" | "outline" | "ghost" | "destructive";
 
 export function Button({
   title,
@@ -50,8 +60,10 @@ export function Button({
   icon?: ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
+  const styles = useStyles();
+  const colors = useColors();
   const isDisabled = disabled || loading;
-  const v = buttonVariants[variant];
+  const v = buttonVariants(colors)[variant];
   return (
     <Pressable
       accessibilityRole="button"
@@ -62,7 +74,8 @@ export function Button({
         styles.button,
         v.container,
         isDisabled && styles.buttonDisabled,
-        pressed && !isDisabled && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+        pressed &&
+          !isDisabled && { opacity: 0.85, transform: [{ scale: 0.98 }] },
         style,
       ]}
     >
@@ -78,10 +91,12 @@ export function Button({
   );
 }
 
-const buttonVariants: Record<
+const buttonVariants = (
+  colors: Palette,
+): Record<
   ButtonVariant,
   { container: ViewStyle; text: { color: string } }
-> = {
+> => ({
   primary: {
     container: {
       backgroundColor: colors.primary,
@@ -113,7 +128,7 @@ const buttonVariants: Record<
     container: { backgroundColor: "rgba(239,68,68,0.15)" },
     text: { color: colors.destructive },
   },
-};
+});
 
 // ---------------------------------------------------------------------------
 // Card
@@ -126,7 +141,20 @@ export function Card({
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
-  return <View style={[styles.card, style]}>{children}</View>;
+  const styles = useStyles();
+  const { scheme, colors } = useTheme();
+  // Oscuro: borde fino. Claro: sombra suave.
+  return (
+    <View
+      style={[
+        styles.card,
+        scheme === "light" && cardElevation(scheme, colors),
+        style,
+      ]}
+    >
+      {children}
+    </View>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -139,6 +167,8 @@ export function TextField({
   style,
   ...props
 }: TextInputProps & { label?: string; suffix?: string }) {
+  const colors = useColors();
+  const styles = useStyles();
   return (
     <View style={styles.field}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
@@ -160,6 +190,7 @@ export function TextField({
 // ---------------------------------------------------------------------------
 
 export function Title({ children }: { children: ReactNode }) {
+  const styles = useStyles();
   return <Text style={styles.title}>{children}</Text>;
 }
 
@@ -170,14 +201,16 @@ export function Muted({
   children: ReactNode;
   style?: StyleProp<TextStyle>;
 }) {
+  const styles = useStyles();
   return <Text style={[styles.muted, style]}>{children}</Text>;
 }
 
 export function SectionLabel({ children }: { children: ReactNode }) {
+  const styles = useStyles();
   return <Text style={styles.sectionLabel}>{children}</Text>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   logo: {
     fontFamily: fonts.logo,
     color: colors.foreground,
@@ -202,7 +235,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(244,246,250,0.08)",
+    borderColor: colors.overlay,
   },
   field: { gap: 6 },
   label: { fontFamily: fonts.medium, fontSize: 14, color: colors.foreground },
@@ -212,7 +245,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.input,
-    backgroundColor: "rgba(43,51,61,0.4)",
+    backgroundColor: colors.field,
     paddingHorizontal: 14,
     color: colors.foreground,
     fontFamily: fonts.regular,
@@ -243,4 +276,4 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.6,
   },
-});
+}));

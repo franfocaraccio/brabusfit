@@ -1,8 +1,12 @@
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { displayDateError, formatDisplayDate, parseDisplayDate } from "@brabus/shared";
+import {
+  displayDateError,
+  formatDisplayDate,
+  parseDisplayDate,
+} from "@brabus/shared";
 import { completeProfile } from "@brabus/supabase";
 
 import {
@@ -16,7 +20,7 @@ import {
 } from "@/components/forms";
 import { Button, Card, Logo, Muted, TextField, Title } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
-import { colors } from "@/lib/theme";
+import { makeStyles } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
 
 /**
@@ -24,15 +28,24 @@ import { useAuth } from "@/providers/auth";
  * físicos (igual que /completar-perfil en la web).
  */
 export default function CompletarPerfilScreen() {
+  const styles = useStyles();
   const { profile, signOut, refreshProfile } = useAuth();
 
   const [firstName, setFirstName] = useState(profile?.first_name ?? "");
   const [lastName, setLastName] = useState(profile?.last_name ?? "");
   const [username, setUsername] = useState(profile?.username ?? "");
-  const [usernameValid, setUsernameValid] = useState(Boolean(profile?.username));
-  const [birthDate, setBirthDate] = useState(formatDisplayDate(profile?.birth_date));
-  const [heightCm, setHeightCm] = useState(profile?.height_cm?.toString().replace(".", ",") ?? "");
-  const [weightKg, setWeightKg] = useState(profile?.weight_kg?.toString().replace(".", ",") ?? "");
+  const [usernameValid, setUsernameValid] = useState(
+    Boolean(profile?.username),
+  );
+  const [birthDate, setBirthDate] = useState(
+    formatDisplayDate(profile?.birth_date),
+  );
+  const [heightCm, setHeightCm] = useState(
+    profile?.height_cm?.toString().replace(".", ",") ?? "",
+  );
+  const [weightKg, setWeightKg] = useState(
+    profile?.weight_kg?.toString().replace(".", ",") ?? "",
+  );
   const [isCoach, setIsCoach] = useState(profile?.is_coach ?? false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +84,10 @@ export default function CompletarPerfilScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.header}>
             <Logo size={32} />
           </View>
@@ -81,10 +97,18 @@ export default function CompletarPerfilScreen() {
 
             <Row>
               <Col>
-                <TextField label="Nombre" value={firstName} onChangeText={setFirstName} />
+                <TextField
+                  label="Nombre"
+                  value={firstName}
+                  onChangeText={setFirstName}
+                />
               </Col>
               <Col>
-                <TextField label="Apellido" value={lastName} onChangeText={setLastName} />
+                <TextField
+                  label="Apellido"
+                  value={lastName}
+                  onChangeText={setLastName}
+                />
               </Col>
             </Row>
 
@@ -95,7 +119,11 @@ export default function CompletarPerfilScreen() {
               initial={profile?.username}
             />
 
-            <DateField label="Fecha de nacimiento" value={birthDate} onChangeText={setBirthDate} />
+            <DateField
+              label="Fecha de nacimiento"
+              value={birthDate}
+              onChangeText={setBirthDate}
+            />
 
             <Row>
               <Col>
@@ -139,9 +167,9 @@ export default function CompletarPerfilScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   safe: { flex: 1, backgroundColor: colors.background },
   container: { flexGrow: 1, justifyContent: "center", padding: 20, gap: 20 },
   header: { alignItems: "center" },
   card: { padding: 18, gap: 14 },
-});
+}));
