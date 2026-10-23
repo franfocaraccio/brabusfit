@@ -428,7 +428,7 @@ export function DayTrainer({
                             <button
                               type="button"
                               onClick={() => setHistoryDialog(ex)}
-                              className="text-primary text-xs font-medium hover:underline"
+                              className="text-primary-text text-xs font-medium hover:underline"
                             >
                               Ver más
                             </button>

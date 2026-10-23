@@ -368,7 +368,7 @@ export function PlanBuilder({
                     >
                       {meal.options.length > 1 && (
                         <div className="flex items-center justify-between">
-                          <span className="text-primary text-xs font-semibold">{optionLabel(oi)}</span>
+                          <span className="text-primary-text text-xs font-semibold">{optionLabel(oi)}</span>
                           <Button
                             type="button"
                             variant="ghost"

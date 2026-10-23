@@ -152,7 +152,7 @@ export function ExercisePicker({
                   >
                     <span className="min-w-0 flex-1 truncate">{e.name}</span>
                     {e.owner_id ? (
-                      <span className="bg-primary/15 text-primary rounded px-1.5 text-[10px] font-semibold">
+                      <span className="bg-primary/15 text-primary-text rounded px-1.5 text-[10px] font-semibold">
                         Propio
                       </span>
                     ) : null}

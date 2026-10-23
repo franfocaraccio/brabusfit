@@ -50,7 +50,7 @@ export default async function PlanPage({
         <h1 className="mt-1 flex flex-wrap items-center gap-2 text-2xl font-bold tracking-tight">
           {plan.name}
           {plan.is_current && (
-            <span className="bg-primary/15 text-primary rounded px-1.5 text-[10px] font-semibold">
+            <span className="bg-primary/15 text-primary-text rounded px-1.5 text-[10px] font-semibold">
               Vigente
             </span>
           )}

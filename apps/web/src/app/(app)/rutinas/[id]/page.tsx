@@ -55,7 +55,7 @@ export default async function RutinaDetailPage({
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold tracking-tight">
             {routine.name}
             {routine.is_current && (
-              <span className="bg-primary/15 text-primary rounded px-1.5 text-[10px] font-semibold">
+              <span className="bg-primary/15 text-primary-text rounded px-1.5 text-[10px] font-semibold">
                 Vigente
               </span>
             )}
@@ -144,7 +144,7 @@ export default async function RutinaDetailPage({
             {days.map((day, i) => (
               <Card key={day.id} className="space-y-2 p-4">
                 <div className="flex items-center gap-2.5">
-                  <span className="bg-primary/15 text-primary flex size-6 items-center justify-center rounded-full text-xs font-semibold">
+                  <span className="bg-primary/15 text-primary-text flex size-6 items-center justify-center rounded-full text-xs font-semibold">
                     {i + 1}
                   </span>
                   <h3 className="font-semibold">{day.name}</h3>

@@ -173,7 +173,7 @@ export function StudentHome({
           </p>
           <Link
             href="/rutinas"
-            className="text-primary mt-2 inline-block text-sm font-medium"
+            className="text-primary-text mt-2 inline-block text-sm font-medium"
           >
             Ir a Entrenamiento
           </Link>
@@ -292,7 +292,7 @@ function PlanCard({ plan }: { plan: HomePlan }) {
             </p>
           ) : null}
         </div>
-        <Salad className="text-primary size-5 shrink-0" />
+        <Salad className="text-primary-text size-5 shrink-0" />
       </div>
 
       {plan.kcal ? (
@@ -341,7 +341,7 @@ function PlanCard({ plan }: { plan: HomePlan }) {
 
       <Link
         href={`/nutricion/${plan.id}`}
-        className="text-primary inline-flex items-center gap-1.5 text-sm font-semibold"
+        className="text-primary-text inline-flex items-center gap-1.5 text-sm font-semibold"
       >
         Ver plan <ArrowRight className="size-4" />
       </Link>

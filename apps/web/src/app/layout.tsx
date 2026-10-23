@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Barlow, Barlow_Condensed, Unbounded } from "next/font/google";
 
+import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 
 import "./globals.css";
@@ -33,7 +34,10 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#0e1116",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f6f3ee" },
+    { media: "(prefers-color-scheme: dark)", color: "#0e1116" },
+  ],
 };
 
 export default function RootLayout({
@@ -45,14 +49,16 @@ export default function RootLayout({
     <html
       lang="es"
       suppressHydrationWarning
-      className={`dark ${barlow.variable} ${barlowCondensed.variable} ${unbounded.variable} h-full antialiased`}
+      className={`${barlow.variable} ${barlowCondensed.variable} ${unbounded.variable} h-full antialiased`}
     >
       <body
         suppressHydrationWarning
         className="bg-background text-foreground min-h-full"
       >
-        {children}
-        <Toaster richColors position="top-center" />
+        <ThemeProvider>
+          {children}
+          <Toaster richColors position="top-center" />
+        </ThemeProvider>
       </body>
     </html>
   );

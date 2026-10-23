@@ -76,7 +76,7 @@ export function PlanView({ detail }: { detail: PlanDetail }) {
                 <h2 className="font-sans text-base font-semibold">
                   {meal.name}
                   {meal.time_label ? (
-                    <span className="text-primary ml-2 text-xs font-semibold">{meal.time_label}</span>
+                    <span className="text-primary-text ml-2 text-xs font-semibold">{meal.time_label}</span>
                   ) : null}
                 </h2>
                 {range.hasData && (
@@ -91,7 +91,7 @@ export function PlanView({ detail }: { detail: PlanDetail }) {
                 return (
                   <div key={i} className="space-y-1.5">
                     {meal.options.length > 1 && (
-                      <p className="text-primary text-xs font-semibold">{optionLabel(i)}</p>
+                      <p className="text-primary-text text-xs font-semibold">{optionLabel(i)}</p>
                     )}
                     <ul className="divide-y rounded-lg border">
                       {opt.items.map((it, j) => (

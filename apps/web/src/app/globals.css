@@ -37,6 +37,7 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-text: var(--primary-text);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -50,19 +51,65 @@
 }
 
 /*
- * Brabus Fit — tema atlético "performance" (dark-first).
- * Naranja energía (#F97316) + verde éxito (#22C55E) sobre slate oscuro.
+ * Brabus Fit — tema atlético "performance".
+ * Naranja energía (#F97316) + verde éxito (#22C55E).
+ * Claro: gris crema con tarjetas apoyadas en una sombra suave.
+ * Oscuro (.dark): slate oscuro con tarjetas de borde fino.
  */
-:root,
+:root {
+  --background: #f6f3ee;
+  --foreground: #1d1a16;
+  --card: #fffdfa;
+  --card-foreground: #1d1a16;
+  --card-shadow:
+    0 1px 2px rgba(60, 45, 25, 0.06), 0 4px 14px rgba(60, 45, 25, 0.07);
+  --popover: #fffdfa;
+  --popover-foreground: #1d1a16;
+  --primary: #f97316;
+  --primary-foreground: #14110a;
+  /* Naranja para textos y links sobre fondo claro (el #f97316 no se lee en letra chica). */
+  --primary-text: #c2410c;
+  --secondary: #eee9e1;
+  --secondary-foreground: #1d1a16;
+  --muted: #eee9e1;
+  --muted-foreground: #6f685e;
+  --accent: #e9e3d9;
+  --accent-foreground: #1d1a16;
+  --success: #16a34a;
+  --success-foreground: #f0fdf4;
+  --destructive: #dc2626;
+  --destructive-foreground: #fef2f2;
+  --border: #e7e1d6;
+  --input: #ddd6ca;
+  --ring: #f97316;
+  --radius: 0.7rem;
+  --chart-1: #f97316;
+  --chart-2: #16a34a;
+  --chart-3: #fb923c;
+  --chart-4: #0ea5e9;
+  --chart-5: #8b5cf6;
+  --sidebar: #fbf9f5;
+  --sidebar-foreground: #1d1a16;
+  --sidebar-primary: #f97316;
+  --sidebar-primary-foreground: #14110a;
+  --sidebar-accent: #eee9e1;
+  --sidebar-accent-foreground: #1d1a16;
+  --sidebar-border: #e7e1d6;
+  --sidebar-ring: #f97316;
+  --font-mono: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+}
+
 .dark {
   --background: #0e1116;
   --foreground: #f4f6fa;
   --card: #161b22;
   --card-foreground: #f4f6fa;
+  --card-shadow: none;
   --popover: #161b22;
   --popover-foreground: #f4f6fa;
   --primary: #f97316;
   --primary-foreground: #14110a;
+  --primary-text: #f97316;
   --secondary: #20262f;
   --secondary-foreground: #f4f6fa;
   --muted: #20262f;

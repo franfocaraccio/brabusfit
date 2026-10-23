@@ -85,7 +85,7 @@ function PendingCard({
     <Card className="space-y-3 p-4">
       <div className="text-muted-foreground flex items-center justify-between text-xs">
         <span>{title}</span>
-        <Icon className="text-primary size-4" />
+        <Icon className="text-primary-text size-4" />
       </div>
       {clients.length === 0 ? (
         <p className="text-muted-foreground flex items-center gap-2 text-sm">
@@ -105,7 +105,7 @@ function PendingCard({
               <li key={c.id}>
                 <Link
                   href={`/clientes/${c.id}`}
-                  className="hover:text-primary flex items-center justify-between py-2 transition-colors"
+                  className="hover:text-primary-text flex items-center justify-between py-2 transition-colors"
                 >
                   <span className="truncate">{c.name}</span>
                   <ArrowRight className="text-muted-foreground size-4 shrink-0" />
@@ -114,7 +114,7 @@ function PendingCard({
             ))}
           </ul>
           {clients.length > PREVIEW ? (
-            <Link href="/clientes" className="text-primary text-sm font-medium">
+            <Link href="/clientes" className="text-primary-text text-sm font-medium">
               Ver {clients.length - PREVIEW} más
             </Link>
           ) : null}
@@ -175,14 +175,14 @@ function WeekCard({
               <li key={r.id}>
                 <Link
                   href={`/clientes/${r.id}`}
-                  className="hover:text-primary flex items-center justify-between gap-3 py-2 transition-colors"
+                  className="hover:text-primary-text flex items-center justify-between gap-3 py-2 transition-colors"
                 >
                   <span className="truncate">{r.name}</span>
                   <span
                     className={cn(
                       "shrink-0 rounded-full px-2 py-0.5 text-xs",
                       r.days > 0
-                        ? "bg-primary/15 text-primary"
+                        ? "bg-primary/15 text-primary-text"
                         : "text-muted-foreground",
                     )}
                   >
@@ -195,7 +195,7 @@ function WeekCard({
             ))}
           </ul>
           {rows.length > 6 ? (
-            <Link href="/clientes" className="text-primary text-sm font-medium">
+            <Link href="/clientes" className="text-primary-text text-sm font-medium">
               Ver todos
             </Link>
           ) : null}

@@ -28,7 +28,7 @@ export default async function AjustesPage() {
 
       <Link href="/ajustes/perfil" className="block">
         <Card className="hover:bg-muted/40 flex flex-row items-center gap-4 p-4 transition-colors">
-          <span className="bg-primary/15 text-primary flex size-12 shrink-0 items-center justify-center rounded-full text-base font-semibold">
+          <span className="bg-primary/15 text-primary-text flex size-12 shrink-0 items-center justify-center rounded-full text-base font-semibold">
             {initials}
           </span>
           <div className="min-w-0 flex-1">
@@ -49,7 +49,7 @@ export default async function AjustesPage() {
           href="/ajustes/perfil"
           className={cn(rowClass, "hover:bg-muted/40")}
         >
-          <User className="text-primary size-5" />
+          <User className="text-primary-text size-5" />
           <span className="flex-1 text-sm font-medium">Mi perfil</span>
           <ChevronRight className="text-muted-foreground size-4" />
         </Link>
@@ -58,7 +58,7 @@ export default async function AjustesPage() {
             href="/ajustes/coaches"
             className={cn(rowClass, "hover:bg-muted/40")}
           >
-            <Users className="text-primary size-5" />
+            <Users className="text-primary-text size-5" />
             <span className="flex-1 text-sm font-medium">Mis coaches</span>
             {pending > 0 && (
               <span className="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-full text-[11px] font-bold">
@@ -68,15 +68,14 @@ export default async function AjustesPage() {
             <ChevronRight className="text-muted-foreground size-4" />
           </Link>
         )}
-        <div className={cn(rowClass, "cursor-default")}>
-          <Palette className="text-muted-foreground size-5" />
-          <span className="text-muted-foreground flex-1 text-sm font-medium">
-            Apariencia
-          </span>
-          <span className="bg-muted text-muted-foreground rounded px-1.5 text-[11px] font-semibold">
-            Próximamente
-          </span>
-        </div>
+        <Link
+          href="/ajustes/apariencia"
+          className={cn(rowClass, "hover:bg-muted/40")}
+        >
+          <Palette className="text-primary-text size-5" />
+          <span className="flex-1 text-sm font-medium">Apariencia</span>
+          <ChevronRight className="text-muted-foreground size-4" />
+        </Link>
       </Card>
 
       <Card className="py-0">
