@@ -17,7 +17,7 @@ App de rutinas de entrenamiento para **coaches** y **alumnos**, en **web** y
 ```
 apps/
   web/          Next.js 16 (App Router) — deploy en Vercel (Root Directory: apps/web)
-  mobile/       Expo SDK 57 + Expo Router — iOS y Android con un solo código
+  mobile/       Expo SDK 58 + Expo Router — iOS y Android con un solo código
 packages/
   shared/       Tipos de la base, validaciones y helpers (TypeScript puro)
   supabase/     Consultas y mutaciones compartidas (reciben el cliente Supabase)
@@ -34,7 +34,7 @@ usa solo la clave pública de Supabase.
 ## Stack
 
 - **Web:** Next.js 16 + React 19 + TypeScript, Tailwind CSS v4 + shadcn/ui (base-ui)
-- **Mobile:** Expo SDK 57, React Native 0.86, Expo Router
+- **Mobile:** Expo SDK 58, React Native 0.88, Expo Router
 - **Backend:** Supabase (Postgres + Auth email/Google + RLS)
 - **Tooling:** npm workspaces + Turborepo
 - **Deploy:** Vercel (web) · EAS (mobile, cuando se publique)

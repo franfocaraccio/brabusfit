@@ -134,15 +134,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 export const useTheme = () => useContext(ThemeContext);
 export const useColors = () => useContext(ThemeContext).colors;
 
+type Styles = Parameters<typeof StyleSheet.create>[0];
+
 /**
  * Hoja de estilos que depende del tema: `const useStyles = makeStyles((colors) => ({...}))`
  * y adentro del componente `const styles = useStyles()`. Se arma una vez por tema.
  */
-export function makeStyles<T extends StyleSheet.NamedStyles<T>>(
-  factory: (colors: Palette) => T,
-) {
-  const cache = new Map<Palette, T>();
-  return function useStyles(): T {
+export function makeStyles<S extends Styles>(factory: (colors: Palette) => S & Styles) {
+  const cache = new Map<Palette, Readonly<S>>();
+  return function useStyles(): Readonly<S> {
     const colors = useColors();
     let styles = cache.get(colors);
     if (!styles) {

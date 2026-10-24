@@ -58,7 +58,7 @@ Flutter (no comparte código), nativo puro (dos apps), Capacitor/PWA (se siente
 web; perdemos push, cámara y pasos).
 
 ### Hecho
-- `apps/web` (Next.js) y `apps/mobile` (Expo SDK 57 + Expo Router).
+- `apps/web` (Next.js) y `apps/mobile` (Expo SDK 58 + Expo Router).
 - `packages/shared` (tipos, validaciones, helpers) y `packages/supabase`
   (consultas y mutaciones que reciben el cliente Supabase): **la lógica de datos
   se escribe una vez** y la usan las dos apps. Las server actions de la web son

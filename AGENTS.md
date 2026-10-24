@@ -4,12 +4,12 @@ Monorepo (npm workspaces + Turborepo). Cada app tiene sus propias notas:
 
 - `apps/web/AGENTS.md` — Next.js 16 (APIs distintas a las de tu entrenamiento:
   leer `node_modules/next/dist/docs/` antes de escribir código).
-- `apps/mobile/AGENTS.md` — Expo SDK 57 (consultar la doc versionada de Expo,
+- `apps/mobile/AGENTS.md` — Expo SDK 58 (consultar la doc versionada de Expo,
   usar `npx expo install` para dependencias nativas).
 
 ## Reglas del monorepo
 
-- `npm install` **siempre desde la raíz**. Una sola copia de React (19.2.3, la de Expo SDK 57) para
+- `npm install` **siempre desde la raíz**. Una sola copia de React (19.3.0, la de Expo SDK 58) para
   todo el repo: web y mobile deben usar la misma versión.
 - La lógica de datos va en `packages/supabase` (funciones que reciben el cliente
   Supabase) y los tipos/validaciones en `packages/shared`. Las apps solo agregan
@@ -37,9 +37,20 @@ Para mobile, además: `npx expo-doctor` y `npx expo export` desde `apps/mobile`.
 
 ## Versión de Expo
 
-El proyecto usa **SDK 57** porque es la última que soporta Expo Go del App
-Store (verificar en Expo Go → configuración → "Supported SDK"). Subir de SDK
-solo cuando Expo Go lo soporte, o cuando se use una development build. Al subir:
-alinear React de la web a la misma versión y revisar APIs (ej. `usePreventRemove`
-se importa de `expo-router/react-navigation` en SDK 57; desde SDK 58 viene en
-`expo-router`).
+El proyecto usa **SDK 58** (React Native 0.88, React 19.3) porque es la que
+soporta Expo Go del App Store (verificar en Expo Go → configuración →
+"Supported SDK"). Expo Go del App Store abre solo **la última** SDK: cuando se
+actualiza, la app deja de abrir hasta subir el proyecto (pasó de 57 a 58).
+
+Al subir de SDK:
+1. `npm install expo@~<versión> --workspace=@brabus/mobile` desde la raíz y
+   `npx expo install --fix` desde `apps/mobile`.
+2. Alinear React (y `@types/react`) de la web a la misma versión exacta.
+3. Si `npx expo-doctor` marca copias duplicadas, regenerar el lockfile: borrar
+   `package-lock.json` y todos los `node_modules`, y `npm install` desde la raíz.
+4. Cambiar `runtimeVersion` en `app.json` (`exposdk:<versión>.0.0`) y el link y
+   el QR de Expo Go (SETUP.md y `docs/expo-go-qr.png`).
+5. Revisar APIs que cambian. Ej.: desde SDK 58 `usePreventRemove` se importa de
+   `expo-router`; con React Native 0.88 cambió el tipado de `StyleSheet.create`
+   (ver `makeStyles` en `apps/mobile/src/lib/theme.tsx`).
+6. Publicar con `npm run publish` desde `apps/mobile`.

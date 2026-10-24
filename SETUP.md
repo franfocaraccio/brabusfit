@@ -73,14 +73,14 @@ El proyecto pertenece a la organización `brabusfit-team`: para que otra persona
 lo abra en Expo Go, invitarla en expo.dev → brabusfit-team → Members (rol Viewer).
 Para abrirla: escanear `docs/expo-go-qr.png` con la cámara (link fijo al canal
 `main`, siempre trae la última versión publicada):
-`exp://u.expo.dev/6f6c74e5-fc15-451d-9808-66cce2ea769d?channel-name=main&runtime-version=exposdk:57.0.0`
+`exp://u.expo.dev/6f6c74e5-fc15-451d-9808-66cce2ea769d?channel-name=main&runtime-version=exposdk:58.0.0`
 
 **Usar la app fuera de casa (EAS Update):** desde `apps/mobile`, corré
 `npm run publish`. Sube la versión actual del código a Expo (branch `main`) y
 aparece en Expo Go → perfil → proyecto *brabus-fit*, usable desde cualquier red
 sin la compu. Las variables `EXPO_PUBLIC_*` se toman del entorno `production`
 de EAS (expo.dev → proyecto → Environment variables), no del `.env` local.
-`runtimeVersion` está fijado en `exposdk:57.0.0` para que Expo Go acepte las
+`runtimeVersion` está fijado en `exposdk:58.0.0` (cambiarlo al subir de SDK) para que Expo Go acepte las
 updates; al pasar a builds propias (EAS Build) cambiarlo a `{"policy": "appVersion"}`.
 
 ### Entorno local (Supabase en Docker)

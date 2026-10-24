@@ -35,7 +35,8 @@
         }
       ],
       "expo-web-browser",
-      "expo-sharing"
+      "expo-sharing",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true
@@ -50,6 +51,6 @@
     "updates": {
       "url": "https://u.expo.dev/6f6c74e5-fc15-451d-9808-66cce2ea769d"
     },
-    "runtimeVersion": "exposdk:57.0.0"
+    "runtimeVersion": "exposdk:58.0.0"
   }
 }

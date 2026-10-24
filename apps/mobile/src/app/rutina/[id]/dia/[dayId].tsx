@@ -6,9 +6,8 @@ import {
   Stack,
   useLocalSearchParams,
   useNavigation,
+  usePreventRemove,
 } from "expo-router";
-// SDK 57: usePreventRemove todavía no se exporta desde "expo-router".
-import { usePreventRemove } from "expo-router/react-navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import {
   ActivityIndicator,
