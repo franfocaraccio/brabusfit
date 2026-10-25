@@ -3,7 +3,7 @@
 Ideas y decisiones de arquitectura. Cada sección indica si ya está hecha o
 pendiente.
 
-## Pendientes por sector (actualizado 2026-10-22)
+## Pendientes por sector (actualizado 2026-10-24)
 
 Lista de trabajo vigente, ordenada por sección de la app. El detalle de lo ya
 hecho y las decisiones de diseño están en las secciones de más abajo.
@@ -44,8 +44,7 @@ hecho y las decisiones de diseño están en las secciones de más abajo.
   alumno usa gratis. Stripe + límites por plan (ver sección 4).
 - Emails reales (confirmación, invitaciones): requiere dominio propio + Resend.
 - Staging separado de producción (hoy descartado).
-- Limpieza técnica: borrar `exercises.name`; actualizar parches de Expo
-  (`expo`, `expo-router`).
+- Limpieza técnica: borrar `exercises.name`.
 
 ---
 
