@@ -1,5 +1,12 @@
 import { escapeHtml as h, exportMeta, type ExportHeader } from "./export";
-import { dayRange, formatRange, macroLine, mealRange, optionLabel, optionTotals } from "./nutrition";
+import {
+  dayRange,
+  formatRange,
+  macroLine,
+  mealRange,
+  optionLabel,
+  optionTotals,
+} from "./nutrition";
 import { buildXlsx, type XlsxCell } from "./xlsx";
 
 /** Plan listo para exportar (todo: objetivos, indicaciones, comidas y macros). */
@@ -27,33 +34,59 @@ export type PlanExport = ExportHeader & {
 const num = (v: number | null) => (v === null ? "" : v);
 const fmt = (v: number | null) =>
   v === null ? "" : v.toLocaleString("es-AR", { maximumFractionDigits: 1 });
-const mealTitle = (m: PlanExport["meals"][number]) => (m.time ? `${m.name} (${m.time})` : m.name);
+const mealTitle = (m: PlanExport["meals"][number]) =>
+  m.time ? `${m.name} (${m.time})` : m.name;
 
 /** Excel: una hoja con objetivos, indicaciones y cada comida con sus opciones. */
 export function planXlsx(p: PlanExport): Uint8Array {
   const bold = (v: string): XlsxCell => ({ value: v, style: "bold" });
-  const rows: XlsxCell[][] = [[{ value: p.name, style: "title" }], ...exportMeta(p).map((m) => [m])];
+  const rows: XlsxCell[][] = [
+    [{ value: p.name, style: "title" }],
+    ...exportMeta(p).map((m) => [m]),
+  ];
 
   if (p.targets.length > 0) {
     rows.push([], [bold("Objetivos")], ...p.targets.map(([k, v]) => [k, v]));
   }
   if (p.guidelines) {
-    rows.push([], [bold("Indicaciones")], ...p.guidelines.split("\n").map((l) => [l]));
+    rows.push(
+      [],
+      [bold("Indicaciones")],
+      ...p.guidelines.split("\n").map((l) => [l]),
+    );
   }
 
   for (const meal of p.meals) {
     rows.push([], [{ value: mealTitle(meal), style: "title" }]);
     meal.options.forEach((opt, i) => {
       if (meal.options.length > 1) rows.push([bold(optionLabel(i))]);
-      rows.push(["Alimento", "Cantidad", "kcal", "Prot. (g)", "Carb. (g)", "Grasas (g)"].map(bold));
+      rows.push(
+        [
+          "Alimento",
+          "Cantidad",
+          "kcal",
+          "Prot. (g)",
+          "Carb. (g)",
+          "Grasas (g)",
+        ].map(bold),
+      );
       for (const it of opt.items) {
-        rows.push([it.food, it.amount, num(it.kcal), num(it.protein), num(it.carbs), num(it.fat)]);
+        rows.push([
+          it.food,
+          it.amount,
+          num(it.kcal),
+          num(it.protein),
+          num(it.carbs),
+          num(it.fat),
+        ]);
       }
       const t = optionTotals(opt.items);
       if (t.hasData) {
-        rows.push([bold("Total"), "", t.kcal, t.protein, t.carbs, t.fat].map((v) =>
-          typeof v === "number" ? Math.round(v * 10) / 10 : v,
-        ));
+        rows.push(
+          [bold("Total"), "", t.kcal, t.protein, t.carbs, t.fat].map((v) =>
+            typeof v === "number" ? Math.round(v * 10) / 10 : v,
+          ),
+        );
       }
     });
   }
@@ -62,7 +95,14 @@ export function planXlsx(p: PlanExport): Uint8Array {
   if (day.hasData) {
     rows.push(
       [],
-      [bold("Total del día"), "", formatRange(day, "kcal"), formatRange(day, "protein"), formatRange(day, "carbs"), formatRange(day, "fat")],
+      [
+        bold("Total del día"),
+        "",
+        formatRange(day, "kcal"),
+        formatRange(day, "protein"),
+        formatRange(day, "carbs"),
+        formatRange(day, "fat"),
+      ],
     );
   }
 

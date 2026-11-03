@@ -42,6 +42,7 @@ export default async function EditarRutinaPage({
         catalog: e.catalog,
         variant: e.variant ?? "",
         sets_reps: e.sets_reps,
+        rest: e.rest_seconds,
       })),
     })),
   };

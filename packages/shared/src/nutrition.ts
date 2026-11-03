@@ -17,7 +17,11 @@ export type PlanItemInput = {
   fat: string;
 };
 export type PlanOptionInput = { items: PlanItemInput[] };
-export type PlanMealInput = { name: string; time_label: string; options: PlanOptionInput[] };
+export type PlanMealInput = {
+  name: string;
+  time_label: string;
+  options: PlanOptionInput[];
+};
 
 /** Datos para crear o editar un plan completo (RPC save_full_plan). */
 export type PlanInput = {
@@ -77,7 +81,8 @@ export const emptyMeal = (name = ""): PlanMealInput => ({
 });
 
 /** "Opción A", "Opción B"… */
-export const optionLabel = (i: number) => `Opción ${String.fromCharCode(65 + i)}`;
+export const optionLabel = (i: number) =>
+  `Opción ${String.fromCharCode(65 + i)}`;
 
 const isBlankItem = (i: PlanItemInput) => !i.food.trim();
 
@@ -93,25 +98,26 @@ export function normalizePlan(input: PlanInput): PlanInput {
     target_carbs: num(input.target_carbs),
     target_fat: num(input.target_fat),
     target_water_l: num(input.target_water_l),
-    meals: input.meals.map((m) => ({
-      name: m.name.trim(),
-      time_label: m.time_label.trim(),
-      options: m.options
-        .map((o) => ({
-          items: o.items
-            .filter((i) => !isBlankItem(i))
-            .map((i) => ({
-              food: i.food.trim(),
-              amount: i.amount.trim(),
-              unit: i.amount.trim() || i.unit === "a gusto" ? i.unit : "",
-              kcal: num(i.kcal),
-              protein: num(i.protein),
-              carbs: num(i.carbs),
-              fat: num(i.fat),
-            })),
-        }))
-        .filter((o) => o.items.length > 0),
-    }))
+    meals: input.meals
+      .map((m) => ({
+        name: m.name.trim(),
+        time_label: m.time_label.trim(),
+        options: m.options
+          .map((o) => ({
+            items: o.items
+              .filter((i) => !isBlankItem(i))
+              .map((i) => ({
+                food: i.food.trim(),
+                amount: i.amount.trim(),
+                unit: i.amount.trim() || i.unit === "a gusto" ? i.unit : "",
+                kcal: num(i.kcal),
+                protein: num(i.protein),
+                carbs: num(i.carbs),
+                fat: num(i.fat),
+              })),
+          }))
+          .filter((o) => o.items.length > 0),
+      }))
       // Las comidas que quedaron sin alimentos no se guardan.
       .filter((m) => m.options.length > 0),
   };
@@ -121,9 +127,12 @@ export function normalizePlan(input: PlanInput): PlanInput {
 export function validatePlan(input: PlanInput): string | null {
   if (!input.name.trim()) return "El plan necesita un nombre.";
   // Las comidas sin alimentos se descartan al guardar (normalizePlan).
-  const filled = input.meals.filter((m) => m.options.some((o) => o.items.some((i) => !isBlankItem(i))));
+  const filled = input.meals.filter((m) =>
+    m.options.some((o) => o.items.some((i) => !isBlankItem(i))),
+  );
   if (filled.length === 0) return "Agregá al menos una comida con un alimento.";
-  if (filled.some((m) => !m.name.trim())) return "Cada comida necesita un nombre.";
+  if (filled.some((m) => !m.name.trim()))
+    return "Cada comida necesita un nombre.";
   return null;
 }
 
@@ -131,7 +140,12 @@ export function validatePlan(input: PlanInput): string | null {
 // Totales (kcal y macros)
 // ---------------------------------------------------------------------------
 
-export type Macros = { kcal: number; protein: number; carbs: number; fat: number };
+export type Macros = {
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+};
 /** Rango: si las opciones de una comida difieren, el total va de min a max. */
 export type MacroRange = { min: Macros; max: Macros; hasData: boolean };
 
@@ -144,11 +158,15 @@ type MacroSource = {
   carbs: number | string | null;
   fat: number | string | null;
 };
-const val = (v: number | string | null) => (typeof v === "number" ? v : (parseDecimal(v) ?? 0));
-const hasAny = (i: MacroSource) => KEYS.some((k) => i[k] !== null && i[k] !== "");
+const val = (v: number | string | null) =>
+  typeof v === "number" ? v : (parseDecimal(v) ?? 0);
+const hasAny = (i: MacroSource) =>
+  KEYS.some((k) => i[k] !== null && i[k] !== "");
 
 /** Suma de una opción. */
-export function optionTotals(items: MacroSource[]): Macros & { hasData: boolean } {
+export function optionTotals(
+  items: MacroSource[],
+): Macros & { hasData: boolean } {
   const t = { ...ZERO };
   for (const i of items) for (const k of KEYS) t[k] += val(i[k]);
   return { ...t, hasData: items.some(hasAny) };
@@ -157,7 +175,8 @@ export function optionTotals(items: MacroSource[]): Macros & { hasData: boolean 
 /** Rango de una comida entre sus opciones. */
 export function mealRange(options: { items: MacroSource[] }[]): MacroRange {
   const totals = options.map((o) => optionTotals(o.items));
-  if (totals.length === 0) return { min: { ...ZERO }, max: { ...ZERO }, hasData: false };
+  if (totals.length === 0)
+    return { min: { ...ZERO }, max: { ...ZERO }, hasData: false };
   const min = { ...ZERO };
   const max = { ...ZERO };
   for (const k of KEYS) {
@@ -168,7 +187,9 @@ export function mealRange(options: { items: MacroSource[] }[]): MacroRange {
 }
 
 /** Total del día: suma de los rangos de cada comida. */
-export function dayRange(meals: { options: { items: MacroSource[] }[] }[]): MacroRange {
+export function dayRange(
+  meals: { options: { items: MacroSource[] }[] }[],
+): MacroRange {
   const min = { ...ZERO };
   const max = { ...ZERO };
   let hasData = false;
@@ -187,7 +208,11 @@ const fmt = (n: number) =>
   Math.round(n).toLocaleString("es-AR", { maximumFractionDigits: 0 });
 
 /** "1.850" o "1.850–1.950" (+ unidad). */
-export function formatRange(r: MacroRange, key: keyof Macros, unit = ""): string {
+export function formatRange(
+  r: MacroRange,
+  key: keyof Macros,
+  unit = "",
+): string {
   const a = fmt(r.min[key]);
   const b = fmt(r.max[key]);
   return `${a === b ? a : `${a}–${b}`}${unit ? ` ${unit}` : ""}`;
@@ -204,7 +229,10 @@ export function macroLine(r: MacroRange): string {
 }
 
 /** Cantidad legible: "60 g", "2 unidades", "a gusto". */
-export function itemAmount(i: { amount: string | null; unit: string | null }): string {
+export function itemAmount(i: {
+  amount: string | null;
+  unit: string | null;
+}): string {
   if (!i.amount) return i.unit === "a gusto" ? "a gusto" : "";
   return [i.amount.replace(".", ","), i.unit].filter(Boolean).join(" ");
 }
@@ -218,10 +246,14 @@ export function planTargets(p: {
   target_water_l: number | null;
 }): [string, string][] {
   const out: [string, string][] = [];
-  const n = (v: number) => v.toLocaleString("es-AR", { maximumFractionDigits: 1 });
-  if (p.target_kcal !== null) out.push(["Calorías", `${n(p.target_kcal)} kcal`]);
-  if (p.target_protein !== null) out.push(["Proteínas", `${n(p.target_protein)} g`]);
-  if (p.target_carbs !== null) out.push(["Carbohidratos", `${n(p.target_carbs)} g`]);
+  const n = (v: number) =>
+    v.toLocaleString("es-AR", { maximumFractionDigits: 1 });
+  if (p.target_kcal !== null)
+    out.push(["Calorías", `${n(p.target_kcal)} kcal`]);
+  if (p.target_protein !== null)
+    out.push(["Proteínas", `${n(p.target_protein)} g`]);
+  if (p.target_carbs !== null)
+    out.push(["Carbohidratos", `${n(p.target_carbs)} g`]);
   if (p.target_fat !== null) out.push(["Grasas", `${n(p.target_fat)} g`]);
   if (p.target_water_l !== null) out.push(["Agua", `${n(p.target_water_l)} L`]);
   return out;

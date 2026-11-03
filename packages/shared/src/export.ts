@@ -38,7 +38,11 @@ export function exportFileName(
   ext: "pdf" | "xlsx",
   prefix: "Rutina" | "Dieta" = "Rutina",
 ): string {
-  const clean = (s: string) => s.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
+  const clean = (s: string) =>
+    s
+      .replace(/[\\/:*?"<>|]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
   return `${[prefix, clean(r.name), r.clientName ? clean(r.clientName) : null]
     .filter(Boolean)
     .join(" - ")}.${ext}`;
@@ -68,7 +72,11 @@ export function routineXlsx(r: RoutineExport): Uint8Array {
 }
 
 export const escapeHtml = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 
 /** HTML imprimible (A4) para generar el PDF en mobile (expo-print). */
 export function routineHtml(r: RoutineExport): string {

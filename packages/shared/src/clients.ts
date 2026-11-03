@@ -53,12 +53,17 @@ export const CLIENT_LEVELS: { value: ClientLevel; label: string }[] = [
   { value: "avanzado", label: "Avanzado" },
 ];
 
-const labelOf = <T extends string>(list: { value: T; label: string }[], v: T | null | undefined) =>
-  list.find((o) => o.value === v)?.label ?? null;
+const labelOf = <T extends string>(
+  list: { value: T; label: string }[],
+  v: T | null | undefined,
+) => list.find((o) => o.value === v)?.label ?? null;
 
-export const sexLabel = (v: ClientSex | null | undefined) => labelOf(CLIENT_SEXES, v);
-export const goalLabel = (v: ClientGoal | null | undefined) => labelOf(CLIENT_GOALS, v);
-export const levelLabel = (v: ClientLevel | null | undefined) => labelOf(CLIENT_LEVELS, v);
+export const sexLabel = (v: ClientSex | null | undefined) =>
+  labelOf(CLIENT_SEXES, v);
+export const goalLabel = (v: ClientGoal | null | undefined) =>
+  labelOf(CLIENT_GOALS, v);
+export const levelLabel = (v: ClientLevel | null | undefined) =>
+  labelOf(CLIENT_LEVELS, v);
 
 /**
  * Estado de la ficha frente a la app, como lo ve el coach:
@@ -71,7 +76,10 @@ export const levelLabel = (v: ClientLevel | null | undefined) => labelOf(CLIENT_
  */
 export type ClientStatus = "linked" | "invited" | "unregistered";
 
-export function clientStatus(access: AppAccess, hasAccount: boolean): ClientStatus {
+export function clientStatus(
+  access: AppAccess,
+  hasAccount: boolean,
+): ClientStatus {
   if (access === "active") return "linked";
   if (access === "pending" && hasAccount) return "invited";
   return "unregistered";
@@ -84,12 +92,19 @@ export const CLIENT_STATUS_LABEL: Record<ClientStatus, string> = {
 };
 
 /** Edad en años a partir de YYYY-MM-DD (null si no hay fecha). */
-export function ageFrom(birthDate: string | null | undefined, today = new Date()): number | null {
+export function ageFrom(
+  birthDate: string | null | undefined,
+  today = new Date(),
+): number | null {
   if (!birthDate) return null;
   const [y, m, d] = birthDate.split("-").map(Number);
   if (!y || !m || !d) return null;
   let age = today.getFullYear() - y;
-  if (today.getMonth() + 1 < m || (today.getMonth() + 1 === m && today.getDate() < d)) age--;
+  if (
+    today.getMonth() + 1 < m ||
+    (today.getMonth() + 1 === m && today.getDate() < d)
+  )
+    age--;
   return age >= 0 ? age : null;
 }
 
@@ -99,12 +114,18 @@ const NUM = /^\d+([.,]\d+)?$/;
 export function validateClient(input: ClientInput): string | null {
   if (!input.first_name.trim()) return "El cliente necesita un nombre.";
   const email = input.email.trim();
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Revisá el email.";
-  if (input.height_cm.trim() && !NUM.test(input.height_cm.trim())) return "Revisá la estatura.";
-  if (input.initial_weight_kg.trim() && !NUM.test(input.initial_weight_kg.trim())) {
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return "Revisá el email.";
+  if (input.height_cm.trim() && !NUM.test(input.height_cm.trim()))
+    return "Revisá la estatura.";
+  if (
+    input.initial_weight_kg.trim() &&
+    !NUM.test(input.initial_weight_kg.trim())
+  ) {
     return "Revisá el peso inicial.";
   }
-  if (input.birth_date && ageFrom(input.birth_date) === null) return "Revisá la fecha de nacimiento.";
+  if (input.birth_date && ageFrom(input.birth_date) === null)
+    return "Revisá la fecha de nacimiento.";
   return null;
 }
 

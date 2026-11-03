@@ -35,7 +35,8 @@ export async function createCatalogEntry(
 ): Promise<ActionResult<CatalogEntry>> {
   const name = input.name.trim().replace(/\s+/g, " ");
   if (!name) return fail("Poné un nombre para el ejercicio.");
-  if (findCatalogByName(existing, name)) return fail("Ese ejercicio ya existe en el catálogo.");
+  if (findCatalogByName(existing, name))
+    return fail("Ese ejercicio ya existe en el catálogo.");
 
   const userId = await getUserId(client);
   if (!userId) return fail("No autenticado.");
@@ -46,7 +47,8 @@ export async function createCatalogEntry(
     .select("id, name, muscle_group, owner_id")
     .single();
   if (error) {
-    if (error.code === "23505") return fail("Ese ejercicio ya existe en el catálogo.");
+    if (error.code === "23505")
+      return fail("Ese ejercicio ya existe en el catálogo.");
     return fail(error.message);
   }
   return ok(data as CatalogEntry);

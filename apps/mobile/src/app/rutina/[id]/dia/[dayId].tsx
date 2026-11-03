@@ -23,16 +23,26 @@ import {
   clearDraft,
   describeDraft,
   draftKey,
+  EXERCISE_VARIANTS,
+  formatDuration,
+  formatRest,
   formatShortDate,
+  formatVolume,
+  hasIncompleteRows,
   loadDraft,
+  loadTimerStart,
   saveDraft,
+  saveTimerStart,
+  timerKey,
   HISTORY_PREVIEW,
   historyLabel,
   formatWeight,
   NOTE_MAX_LENGTH,
   parseDecimal,
+  parseSetRows,
   sanitizeDecimal,
   summarizeHistory,
+  volumeProgress,
   type ExerciseLogInput,
   type HistoryEntry,
   type TrainingExercise,
@@ -47,7 +57,10 @@ import { supabase } from "@/lib/supabase";
 import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
 import { useAuth } from "@/providers/auth";
 
-type SetRow = { key: string; weight: string; reps: string };
+type SetRow = { key: string; weight: string; reps: string; done?: boolean };
+
+/** Cuenta regresiva de descanso en curso. */
+type Rest = { exerciseName: string; endsAt: number };
 
 let keySeq = 0;
 const newKey = () => `row-${++keySeq}`;
@@ -68,6 +81,10 @@ const rowsSignature = (rs: SetRow[]) =>
   rs.map((r) => `${r.weight.trim()}|${r.reps.trim()}`).join(";");
 
 const onlyDigits = (v: string) => v.replace(/[^0-9]/g, "");
+
+/** Tiempo desde "Empezar" (null si no se usó el cronómetro). */
+const elapsedSince = (start: number | null) =>
+  start === null ? null : Date.now() - start;
 
 // ---------------------------------------------------------------------------
 // Pantalla: carga los datos y monta el entrenador
@@ -164,6 +181,19 @@ function Trainer({
     ),
   );
   const [notes, setNotes] = useState<Record<string, string>>({});
+  // Variante anotada: arranca con la de la última vez.
+  const [variants, setVariants] = useState<Record<string, string | null>>(() =>
+    Object.fromEntries(
+      exercises.map((e) => [e.id, e.history[0]?.variant ?? null]),
+    ),
+  );
+  // Cronómetro del entrenamiento (desde "Empezar"); sigue si se cierra la app.
+  const timerId = timerKey(userId, dayId);
+  const [startedAt, setStartedAt] = useState<number | null>(() =>
+    loadTimerStart(authStorage, timerId),
+  );
+  const [now, setNow] = useState(() => Date.now());
+  const [rest, setRest] = useState<Rest | null>(null);
 
   const completedCount = Object.values(completed).filter(Boolean).length;
   const allDone = exercises.length > 0 && completedCount === exercises.length;
@@ -190,8 +220,9 @@ function Trainer({
       confirmText: "Salir sin guardar",
       destructive: true,
       onConfirm: () => {
-        // Salida a propósito: el respaldo ya no hace falta.
+        // Salida a propósito: el respaldo y el cronómetro ya no hacen falta.
         clearDraft(authStorage, draftId);
+        clearDraft(authStorage, timerId);
         navigation.dispatch(data.action);
       },
     });
@@ -211,6 +242,7 @@ function Trainer({
         ]),
       ),
       notes,
+      variants,
     });
 
   // Al entrar: si quedó una sesión sin guardar (menos de 24 h), preguntamos.
@@ -226,7 +258,11 @@ function Trainer({
       message: `${describeDraft(draft)} ¿Querés continuarla o empezar de nuevo?`,
       cancelText: "Descartar",
       confirmText: "Continuar sesión",
-      onCancel: () => clearDraft(authStorage, draftId),
+      onCancel: () => {
+        clearDraft(authStorage, draftId);
+        clearDraft(authStorage, timerId);
+        setStartedAt(null);
+      },
       onConfirm: () => {
         setCompleted(
           Object.fromEntries(
@@ -249,9 +285,19 @@ function Trainer({
             Object.entries(draft.notes).filter(([id]) => ids.has(id)),
           ),
         );
+        if (draft.variants) {
+          setVariants((prev) => ({
+            ...prev,
+            ...Object.fromEntries(
+              Object.entries(draft.variants ?? {}).filter(([id]) =>
+                ids.has(id),
+              ),
+            ),
+          }));
+        }
       },
     });
-  }, [draftId, exercises]);
+  }, [draftId, timerId, exercises]);
 
   // Volver atrás recién cuando el aviso ya está desactivado.
   useEffect(() => {
@@ -277,28 +323,126 @@ function Trainer({
           : prev[exId],
     }));
 
-  const toggleDone = (exId: string) => {
+  // --- cronómetro y descanso --------------------------------------------------
+  // Un tic por segundo mientras corre el cronómetro o un descanso.
+  useEffect(() => {
+    if (startedAt === null && rest === null) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [startedAt, rest]);
+
+  // Fin del descanso: vibración y aviso.
+  useEffect(() => {
+    if (rest && now >= rest.endsAt) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- el descanso vence con el reloj
+      setRest(null);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      notify("¡Descanso terminado!", "A la próxima serie.");
+    }
+  }, [now, rest]);
+
+  const startWorkout = () => {
     Haptics.selectionAsync();
-    const next = { ...completed, [exId]: !completed[exId] };
-    setCompleted(next);
-    persistDraft(next);
+    const start = Date.now();
+    setStartedAt(start);
+    setNow(start);
+    saveTimerStart(authStorage, timerId, start);
   };
 
-  const saveExercise = (exId: string) => {
+  // Serie hecha: la marca y arranca el descanso que fijó el coach.
+  const toggleSetDone = (ex: TrainingExercise, row: SetRow) => {
+    Haptics.selectionAsync();
+    const done = !row.done;
+    setRow(ex.id, row.key, { done });
+    if (done && ex.restSeconds) {
+      const start = Date.now();
+      setNow(start);
+      setRest({ exerciseName: ex.name, endsAt: start + ex.restSeconds * 1000 });
+    }
+  };
+
+  const adjustRest = (deltaSeconds: number) =>
+    setRest((r) => {
+      if (!r) return r;
+      const endsAt = r.endsAt + deltaSeconds * 1000;
+      return endsAt <= Date.now() ? null : { ...r, endsAt };
+    });
+
+  // --- completar ejercicios ---------------------------------------------------
+  // Recibe los completados ya actualizados (el estado todavía no se re-renderizó).
+  const showFinished = (done: Record<string, boolean>) => {
+    const elapsed = elapsedSince(startedAt);
+    confirm({
+      title: "🎉 ¡Rutina completada!",
+      message:
+        elapsed !== null
+          ? `Tiempo total de entrenamiento: ${formatDuration(elapsed)}.`
+          : "Completaste todos los ejercicios del día.",
+      cancelText: "Seguir editando",
+      confirmText: "Guardar entrenamiento",
+      onConfirm: () => doSave(done),
+    });
+  };
+
+  /** Marca el ejercicio como hecho y encadena progresión / rutina completada. */
+  const completeExercise = (ex: TrainingExercise) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const next = { ...completed, [exId]: true };
+    const next = { ...completed, [ex.id]: true };
     setCompleted(next);
     persistDraft(next);
     setOpenId(null);
+
+    const nowAllDone = exercises.every((e) => next[e.id]);
+    const gain = volumeProgress(parseSetRows(rows[ex.id]), ex.history[0]);
+    if (gain) {
+      notify(
+        "🔥 ¡Progresaste!",
+        `${ex.name}: +${gain.percent}% de volumen respecto a la última vez (${formatVolume(gain.before)} → ${formatVolume(gain.after)} kg).`,
+        {
+          buttonText: "¡Vamos!",
+          onClose: nowAllDone ? () => showFinished(next) : undefined,
+        },
+      );
+    } else if (nowAllDone) {
+      showFinished(next);
+    }
+  };
+
+  // "Guardar ejercicio": si hay series a medio cargar, primero se confirma.
+  const saveExercise = (ex: TrainingExercise) => {
+    if (hasIncompleteRows(rows[ex.id])) {
+      confirm({
+        title: "⚠️ Faltan datos en algunas series",
+        message: "¿Guardar igualmente?",
+        cancelText: "Cancelar",
+        confirmText: "Guardar igual",
+        onConfirm: () => completeExercise(ex),
+      });
+      return;
+    }
+    completeExercise(ex);
+  };
+
+  // Círculo: completa (con los mismos controles) o descompleta.
+  const toggleDone = (ex: TrainingExercise) => {
+    if (completed[ex.id]) {
+      Haptics.selectionAsync();
+      const next = { ...completed, [ex.id]: false };
+      setCompleted(next);
+      persistDraft(next);
+      return;
+    }
+    saveExercise(ex);
   };
 
   // --- guardar sesión ---------------------------------------------------------
-  const doSave = () => {
+  const doSave = (done: Record<string, boolean> = completed) => {
     const logs: ExerciseLogInput[] = exercises
-      .filter((ex) => completed[ex.id])
+      .filter((ex) => done[ex.id])
       .map((ex) => ({
         exerciseId: ex.id,
         note: notes[ex.id] ?? null,
+        variant: variants[ex.id] ?? null,
         sets: rows[ex.id].map((r, i) => ({
           set_number: i + 1,
           weight: parseDecimal(r.weight),
@@ -307,18 +451,25 @@ function Trainer({
       }));
 
     startSaving(async () => {
-      const res = await saveWorkout(supabase, routineId, dayId, logs);
+      const res = await saveWorkout(
+        supabase,
+        routineId,
+        dayId,
+        logs,
+        startedAt === null ? null : new Date(startedAt).toISOString(),
+      );
       if (!res.ok) {
         notify("No se pudo guardar", res.error);
         return;
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       clearDraft(authStorage, draftId);
+      clearDraft(authStorage, timerId);
       setLeaving(true);
     });
   };
 
-  const onSavePress = () => {
+  const checkUnfinished = () => {
     if (allDone) {
       doSave();
       return;
@@ -328,9 +479,31 @@ function Trainer({
       message: `Te quedan ${exercises.length - completedCount} ejercicios sin guardar. Se registran solo los ${completedCount} que guardaste. ¿Querés guardar la sesión igualmente?`,
       cancelText: "Seguir entrenando",
       confirmText: "Guardar igualmente",
-      onConfirm: doSave,
+      onConfirm: () => doSave(),
     });
   };
+
+  // "Guardar sesión": series incompletas → ejercicios sin terminar → guardar.
+  const onSavePress = () => {
+    const anyIncomplete = exercises.some(
+      (ex) => completed[ex.id] && hasIncompleteRows(rows[ex.id]),
+    );
+    if (anyIncomplete) {
+      confirm({
+        title: "⚠️ Faltan datos en algunas series",
+        message: "¿Guardar igualmente?",
+        cancelText: "Cancelar",
+        confirmText: "Guardar igual",
+        onConfirm: checkUnfinished,
+      });
+      return;
+    }
+    checkUnfinished();
+  };
+
+  const restLeft = rest
+    ? Math.max(0, Math.ceil((rest.endsAt - now) / 1000))
+    : 0;
 
   return (
     <SafeAreaView style={styles.screen} edges={["bottom"]}>
@@ -341,9 +514,42 @@ function Trainer({
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
       >
-        <Muted>
-          {completedCount} de {exercises.length} ejercicios completados
-        </Muted>
+        <View style={styles.topRow}>
+          <Muted style={{ flex: 1 }}>
+            {completedCount} de {exercises.length} ejercicios completados
+          </Muted>
+          {startedAt === null ? (
+            <Pressable
+              onPress={startWorkout}
+              style={({ pressed }) => [
+                styles.startButton,
+                pressed && { opacity: 0.85 },
+              ]}
+              accessibilityRole="button"
+            >
+              <Ionicons
+                name="play"
+                size={14}
+                color={colors.primaryForeground}
+              />
+              <Text style={styles.startText}>Empezar</Text>
+            </Pressable>
+          ) : (
+            <View
+              style={styles.timerPill}
+              accessibilityLabel="Tiempo de entrenamiento"
+            >
+              <Ionicons
+                name="timer-outline"
+                size={16}
+                color={colors.primaryText}
+              />
+              <Text style={styles.timerText}>
+                {formatDuration(now - startedAt)}
+              </Text>
+            </View>
+          )}
+        </View>
 
         {exercises.map((ex) => {
           const isOpen = openId === ex.id;
@@ -356,7 +562,7 @@ function Trainer({
               {/* Encabezado: círculo (completar) + nombre (expandir) */}
               <View style={styles.exerciseHeader}>
                 <Pressable
-                  onPress={() => toggleDone(ex.id)}
+                  onPress={() => toggleDone(ex)}
                   hitSlop={8}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: isDone }}
@@ -381,7 +587,12 @@ function Trainer({
                 >
                   <View style={{ flex: 1 }}>
                     <Text style={styles.exerciseName}>{ex.name}</Text>
-                    <Text style={styles.exerciseSets}>{ex.setsReps}</Text>
+                    <Text style={styles.exerciseSets}>
+                      {ex.setsReps}
+                      {ex.restSeconds
+                        ? ` · Descanso ${formatRest(ex.restSeconds)}`
+                        : ""}
+                    </Text>
                     {ex.history[0] ? (
                       <Text style={styles.exerciseLast}>
                         {summarizeHistory(ex.history[0])}
@@ -445,6 +656,38 @@ function Trainer({
                     </View>
                   )}
 
+                  <View style={{ gap: 6 }}>
+                    <Text style={styles.noteLabel}>Variante</Text>
+                    <View style={styles.chips} accessibilityRole="radiogroup">
+                      {EXERCISE_VARIANTS.map((v) => {
+                        const selected = variants[ex.id] === v;
+                        return (
+                          <Pressable
+                            key={v}
+                            onPress={() =>
+                              setVariants((prev) => ({
+                                ...prev,
+                                [ex.id]: selected ? null : v,
+                              }))
+                            }
+                            accessibilityRole="radio"
+                            accessibilityState={{ selected }}
+                            style={[styles.chip, selected && styles.chipOn]}
+                          >
+                            <Text
+                              style={[
+                                styles.chipText,
+                                selected && styles.chipTextOn,
+                              ]}
+                            >
+                              {v}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+
                   {rows[ex.id].map((row, i) => (
                     <View key={row.key} style={styles.setRow}>
                       <Text style={styles.setLabel}>Serie {i + 1}</Text>
@@ -473,6 +716,29 @@ function Trainer({
                           style={styles.compactInput}
                         />
                       </View>
+                      {ex.restSeconds ? (
+                        <Pressable
+                          onPress={() => toggleSetDone(ex, row)}
+                          hitSlop={6}
+                          accessibilityRole="checkbox"
+                          accessibilityState={{ checked: !!row.done }}
+                          accessibilityLabel={`Serie ${i + 1} hecha, descansar`}
+                          style={[
+                            styles.setCheck,
+                            row.done && styles.setCheckOn,
+                          ]}
+                        >
+                          <Ionicons
+                            name="checkmark"
+                            size={18}
+                            color={
+                              row.done
+                                ? colors.primaryForeground
+                                : colors.mutedForeground
+                            }
+                          />
+                        </Pressable>
+                      ) : null}
                       <Pressable
                         onPress={() => removeRow(ex.id, row.key)}
                         disabled={rows[ex.id].length === 1}
@@ -512,7 +778,7 @@ function Trainer({
                         setNotes((n) => ({ ...n, [ex.id]: v }))
                       }
                       maxLength={NOTE_MAX_LENGTH}
-                      placeholder="Ej: hecho en Smith"
+                      placeholder="Ej: agarre cerrado"
                       placeholderTextColor={colors.mutedForeground}
                       selectionColor={colors.primary}
                       multiline
@@ -522,7 +788,7 @@ function Trainer({
 
                   <Button
                     title="Guardar ejercicio"
-                    onPress={() => saveExercise(ex.id)}
+                    onPress={() => saveExercise(ex)}
                     style={styles.saveExerciseButton}
                   />
                 </View>
@@ -533,6 +799,48 @@ function Trainer({
       </ScrollView>
 
       <View style={styles.footer}>
+        {rest ? (
+          <View
+            style={styles.restBar}
+            accessibilityRole="timer"
+            accessibilityLiveRegion="polite"
+          >
+            <Ionicons
+              name="timer-outline"
+              size={22}
+              color={colors.primaryText}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.restLabel} numberOfLines={1}>
+                Descanso · {rest.exerciseName}
+              </Text>
+              <Text style={styles.restTime}>
+                {formatDuration(restLeft * 1000)}
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => adjustRest(-15)}
+              style={styles.restButton}
+              hitSlop={4}
+            >
+              <Text style={styles.restButtonText}>−15 s</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => adjustRest(15)}
+              style={styles.restButton}
+              hitSlop={4}
+            >
+              <Text style={styles.restButtonText}>+15 s</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setRest(null)}
+              hitSlop={8}
+              accessibilityRole="button"
+            >
+              <Text style={styles.restSkip}>Saltar</Text>
+            </Pressable>
+          </View>
+        ) : null}
         <Button
           title="Guardar sesión"
           variant={completedCount > 0 ? "primary" : "secondary"}
@@ -581,6 +889,99 @@ const useStyles = makeStyles((colors) => ({
     padding: 24,
   },
   content: { padding: 16, paddingBottom: 24, gap: 12 },
+  topRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  startButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: colors.primary,
+  },
+  startText: {
+    fontFamily: fonts.semibold,
+    fontSize: 14,
+    color: colors.primaryForeground,
+  },
+  timerPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "rgba(249,115,22,0.15)",
+  },
+  timerText: {
+    fontFamily: fonts.semibold,
+    fontSize: 15,
+    color: colors.primaryText,
+    fontVariant: ["tabular-nums"],
+  },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.input,
+  },
+  chipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.mutedForeground,
+  },
+  chipTextOn: { color: colors.primaryForeground },
+  setCheck: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.input,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  setCheckOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  restBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    backgroundColor: "rgba(249,115,22,0.15)",
+  },
+  restLabel: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    color: colors.mutedForeground,
+  },
+  restTime: {
+    fontFamily: fonts.semibold,
+    fontSize: 18,
+    color: colors.foreground,
+    fontVariant: ["tabular-nums"],
+  },
+  restButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.input,
+  },
+  restButtonText: {
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    color: colors.foreground,
+  },
+  restSkip: {
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+    color: colors.mutedForeground,
+  },
   exercise: {
     backgroundColor: colors.card,
     borderRadius: radius.lg,
@@ -656,7 +1057,11 @@ const useStyles = makeStyles((colors) => ({
     fontSize: 13,
     color: colors.foreground,
   },
-  seeMore: { fontFamily: fonts.semibold, fontSize: 13, color: colors.primaryText },
+  seeMore: {
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+    color: colors.primaryText,
+  },
   setRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   setLabel: {
     width: 54,

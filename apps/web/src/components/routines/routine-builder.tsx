@@ -6,7 +6,12 @@ import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { createRoutine, updateRoutine } from "@/lib/actions/routines";
-import type { CatalogEntry, RoutineDayInput } from "@brabus/shared";
+import {
+  formatRest,
+  REST_OPTIONS,
+  type CatalogEntry,
+  type RoutineDayInput,
+} from "@brabus/shared";
 import type { ClientSummary, FolderLite } from "@brabus/supabase";
 import { ExercisePicker } from "@/components/routines/exercise-picker";
 import { SortableList } from "@/components/routines/sortable";
@@ -28,6 +33,8 @@ type ExerciseDraft = {
   catalog: CatalogEntry | null;
   variant: string;
   sets_reps: string;
+  /** Descanso entre series (segundos) o null = sin descanso. */
+  rest: number | null;
 };
 type DayDraft = {
   key: string;
@@ -37,12 +44,26 @@ type DayDraft = {
 };
 
 const NEW_FOLDER = "__new__";
+/** Opción "sin descanso" del selector. */
+const NO_REST = "none";
+const restItems: Record<string, string> = {
+  [NO_REST]: "Sin descanso",
+  ...Object.fromEntries(
+    REST_OPTIONS.map((s) => [String(s), `Descanso ${formatRest(s)}`]),
+  ),
+};
 /** Destino "plantilla" (en vez de un cliente). */
 const TEMPLATE = "__template__";
 const newKey = () => crypto.randomUUID();
 
 function emptyExercise(): ExerciseDraft {
-  return { key: newKey(), catalog: null, variant: "", sets_reps: "" };
+  return {
+    key: newKey(),
+    catalog: null,
+    variant: "",
+    sets_reps: "",
+    rest: null,
+  };
 }
 function emptyDay(): DayDraft {
   return { key: newKey(), name: "", exercises: [emptyExercise()] };
@@ -189,6 +210,7 @@ export function RoutineBuilder({
         catalog_id: ex.catalog?.id,
         variant: ex.variant.trim() || null,
         sets_reps: ex.sets_reps.trim(),
+        rest_seconds: ex.rest,
       })),
     }));
 
@@ -352,7 +374,7 @@ export function RoutineBuilder({
                             setCatalogList((list) => [...list, entry])
                           }
                         />
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                           <Input
                             value={ex.sets_reps}
                             onChange={(e) =>
@@ -373,6 +395,31 @@ export function RoutineBuilder({
                             placeholder="Variante (opcional)"
                             aria-label="Variante"
                           />
+                          <Select
+                            value={ex.rest === null ? NO_REST : String(ex.rest)}
+                            onValueChange={(v) =>
+                              updateExercise(day.key, ex.key, {
+                                rest: !v || v === NO_REST ? null : Number(v),
+                              })
+                            }
+                            items={restItems}
+                          >
+                            <SelectTrigger
+                              className="col-span-2 w-full sm:col-span-1"
+                              aria-label="Descanso entre series"
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(restItems).map(
+                                ([value, label]) => (
+                                  <SelectItem key={value} value={value}>
+                                    {label}
+                                  </SelectItem>
+                                ),
+                              )}
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
                       <Button

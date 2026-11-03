@@ -50,12 +50,22 @@ type PlanRow = {
   meals: {
     name: string;
     position: number;
-    options: { items: { kcal: number | null; protein: number | null; carbs: number | null; fat: number | null }[] }[];
+    options: {
+      items: {
+        kcal: number | null;
+        protein: number | null;
+        carbs: number | null;
+        fat: number | null;
+      }[];
+    }[];
   }[];
 };
 
 /** Plan del alumno: el vigente, o si no hay, el último que le armó un coach. */
-async function getHomePlan(client: BrabusClient, userId: string): Promise<HomePlan | null> {
+async function getHomePlan(
+  client: BrabusClient,
+  userId: string,
+): Promise<HomePlan | null> {
   // RLS: solo los de coaches con acceso activo.
   const { data } = await client
     .from("nutrition_plans")
@@ -71,9 +81,12 @@ async function getHomePlan(client: BrabusClient, userId: string): Promise<HomePl
 
   const meals = [...p.meals].sort((a, b) => a.position - b.position);
   const range = dayRange(meals);
-  const mid = (k: "protein" | "carbs" | "fat") => (range.min[k] + range.max[k]) / 2;
+  const mid = (k: "protein" | "carbs" | "fat") =>
+    (range.min[k] + range.max[k]) / 2;
   const targets =
-    p.target_protein !== null && p.target_carbs !== null && p.target_fat !== null
+    p.target_protein !== null &&
+    p.target_carbs !== null &&
+    p.target_fat !== null
       ? { protein: p.target_protein, carbs: p.target_carbs, fat: p.target_fat }
       : null;
 
@@ -87,7 +100,11 @@ async function getHomePlan(client: BrabusClient, userId: string): Promise<HomePl
         : range.hasData
           ? formatRange(range, "kcal")
           : null,
-    macros: targets ?? (range.hasData ? { protein: mid("protein"), carbs: mid("carbs"), fat: mid("fat") } : null),
+    macros:
+      targets ??
+      (range.hasData
+        ? { protein: mid("protein"), carbs: mid("carbs"), fat: mid("fat") }
+        : null),
     meals: meals.map((m) => m.name),
   };
 }
@@ -121,7 +138,9 @@ export async function getStudentHome(
     // RLS: solo las de coaches con acceso activo.
     client
       .from("routines")
-      .select("id, name, owner:profiles!routines_owner_id_fkey(first_name, last_name)")
+      .select(
+        "id, name, owner:profiles!routines_owner_id_fkey(first_name, last_name)",
+      )
       .eq("is_current", true)
       .neq("owner_id", userId)
       .order("updated_at", { ascending: false })
@@ -130,19 +149,26 @@ export async function getStudentHome(
   ]);
 
   const sessions = (sessionsRes.data ?? []) as unknown as SessionRow[];
-  const finishedAt = sessions.flatMap((s) => (s.finished_at ? [s.finished_at] : []));
+  const finishedAt = sessions.flatMap((s) =>
+    s.finished_at ? [s.finished_at] : [],
+  );
 
   type RoutineRow = { id: string; name: string; owner: Person | null };
-  let routine: RoutineRow | null = ((currentRes.data ?? []) as unknown as RoutineRow[])[0] ?? null;
+  let routine: RoutineRow | null =
+    ((currentRes.data ?? []) as unknown as RoutineRow[])[0] ?? null;
 
   // Sin rutina vigente: la última que entrenó (si todavía la puede ver).
   if (!routine && sessions.length > 0) {
     const ids = [...new Set(sessions.map((s) => s.routine_id))];
     const { data } = await client
       .from("routines")
-      .select("id, name, owner:profiles!routines_owner_id_fkey(first_name, last_name)")
+      .select(
+        "id, name, owner:profiles!routines_owner_id_fkey(first_name, last_name)",
+      )
       .in("id", ids);
-    const visible = new Map(((data ?? []) as unknown as RoutineRow[]).map((r) => [r.id, r]));
+    const visible = new Map(
+      ((data ?? []) as unknown as RoutineRow[]).map((r) => [r.id, r]),
+    );
     const lastId = ids.find((id) => visible.has(id));
     routine = lastId ? visible.get(lastId)! : null;
   }
@@ -162,7 +188,8 @@ export async function getStudentHome(
       name: routine.name,
       coachName: fullName(routine.owner),
       dayCount: count ?? 0,
-      lastDayName: sessions.find((s) => s.routine_id === routine.id)?.day?.name ?? null,
+      lastDayName:
+        sessions.find((s) => s.routine_id === routine.id)?.day?.name ?? null,
     },
   };
 }
@@ -191,7 +218,10 @@ export type CoachHome = {
 };
 
 /** Datos del inicio del coach: pendientes, quién entrenó y sus clientes. */
-export async function getCoachHome(client: BrabusClient, coachId: string): Promise<CoachHome> {
+export async function getCoachHome(
+  client: BrabusClient,
+  coachId: string,
+): Promise<CoachHome> {
   const since = new Date();
   since.setDate(since.getDate() - 8);
 
@@ -220,7 +250,9 @@ export async function getCoachHome(client: BrabusClient, coachId: string): Promi
       .gte("finished_at", since.toISOString()),
   ]);
 
-  const rows = (clientsRes.data ?? []) as unknown as (ClientNameRow & { created_at: string })[];
+  const rows = (clientsRes.data ?? []) as unknown as (ClientNameRow & {
+    created_at: string;
+  })[];
   const clients = rows
     .map((c) => ({
       id: c.id,
@@ -237,8 +269,12 @@ export async function getCoachHome(client: BrabusClient, coachId: string): Promi
 
   return {
     clients,
-    noRoutine: active.filter((c) => !withRoutine.has(c.id)).map(({ id, name }) => ({ id, name })),
-    noPlan: active.filter((c) => !withPlan.has(c.id)).map(({ id, name }) => ({ id, name })),
+    noRoutine: active
+      .filter((c) => !withRoutine.has(c.id))
+      .map(({ id, name }) => ({ id, name })),
+    noPlan: active
+      .filter((c) => !withPlan.has(c.id))
+      .map(({ id, name }) => ({ id, name })),
     sessions: (sessionsRes.data ?? []).flatMap((s) =>
       s.finished_at ? [{ userId: s.user_id, finishedAt: s.finished_at }] : [],
     ),

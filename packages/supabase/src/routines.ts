@@ -1,5 +1,6 @@
 import {
   fail,
+  formatRest,
   ok,
   validateRoutine,
   type ActionResult,
@@ -113,7 +114,9 @@ export async function setCurrentRoutine(
   client: BrabusClient,
   routineId: string,
 ): Promise<ActionResult> {
-  const { error } = await client.rpc("set_current_routine", { p_routine_id: routineId });
+  const { error } = await client.rpc("set_current_routine", {
+    p_routine_id: routineId,
+  });
   if (error) return fail(error.message);
   return ok(undefined);
 }
@@ -192,7 +195,8 @@ export type ClientRoutineGroup = {
 };
 
 export type Person = { first_name: string; last_name: string };
-export const fullName = (p: Person | null) => (p ? `${p.first_name} ${p.last_name}`.trim() || null : null);
+export const fullName = (p: Person | null) =>
+  p ? `${p.first_name} ${p.last_name}`.trim() || null : null;
 
 export type ClientNameRow = {
   id: string;
@@ -225,7 +229,12 @@ export const clientRef = (c: ClientNameRow): ClientRef => ({
 export const clientName = (c: ClientNameRow) =>
   fullName(c) ?? fullName(c.account) ?? c.student_email ?? "Cliente";
 
-type FromCoachRow = { id: string; name: string; is_current: boolean; owner: Person | null };
+type FromCoachRow = {
+  id: string;
+  name: string;
+  is_current: boolean;
+  owner: Person | null;
+};
 
 /**
  * Lo que muestra la sección Rutinas:
@@ -243,17 +252,26 @@ export async function getRoutinesOverview(
   fromCoaches: CoachRoutineLite[];
 }> {
   const [foldersRes, ownRes, clientsRes, fromCoachesRes] = await Promise.all([
-    client.from("folders").select("id, name").eq("owner_id", userId).order("name"),
+    client
+      .from("folders")
+      .select("id, name")
+      .eq("owner_id", userId)
+      .order("name"),
     client
       .from("routines")
       .select("id, name, folder_id, client_id, is_current")
       .eq("owner_id", userId)
       .order("created_at", { ascending: false }),
-    client.from("coach_students").select(CLIENT_NAME_SELECT).eq("coach_id", userId),
+    client
+      .from("coach_students")
+      .select(CLIENT_NAME_SELECT)
+      .eq("coach_id", userId),
     // RLS: solo las de coaches con acceso activo.
     client
       .from("routines")
-      .select("id, name, is_current, owner:profiles!routines_owner_id_fkey(first_name, last_name)")
+      .select(
+        "id, name, is_current, owner:profiles!routines_owner_id_fkey(first_name, last_name)",
+      )
       .neq("owner_id", userId)
       .order("is_current", { ascending: false })
       .order("created_at", { ascending: false }),
@@ -261,7 +279,10 @@ export async function getRoutinesOverview(
 
   const own = ownRes.data ?? [];
   const clients = new Map(
-    ((clientsRes.data ?? []) as unknown as ClientNameRow[]).map((c) => [c.id, c]),
+    ((clientsRes.data ?? []) as unknown as ClientNameRow[]).map((c) => [
+      c.id,
+      c,
+    ]),
   );
 
   const groups = new Map<string, ClientRoutineGroup>();
@@ -288,14 +309,18 @@ export async function getRoutinesOverview(
       .filter((r) => !r.client_id)
       .map((r) => ({ id: r.id, name: r.name, folder_id: r.folder_id })),
     clients: [...groups.values()].sort(
-      (a, b) => Number(a.archived) - Number(b.archived) || a.name.localeCompare(b.name, "es"),
+      (a, b) =>
+        Number(a.archived) - Number(b.archived) ||
+        a.name.localeCompare(b.name, "es"),
     ),
-    fromCoaches: ((fromCoachesRes.data ?? []) as unknown as FromCoachRow[]).map((r) => ({
-      id: r.id,
-      name: r.name,
-      coachName: fullName(r.owner),
-      isCurrent: r.is_current,
-    })),
+    fromCoaches: ((fromCoachesRes.data ?? []) as unknown as FromCoachRow[]).map(
+      (r) => ({
+        id: r.id,
+        name: r.name,
+        coachName: fullName(r.owner),
+        isCurrent: r.is_current,
+      }),
+    ),
   };
 }
 
@@ -317,8 +342,13 @@ export type EditableExercise = {
   catalog: CatalogEntry;
   variant: string | null;
   sets_reps: string;
+  rest_seconds: number | null;
 };
-export type EditableDay = { id: string; name: string; exercises: EditableExercise[] };
+export type EditableDay = {
+  id: string;
+  name: string;
+  exercises: EditableExercise[];
+};
 export type EditableRoutine = {
   id: string;
   name: string;
@@ -336,6 +366,7 @@ type EditDayRow = {
     id: string;
     variant: string | null;
     sets_reps: string;
+    rest_seconds: number | null;
     position: number;
     catalog: CatalogEntry;
   }[];
@@ -373,7 +404,7 @@ export async function getRoutineForEdit(
     client
       .from("routine_days")
       .select(
-        "id, name, position, exercises(id, variant, sets_reps, position, catalog:exercise_catalog(id, name, muscle_group, owner_id))",
+        "id, name, position, exercises(id, variant, sets_reps, rest_seconds, position, catalog:exercise_catalog(id, name, muscle_group, owner_id))",
       )
       .eq("routine_id", routineId)
       .order("position"),
@@ -383,7 +414,11 @@ export async function getRoutineForEdit(
     id: routine.id,
     name: routine.name,
     folderId: routine.folder_id,
-    clientName: routine.client_id ? (owner ? clientName(owner) : "Cliente") : null,
+    clientName: routine.client_id
+      ? owner
+        ? clientName(owner)
+        : "Cliente"
+      : null,
     days: ((daysData ?? []) as unknown as EditDayRow[]).map((d) => ({
       id: d.id,
       name: d.name,
@@ -394,6 +429,7 @@ export async function getRoutineForEdit(
           catalog: e.catalog,
           variant: e.variant,
           sets_reps: e.sets_reps,
+          rest_seconds: e.rest_seconds,
         })),
     })),
   };
@@ -432,7 +468,9 @@ export async function getRoutineDetail(
     .eq("id", routineId)
     .maybeSingle();
   if (!row) return null;
-  const { owner, ...routine } = row as unknown as Routine & { owner: Person | null };
+  const { owner, ...routine } = row as unknown as Routine & {
+    owner: Person | null;
+  };
 
   const [c, { data: daysData }] = await Promise.all([
     getClientOf(client, routine.client_id),
@@ -461,7 +499,12 @@ export async function getRoutineDetail(
 type ExportDayRow = {
   name: string;
   position: number;
-  exercises: { name: string; sets_reps: string; position: number }[];
+  exercises: {
+    name: string;
+    sets_reps: string;
+    rest_seconds: number | null;
+    position: number;
+  }[];
 };
 
 /** Rutina para exportar a PDF / Excel (solo ejercicios). Null si no hay acceso. */
@@ -475,7 +518,9 @@ export async function getRoutineExport(
   if (!detail) return null;
   const { data: daysData } = await client
     .from("routine_days")
-    .select("name, position, exercises(name, sets_reps, position)")
+    .select(
+      "name, position, exercises(name, sets_reps, rest_seconds, position)",
+    )
     .eq("routine_id", routineId)
     .order("position");
 
@@ -488,7 +533,13 @@ export async function getRoutineExport(
       name: d.name,
       exercises: [...d.exercises]
         .sort((a, b) => a.position - b.position)
-        .map((e) => ({ name: e.name, setsReps: e.sets_reps })),
+        // El descanso va junto a las series: "4x10 · Descanso 90 s".
+        .map((e) => ({
+          name: e.name,
+          setsReps: e.rest_seconds
+            ? `${e.sets_reps} · Descanso ${formatRest(e.rest_seconds)}`
+            : e.sets_reps,
+        })),
     })),
   };
 }

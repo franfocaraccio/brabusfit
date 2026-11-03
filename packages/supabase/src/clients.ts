@@ -20,12 +20,19 @@ import type { BrabusClient } from "./client";
 // ---------------------------------------------------------------------------
 
 type ClientRow = Tables<"coach_students">;
-type AccountProfile = { first_name: string; last_name: string; username: string | null };
+type AccountProfile = {
+  first_name: string;
+  last_name: string;
+  username: string | null;
+};
 
 const fullName = (first: string, last: string) => `${first} ${last}`.trim();
 
 /** Nombre visible: el de la ficha, o el de su cuenta, o el email. */
-function displayName(row: Pick<ClientRow, "first_name" | "last_name" | "student_email">, account: AccountProfile | null) {
+function displayName(
+  row: Pick<ClientRow, "first_name" | "last_name" | "student_email">,
+  account: AccountProfile | null,
+) {
   return (
     fullName(row.first_name, row.last_name) ||
     (account ? fullName(account.first_name, account.last_name) : "") ||
@@ -56,7 +63,10 @@ const CLIENT_SELECT =
   "*, account:profiles!coach_students_student_id_fkey(first_name, last_name, username)";
 
 /** Todas las fichas del coach (activas y archivadas). */
-export async function getClients(client: BrabusClient, coachId: string): Promise<ClientSummary[]> {
+export async function getClients(
+  client: BrabusClient,
+  coachId: string,
+): Promise<ClientSummary[]> {
   const [clientsRes, routinesRes, sessionsRes] = await Promise.all([
     client
       .from("coach_students")
@@ -79,14 +89,20 @@ export async function getClients(client: BrabusClient, coachId: string): Promise
 
   const routineCount = new Map<string, number>();
   for (const r of routinesRes.data ?? []) {
-    if (r.client_id) routineCount.set(r.client_id, (routineCount.get(r.client_id) ?? 0) + 1);
+    if (r.client_id)
+      routineCount.set(r.client_id, (routineCount.get(r.client_id) ?? 0) + 1);
   }
   const lastByUser = new Map<string, string>();
   for (const s of sessionsRes.data ?? []) {
-    if (s.finished_at && !lastByUser.has(s.user_id)) lastByUser.set(s.user_id, s.finished_at);
+    if (s.finished_at && !lastByUser.has(s.user_id))
+      lastByUser.set(s.user_id, s.finished_at);
   }
 
-  return ((clientsRes.data ?? []) as unknown as (ClientRow & { account: AccountProfile | null })[])
+  return (
+    (clientsRes.data ?? []) as unknown as (ClientRow & {
+      account: AccountProfile | null;
+    })[]
+  )
     .map((c) => ({
       id: c.id,
       name: displayName(c, c.account),
@@ -99,15 +115,22 @@ export async function getClients(client: BrabusClient, coachId: string): Promise
       archived: c.archived_at !== null,
       routineCount: routineCount.get(c.id) ?? 0,
       lastActivity:
-        c.status === "active" && c.student_id ? (lastByUser.get(c.student_id) ?? null) : null,
+        c.status === "active" && c.student_id
+          ? (lastByUser.get(c.student_id) ?? null)
+          : null,
     }))
     .sort((a, b) => a.name.localeCompare(b.name, "es"));
 }
 
-export type StudentSetLog = { set_number: number; weight: number | null; reps: number | null };
+export type StudentSetLog = {
+  set_number: number;
+  weight: number | null;
+  reps: number | null;
+};
 export type StudentExerciseLog = {
   completed: boolean;
   note: string | null;
+  variant: string | null;
   exercise: { name: string } | null;
   set_logs: StudentSetLog[];
 };
@@ -137,7 +160,8 @@ export type ClientDetail = {
   sessions: StudentSession[];
 };
 
-const str = (v: string | number | null | undefined) => (v === null || v === undefined ? "" : String(v));
+const str = (v: string | number | null | undefined) =>
+  v === null || v === undefined ? "" : String(v);
 
 /** Ficha completa del cliente. Null si no existe o no es del coach. */
 export async function getClient(
@@ -165,7 +189,7 @@ export async function getClient(
       ? client
           .from("workout_sessions")
           .select(
-            "id, finished_at, started_at, day:routine_days(name), routine:routines(name), exercise_logs(completed, note, exercise:exercises(name), set_logs(set_number, weight, reps))",
+            "id, finished_at, started_at, day:routine_days(name), routine:routines(name), exercise_logs(completed, note, variant, exercise:exercises(name), set_logs(set_number, weight, reps))",
           )
           .eq("user_id", c.student_id)
           .eq("status", "finished")
@@ -282,7 +306,9 @@ export async function removeClientAccess(
   client: BrabusClient,
   clientId: string,
 ): Promise<ActionResult> {
-  const { error } = await client.rpc("remove_client_access", { p_client_id: clientId });
+  const { error } = await client.rpc("remove_client_access", {
+    p_client_id: clientId,
+  });
   if (error) return fail(error.message);
   return ok(undefined);
 }
@@ -302,8 +328,13 @@ export async function setClientArchived(
 }
 
 /** Borra la ficha y las rutinas que el coach le armó. */
-export async function deleteClient(client: BrabusClient, clientId: string): Promise<ActionResult> {
-  const { error } = await client.rpc("delete_client", { p_client_id: clientId });
+export async function deleteClient(
+  client: BrabusClient,
+  clientId: string,
+): Promise<ActionResult> {
+  const { error } = await client.rpc("delete_client", {
+    p_client_id: clientId,
+  });
   if (error) return fail(error.message);
   return ok(undefined);
 }
@@ -322,7 +353,10 @@ export type MyCoach = {
 };
 
 /** Coaches del alumno: activos e invitaciones pendientes. */
-export async function getMyCoaches(client: BrabusClient, studentId: string): Promise<MyCoach[]> {
+export async function getMyCoaches(
+  client: BrabusClient,
+  studentId: string,
+): Promise<MyCoach[]> {
   void studentId; // la RPC usa la sesión
   const { data } = await client.rpc("get_my_coaches", {});
   const links = data ?? [];
@@ -365,7 +399,10 @@ export async function respondInvitation(
 }
 
 /** El alumno se desvincula: se queda con una copia propia de sus rutinas. */
-export async function leaveCoach(client: BrabusClient, linkId: string): Promise<ActionResult> {
+export async function leaveCoach(
+  client: BrabusClient,
+  linkId: string,
+): Promise<ActionResult> {
   const { error } = await client.rpc("leave_coach", { p_link_id: linkId });
   if (error) return fail(error.message);
   return ok(undefined);

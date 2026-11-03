@@ -16,7 +16,11 @@ export type ProgressEntry = {
 
 /** Clave de agrupación de una entrada: el ejercicio del catálogo (o el nombre). */
 const entryKey = (e: ProgressEntry) => e.catalogId ?? exerciseKey(e.name);
-export type ProgressSession = { id: string; date: string; entries: ProgressEntry[] };
+export type ProgressSession = {
+  id: string;
+  date: string;
+  entries: ProgressEntry[];
+};
 
 // ---------------------------------------------------------------------------
 // Período
@@ -32,7 +36,10 @@ export const PERIODS: { value: Period; label: string }[] = [
 export const DEFAULT_PERIOD: Period = "3m";
 
 /** Fecha desde la que se muestran datos (null = todo). */
-export function periodStart(period: Period, now: Date = new Date()): Date | null {
+export function periodStart(
+  period: Period,
+  now: Date = new Date(),
+): Date | null {
   if (period === "all") return null;
   const months = period === "1m" ? 1 : period === "3m" ? 3 : 6;
   const d = new Date(now);
@@ -40,7 +47,8 @@ export function periodStart(period: Period, now: Date = new Date()): Date | null
   return d;
 }
 
-const inPeriod = (iso: string, since: Date | null) => !since || new Date(iso) >= since;
+const inPeriod = (iso: string, since: Date | null) =>
+  !since || new Date(iso) >= since;
 
 // ---------------------------------------------------------------------------
 // Ejercicios (agrupados por ejercicio del catálogo, entre rutinas)
@@ -56,7 +64,8 @@ export function exerciseKey(name: string): string {
     .trim();
 }
 
-const hasData = (sets: ProgressSet[]) => sets.some((s) => s.weight !== null || s.reps !== null);
+const hasData = (sets: ProgressSet[]) =>
+  sets.some((s) => s.weight !== null || s.reps !== null);
 
 export type ExerciseOption = {
   key: string;
@@ -78,7 +87,12 @@ export function listExercises(sessions: ProgressSession[]): ExerciseOption[] {
       seen.add(key);
       const prev = byKey.get(key);
       if (!prev) {
-        byKey.set(key, { key, name: e.name.trim(), sessions: 1, lastDate: s.date });
+        byKey.set(key, {
+          key,
+          name: e.name.trim(),
+          sessions: 1,
+          lastDate: s.date,
+        });
       } else {
         prev.sessions += 1;
         if (s.date >= prev.lastDate) {
@@ -88,7 +102,9 @@ export function listExercises(sessions: ProgressSession[]): ExerciseOption[] {
       }
     }
   }
-  return [...byKey.values()].sort((a, b) => b.lastDate.localeCompare(a.lastDate));
+  return [...byKey.values()].sort((a, b) =>
+    b.lastDate.localeCompare(a.lastDate),
+  );
 }
 
 /** Series de un ejercicio en una sesión (si aparece dos veces, se juntan). */
@@ -137,7 +153,10 @@ export function exerciseSeries(
           if (maxWeight === null || s.weight > maxWeight) {
             maxWeight = s.weight;
             repsAtMax = s.reps;
-          } else if (s.weight === maxWeight && (s.reps ?? 0) > (repsAtMax ?? 0)) {
+          } else if (
+            s.weight === maxWeight &&
+            (s.reps ?? 0) > (repsAtMax ?? 0)
+          ) {
             repsAtMax = s.reps;
           }
         }
@@ -147,7 +166,14 @@ export function exerciseSeries(
           if (s.weight !== null) volume += s.weight * s.reps;
         }
       }
-      return { date, maxWeight, repsAtMax, volume: round1(volume), maxReps, totalReps };
+      return {
+        date,
+        maxWeight,
+        repsAtMax,
+        volume: round1(volume),
+        maxReps,
+        totalReps,
+      };
     });
 }
 
@@ -168,14 +194,27 @@ export function estimate1RM(weight: number, reps: number): number {
 
 export type PersonalRecords = {
   bestWeight: { weight: number; reps: number | null; date: string } | null;
-  bestSet: { weight: number; reps: number; volume: number; date: string } | null;
+  bestSet: {
+    weight: number;
+    reps: number;
+    volume: number;
+    date: string;
+  } | null;
   best1RM: { value: number; weight: number; reps: number; date: string } | null;
   /** Ejercicios sin peso. */
   bestReps: { reps: number; date: string } | null;
 };
 
-export function personalRecords(sessions: ProgressSession[], key: string): PersonalRecords {
-  const r: PersonalRecords = { bestWeight: null, bestSet: null, best1RM: null, bestReps: null };
+export function personalRecords(
+  sessions: ProgressSession[],
+  key: string,
+): PersonalRecords {
+  const r: PersonalRecords = {
+    bestWeight: null,
+    bestSet: null,
+    best1RM: null,
+    bestReps: null,
+  };
   const ordered = [...sessions].sort((a, b) => a.date.localeCompare(b.date));
   for (const session of ordered) {
     for (const s of setsFor(session, key)) {
@@ -184,7 +223,8 @@ export function personalRecords(sessions: ProgressSession[], key: string): Perso
         if (
           !r.bestWeight ||
           s.weight > r.bestWeight.weight ||
-          (s.weight === r.bestWeight.weight && (s.reps ?? 0) > (r.bestWeight.reps ?? 0))
+          (s.weight === r.bestWeight.weight &&
+            (s.reps ?? 0) > (r.bestWeight.reps ?? 0))
         ) {
           r.bestWeight = { weight: s.weight, reps: s.reps, date };
         }
@@ -230,7 +270,9 @@ export function weeklyFrequency(
   since: Date | null,
   now: Date = new Date(),
 ): WeekBucket[] {
-  const dates = sessions.map((s) => new Date(s.date)).filter((d) => !since || d >= since);
+  const dates = sessions
+    .map((s) => new Date(s.date))
+    .filter((d) => !since || d >= since);
   if (dates.length === 0) return [];
   const first = since ?? new Date(Math.min(...dates.map((d) => d.getTime())));
   const end = weekStartOf(now);
@@ -257,12 +299,19 @@ export function weeklyFrequency(
 // ---------------------------------------------------------------------------
 
 export type ChartData = { label: string; value: number; detail: string };
-export type ChartSpec = { title: string; subtitle: string; points: ChartData[] };
+export type ChartSpec = {
+  title: string;
+  subtitle: string;
+  points: ChartData[];
+};
 
 const kg = (n: number) => `${formatWeight(n)} kg`;
 
 /** Gráfico principal (peso máximo) y de volumen para un ejercicio. */
-export function exerciseCharts(points: ExercisePoint[]): { main: ChartSpec; volume: ChartSpec } {
+export function exerciseCharts(points: ExercisePoint[]): {
+  main: ChartSpec;
+  volume: ChartSpec;
+} {
   if (isWeighted(points)) {
     const weighted = points.filter((p) => p.maxWeight !== null);
     return {
@@ -374,7 +423,9 @@ export function buildProgress(
   return {
     exercises,
     selected,
-    records: selected ? recordCards(personalRecords(sessions, selected.key)) : [],
+    records: selected
+      ? recordCards(personalRecords(sessions, selected.key))
+      : [],
     charts: exerciseCharts(points),
     frequency: frequencyChart(weeklyFrequency(sessions, since, now)),
   };
@@ -399,7 +450,9 @@ export function niceScale(
   }
   const rawStep = (hi - lo) / tickCount;
   const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
-  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= rawStep) ?? 10 * mag;
+  const step =
+    [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= rawStep) ??
+    10 * mag;
   const min = zeroBased ? 0 : Math.floor(lo / step) * step;
   const max = Math.ceil(hi / step) * step;
   const ticks: number[] = [];
@@ -410,7 +463,8 @@ export function niceScale(
 /** Número corto para ejes: 1250 → "1,3k", 62.5 → "62,5". */
 export function formatAxis(n: number): string {
   if (Math.abs(n) >= 10000) return `${Math.round(n / 1000)}k`;
-  if (Math.abs(n) >= 1000) return `${String(round1(n / 1000)).replace(".", ",")}k`;
+  if (Math.abs(n) >= 1000)
+    return `${String(round1(n / 1000)).replace(".", ",")}k`;
   return String(round1(n)).replace(".", ",");
 }
 

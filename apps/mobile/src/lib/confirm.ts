@@ -22,7 +22,8 @@ export function confirm({
   onCancel?: () => void;
 }) {
   if (Platform.OS === "web") {
-    if (window.confirm([title, message].filter(Boolean).join("\n\n"))) onConfirm();
+    if (window.confirm([title, message].filter(Boolean).join("\n\n")))
+      onConfirm();
     else onCancel?.();
     return;
   }
@@ -31,17 +32,31 @@ export function confirm({
     message,
     [
       { text: cancelText, style: "cancel", onPress: onCancel },
-      { text: confirmText, style: destructive ? "destructive" : "default", onPress: onConfirm },
+      {
+        text: confirmText,
+        style: destructive ? "destructive" : "default",
+        onPress: onConfirm,
+      },
     ],
     { cancelable: false },
   );
 }
 
-/** Aviso simple (un botón). */
-export function notify(title: string, message?: string) {
+/** Aviso simple (un botón). `onClose` corre al cerrarlo. */
+export function notify(
+  title: string,
+  message?: string,
+  {
+    buttonText = "OK",
+    onClose,
+  }: { buttonText?: string; onClose?: () => void } = {},
+) {
   if (Platform.OS === "web") {
     window.alert([title, message].filter(Boolean).join("\n\n"));
+    onClose?.();
     return;
   }
-  Alert.alert(title, message);
+  Alert.alert(title, message, [{ text: buttonText, onPress: onClose }], {
+    cancelable: false,
+  });
 }

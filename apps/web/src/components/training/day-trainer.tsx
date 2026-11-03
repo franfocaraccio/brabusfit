@@ -6,26 +6,40 @@ import {
   Check,
   ChevronDown,
   History,
+  Play,
   Plus,
+  Timer,
   Trash2,
+  TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
+  EXERCISE_VARIANTS,
+  formatDuration,
+  formatRest,
   formatShortDate as formatDate,
+  formatVolume,
   formatWeight,
+  hasIncompleteRows,
   HISTORY_PREVIEW,
   historyLabel,
   NOTE_MAX_LENGTH,
   parseDecimal,
+  parseSetRows,
   summarizeHistory,
+  volumeProgress,
   clearDraft,
   describeDraft,
   draftKey,
   loadDraft,
+  loadTimerStart,
   saveDraft,
+  saveTimerStart,
+  timerKey,
   type HistoryEntry,
   type SetInput,
+  type VolumeProgress,
   type WorkoutDraft,
   type TrainingExercise,
 } from "@brabus/shared";
@@ -47,7 +61,7 @@ import { cn } from "@/lib/utils";
 
 export type ExerciseState = TrainingExercise;
 
-type SetRow = { key: string; weight: string; reps: string };
+type SetRow = { key: string; weight: string; reps: string; done?: boolean };
 
 const newKey = () => crypto.randomUUID();
 const emptyRow = (): SetRow => ({ key: newKey(), weight: "", reps: "" });
@@ -68,6 +82,16 @@ const rowsSignature = (rs: SetRow[]) =>
   rs.map((r) => `${r.weight.trim()}|${r.reps.trim()}`).join(";");
 
 const BACK = "__back__";
+
+/** Tiempo desde "Empezar" (null si no se usó el cronómetro). */
+const elapsedSince = (start: number | null) =>
+  start === null ? null : Date.now() - start;
+
+/** Cuenta regresiva de descanso en curso. */
+type Rest = { exerciseName: string; endsAt: number };
+
+/** Confirmación pendiente por series incompletas. */
+type IncompleteCheck = { kind: "exercise"; exId: string } | { kind: "session" };
 
 export function DayTrainer({
   userId,
@@ -92,7 +116,9 @@ export function DayTrainer({
   const [openId, setOpenId] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState<Record<string, boolean>>({});
   // Ejercicio cuyo historial completo se muestra en el popup "Ver más".
-  const [historyDialog, setHistoryDialog] = useState<ExerciseState | null>(null);
+  const [historyDialog, setHistoryDialog] = useState<ExerciseState | null>(
+    null,
+  );
   const [rows, setRows] = useState<Record<string, SetRow[]>>(() =>
     Object.fromEntries(exercises.map((e) => [e.id, initialRowsFor(e)])),
   );
@@ -103,9 +129,31 @@ export function DayTrainer({
     ),
   );
   const [notes, setNotes] = useState<Record<string, string>>({});
+  // Variante anotada: arranca con la de la última vez.
+  const [variants, setVariants] = useState<Record<string, string | null>>(() =>
+    Object.fromEntries(
+      exercises.map((e) => [e.id, e.history[0]?.variant ?? null]),
+    ),
+  );
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   // Destino al que el usuario quiso ir con cambios sin guardar (o BACK).
   const [leaveTarget, setLeaveTarget] = useState<string | null>(null);
+
+  // Cronómetro del entrenamiento (desde "Empezar") y descanso entre series.
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const [rest, setRest] = useState<Rest | null>(null);
+  // Pop-ups: series incompletas, progresión y rutina completada.
+  const [incomplete, setIncomplete] = useState<IncompleteCheck | null>(null);
+  const [progress, setProgress] = useState<{
+    name: string;
+    data: VolumeProgress;
+  } | null>(null);
+  const [finished, setFinished] = useState<{ elapsed: number | null } | null>(
+    null,
+  );
+  // "¡Rutina completada!" queda esperando a que se cierre el pop-up de progresión.
+  const pendingFinishRef = useRef(false);
 
   const completedCount = Object.values(completed).filter(Boolean).length;
   const allDone = exercises.length > 0 && completedCount === exercises.length;
@@ -197,15 +245,43 @@ export function DayTrainer({
 
   // --- Respaldo local por si se cierra la pestaña/app de golpe -------------
   const draftId = draftKey(userId, dayId);
-  const storage = () => (typeof window === "undefined" ? undefined : window.localStorage);
+  const timerId = timerKey(userId, dayId);
+  const storage = () =>
+    typeof window === "undefined" ? undefined : window.localStorage;
   const [pendingDraft, setPendingDraft] = useState<WorkoutDraft | null>(null);
 
-  // Al entrar: si quedó una sesión sin guardar (menos de 24 h), preguntamos.
+  // Al entrar: si quedó una sesión sin guardar (menos de 24 h), preguntamos. El
+  // cronómetro, si ya se había empezado, sigue contando.
   useEffect(() => {
     const draft = loadDraft(storage(), draftId);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage solo existe en el cliente
     if (draft) setPendingDraft(draft);
-  }, [draftId]);
+    const start = loadTimerStart(storage(), timerId);
+    if (start) setStartedAt(start);
+  }, [draftId, timerId]);
+
+  // Un tic por segundo mientras corre el cronómetro o un descanso.
+  useEffect(() => {
+    if (startedAt === null && rest === null) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [startedAt, rest]);
+
+  // Fin del descanso: aviso y se cierra la cuenta regresiva.
+  useEffect(() => {
+    if (rest && now >= rest.endsAt) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- el descanso vence con el reloj
+      setRest(null);
+      toast.success("¡Descanso terminado! A la próxima serie.");
+    }
+  }, [now, rest]);
+
+  const startWorkout = () => {
+    const start = Date.now();
+    setStartedAt(start);
+    setNow(start);
+    saveTimerStart(storage(), timerId, start);
+  };
 
   /** Guarda el borrador con el estado actual (se llama al guardar/marcar un ejercicio). */
   const persistDraft = (nextCompleted: Record<string, boolean>) =>
@@ -220,11 +296,16 @@ export function DayTrainer({
         ]),
       ),
       notes,
+      variants,
     });
 
   const restoreDraft = (draft: WorkoutDraft) => {
     const ids = new Set(exercises.map((e) => e.id));
-    setCompleted(Object.fromEntries(draft.completed.filter((id) => ids.has(id)).map((id) => [id, true])));
+    setCompleted(
+      Object.fromEntries(
+        draft.completed.filter((id) => ids.has(id)).map((id) => [id, true]),
+      ),
+    );
     setRows((prev) => ({
       ...prev,
       ...Object.fromEntries(
@@ -233,12 +314,26 @@ export function DayTrainer({
           .map(([id, rs]) => [id, rs.map((r) => ({ key: newKey(), ...r }))]),
       ),
     }));
-    setNotes(Object.fromEntries(Object.entries(draft.notes).filter(([id]) => ids.has(id))));
+    setNotes(
+      Object.fromEntries(
+        Object.entries(draft.notes).filter(([id]) => ids.has(id)),
+      ),
+    );
+    if (draft.variants) {
+      setVariants((prev) => ({
+        ...prev,
+        ...Object.fromEntries(
+          Object.entries(draft.variants ?? {}).filter(([id]) => ids.has(id)),
+        ),
+      }));
+    }
     setPendingDraft(null);
   };
 
   const discardDraft = () => {
     clearDraft(storage(), draftId);
+    clearDraft(storage(), timerId);
+    setStartedAt(null);
     setPendingDraft(null);
   };
 
@@ -263,20 +358,68 @@ export function DayTrainer({
           : prev[exId],
     }));
 
-  // Marca el ejercicio como hecho (solo en memoria; se guarda al cerrar).
-  const handleDone = (exId: string) => {
-    const next = { ...completed, [exId]: true };
+  // Serie hecha: la marca y arranca el descanso que fijó el coach.
+  const toggleSetDone = (ex: ExerciseState, row: SetRow) => {
+    const done = !row.done;
+    setRow(ex.id, row.key, { done });
+    if (done && ex.restSeconds) {
+      const start = Date.now();
+      setNow(start);
+      setRest({ exerciseName: ex.name, endsAt: start + ex.restSeconds * 1000 });
+    }
+  };
+
+  const adjustRest = (deltaSeconds: number) =>
+    setRest((r) => {
+      if (!r) return r;
+      const endsAt = r.endsAt + deltaSeconds * 1000;
+      return endsAt <= Date.now() ? null : { ...r, endsAt };
+    });
+
+  /** Marca el ejercicio como hecho y encadena progresión / rutina completada. */
+  const completeExercise = (ex: ExerciseState) => {
+    const next = { ...completed, [ex.id]: true };
     setCompleted(next);
     persistDraft(next);
     setOpenId(null);
+
+    const nowAllDone = exercises.every((e) => next[e.id]);
+    const gain = volumeProgress(parseSetRows(rows[ex.id]), ex.history[0]);
+    if (gain) {
+      pendingFinishRef.current = nowAllDone;
+      setProgress({ name: ex.name, data: gain });
+    } else if (nowAllDone) {
+      setFinished({ elapsed: elapsedSince(startedAt) });
+    }
+  };
+
+  // "Guardar ejercicio": si hay series a medio cargar, primero se confirma.
+  const handleDone = (ex: ExerciseState) => {
+    if (hasIncompleteRows(rows[ex.id])) {
+      setIncomplete({ kind: "exercise", exId: ex.id });
+      return;
+    }
+    completeExercise(ex);
   };
 
   // Tocar el círculo: completa (o descompleta) sin abrir el ejercicio. Se
   // guardan las series tal como estén (precargadas o editadas).
   const toggleQuickDone = (ex: ExerciseState) => {
-    const next = { ...completed, [ex.id]: !completed[ex.id] };
-    setCompleted(next);
-    persistDraft(next);
+    if (completed[ex.id]) {
+      const next = { ...completed, [ex.id]: false };
+      setCompleted(next);
+      persistDraft(next);
+      return;
+    }
+    handleDone(ex);
+  };
+
+  const closeProgress = () => {
+    setProgress(null);
+    if (pendingFinishRef.current) {
+      pendingFinishRef.current = false;
+      setFinished({ elapsed: elapsedSince(startedAt) });
+    }
   };
 
   const doClose = () => {
@@ -285,38 +428,67 @@ export function DayTrainer({
       .map((ex) => ({
         exerciseId: ex.id,
         note: notes[ex.id] ?? null,
-        sets: rows[ex.id].map(
-          (r, i): SetInput => ({
-            set_number: i + 1,
-            weight: parseDecimal(r.weight),
-            reps: r.reps.trim() === "" ? null : Number(r.reps),
-          }),
-        ),
+        variant: variants[ex.id] ?? null,
+        sets: rows[ex.id].map((r, i): SetInput => ({
+          set_number: i + 1,
+          weight: parseDecimal(r.weight),
+          reps: r.reps.trim() === "" ? null : Number(r.reps),
+        })),
       }));
 
     startTransition(async () => {
-      const res = await saveWorkout(routineId, dayId, logs);
+      const res = await saveWorkout(
+        routineId,
+        dayId,
+        logs,
+        startedAt === null ? null : new Date(startedAt).toISOString(),
+      );
       if (!res.ok) {
         toast.error(res.error);
         return;
       }
       clearDraft(storage(), draftId);
+      clearDraft(storage(), timerId);
       setShowCloseWarning(false);
-      toast.success(
-        "Sesión guardada",
-      );
+      setFinished(null);
+      toast.success("Sesión guardada");
       leave(`/rutinas/${routineId}`);
       router.refresh();
     });
   };
 
-  const handleCloseClick = () => {
-    if (allDone) {
-      doClose();
-    } else {
-      setShowCloseWarning(true);
-    }
+  // "Guardar sesión": series incompletas → ejercicios sin terminar → guardar.
+  const checkUnfinished = () => {
+    if (allDone) doClose();
+    else setShowCloseWarning(true);
   };
+
+  const handleCloseClick = () => {
+    const anyIncomplete = exercises.some(
+      (ex) => completed[ex.id] && hasIncompleteRows(rows[ex.id]),
+    );
+    if (anyIncomplete) {
+      setIncomplete({ kind: "session" });
+      return;
+    }
+    checkUnfinished();
+  };
+
+  const confirmIncomplete = () => {
+    const check = incomplete;
+    setIncomplete(null);
+    if (!check) return;
+    if (check.kind === "session") {
+      checkUnfinished();
+      return;
+    }
+    const ex = exercises.find((e) => e.id === check.exId);
+    if (ex) completeExercise(ex);
+  };
+
+  const restLeft = rest
+    ? Math.max(0, Math.ceil((rest.endsAt - now) / 1000))
+    : 0;
 
   return (
     <div className="space-y-5">
@@ -327,10 +499,31 @@ export function DayTrainer({
         >
           ← Volver a la rutina
         </button>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight">{dayName}</h1>
-        <p className="text-muted-foreground text-sm">
-          {completedCount} de {exercises.length} ejercicios completados
-        </p>
+        <div className="mt-1 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold tracking-tight">{dayName}</h1>
+            <p className="text-muted-foreground text-sm">
+              {completedCount} de {exercises.length} ejercicios completados
+            </p>
+          </div>
+          {startedAt === null ? (
+            <Button
+              size="sm"
+              className="shrink-0 gap-1.5"
+              onClick={startWorkout}
+            >
+              <Play className="size-4" /> Empezar
+            </Button>
+          ) : (
+            <span
+              className="bg-primary/15 text-primary-text inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold tabular-nums"
+              aria-label="Tiempo de entrenamiento"
+            >
+              <Timer className="size-4" />
+              {formatDuration(now - startedAt)}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -383,6 +576,9 @@ export function DayTrainer({
                     </span>
                     <span className="text-muted-foreground block text-xs">
                       {ex.setsReps}
+                      {ex.restSeconds
+                        ? ` · Descanso ${formatRest(ex.restSeconds)}`
+                        : ""}
                     </span>
                     {ex.history[0] ? (
                       <span className="text-foreground/70 mt-0.5 block text-xs">
@@ -438,6 +634,44 @@ export function DayTrainer({
                     </div>
                   )}
 
+                  {/* Variante con la que lo hizo */}
+                  <div className="space-y-1.5">
+                    <span className="text-muted-foreground text-xs font-medium">
+                      Variante
+                    </span>
+                    <div
+                      className="flex flex-wrap gap-1.5"
+                      role="radiogroup"
+                      aria-label="Variante"
+                    >
+                      {EXERCISE_VARIANTS.map((v) => {
+                        const selected = variants[ex.id] === v;
+                        return (
+                          <button
+                            key={v}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            onClick={() =>
+                              setVariants((prev) => ({
+                                ...prev,
+                                [ex.id]: selected ? null : v,
+                              }))
+                            }
+                            className={cn(
+                              "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                              selected
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-input text-muted-foreground hover:text-foreground",
+                            )}
+                          >
+                            {v}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   {/* Inputs de series */}
                   <div className="space-y-2">
                     {ex.history[0] ? (
@@ -478,6 +712,21 @@ export function DayTrainer({
                           }
                           className="flex-1"
                         />
+                        {ex.restSeconds ? (
+                          <Button
+                            variant={row.done ? "default" : "outline"}
+                            size="icon"
+                            aria-label={
+                              row.done
+                                ? `Serie ${i + 1} hecha`
+                                : `Marcar serie ${i + 1} como hecha y descansar`
+                            }
+                            aria-pressed={!!row.done}
+                            onClick={() => toggleSetDone(ex, row)}
+                          >
+                            <Check className="size-4" />
+                          </Button>
+                        ) : null}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -518,14 +767,14 @@ export function DayTrainer({
                         e.target.style.height = `${e.target.scrollHeight}px`;
                         setNotes((n) => ({ ...n, [ex.id]: e.target.value }));
                       }}
-                      placeholder="Ej: hecho en Smith"
+                      placeholder="Ej: agarre cerrado"
                       className="border-input bg-input/40 placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/40 block w-full resize-none overflow-hidden rounded-xl border px-3.5 py-1.5 text-sm outline-none transition-colors focus-visible:ring-3"
                     />
                   </div>
 
                   <Button
                     className="w-full"
-                    onClick={() => handleDone(ex.id)}
+                    onClick={() => handleDone(ex)}
                     disabled={pending}
                   >
                     Guardar ejercicio
@@ -537,8 +786,34 @@ export function DayTrainer({
         })}
       </div>
 
-      {/* Guardar sesión */}
-      <div className="bg-background/90 sticky bottom-16 z-20 -mx-4 border-t px-4 py-3 backdrop-blur md:bottom-0 md:mx-0">
+      {/* Descanso + Guardar sesión */}
+      <div className="bg-background/90 sticky bottom-16 z-20 -mx-4 space-y-2 border-t px-4 py-3 backdrop-blur md:bottom-0 md:mx-0">
+        {rest ? (
+          <div
+            className="bg-primary/15 flex items-center gap-3 rounded-xl px-3 py-2"
+            role="timer"
+            aria-live="polite"
+          >
+            <Timer className="text-primary-text size-5 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-muted-foreground truncate text-xs">
+                Descanso · {rest.exerciseName}
+              </p>
+              <p className="text-lg font-semibold tabular-nums">
+                {formatDuration(restLeft * 1000)}
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => adjustRest(-15)}>
+              −15 s
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => adjustRest(15)}>
+              +15 s
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setRest(null)}>
+              Saltar
+            </Button>
+          </div>
+        ) : null}
         <Button
           className="w-full"
           variant={completedCount > 0 ? "default" : "secondary"}
@@ -572,6 +847,82 @@ export function DayTrainer({
         </DialogContent>
       </Dialog>
 
+      {/* Series con datos faltantes */}
+      <Dialog
+        open={incomplete !== null}
+        onOpenChange={(o) => {
+          if (!o) setIncomplete(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>⚠️ Faltan datos en algunas series</DialogTitle>
+            <DialogDescription>¿Guardar igualmente?</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIncomplete(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={confirmIncomplete}>Guardar igual</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Progresión de volumen */}
+      <Dialog
+        open={progress !== null}
+        onOpenChange={(o) => {
+          if (!o) closeProgress();
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingUp className="text-success size-5" /> ¡Progresaste!
+            </DialogTitle>
+            <DialogDescription>
+              {progress
+                ? `${progress.name}: +${progress.data.percent}% de volumen respecto a la última vez (${formatVolume(progress.data.before)} → ${formatVolume(progress.data.after)} kg).`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={closeProgress}>¡Vamos!</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ¡Rutina completada! */}
+      <Dialog
+        open={finished !== null}
+        onOpenChange={(o) => {
+          if (!o) setFinished(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>🎉 ¡Rutina completada!</DialogTitle>
+            <DialogDescription>
+              {finished?.elapsed != null
+                ? `Tiempo total de entrenamiento: ${formatDuration(finished.elapsed)}.`
+                : "Completaste todos los ejercicios del día."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setFinished(null)}
+              disabled={pending}
+            >
+              Seguir editando
+            </Button>
+            <Button onClick={doClose} disabled={pending}>
+              {pending ? "Guardando…" : "Guardar entrenamiento"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Aviso al salir con cambios sin guardar */}
       <Dialog
         open={leaveTarget !== null}
@@ -596,8 +947,9 @@ export function DayTrainer({
               onClick={() => {
                 const target = leaveTarget;
                 setLeaveTarget(null);
-                // Salida a propósito: el respaldo ya no hace falta.
+                // Salida a propósito: el respaldo y el cronómetro ya no hacen falta.
                 clearDraft(storage(), draftId);
+                clearDraft(storage(), timerId);
                 if (target) leave(target);
               }}
             >
@@ -613,8 +965,8 @@ export function DayTrainer({
           <DialogHeader>
             <DialogTitle>Tenés una sesión sin guardar</DialogTitle>
             <DialogDescription>
-              {pendingDraft ? describeDraft(pendingDraft) : ""} ¿Querés continuarla o
-              empezar de nuevo?
+              {pendingDraft ? describeDraft(pendingDraft) : ""} ¿Querés
+              continuarla o empezar de nuevo?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

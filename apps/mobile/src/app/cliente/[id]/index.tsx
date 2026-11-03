@@ -486,6 +486,7 @@ export default function ClienteScreen() {
                             (a, b) => a.set_number - b.set_number,
                           ),
                           note: l.note,
+                          variant: l.variant,
                         })}
                       </Text>
                     </Text>

@@ -63,7 +63,10 @@ export async function deleteNutritionFolder(
   folderId: string,
 ): Promise<ActionResult> {
   // Los planes de la carpeta pasan a "Sin carpeta" (folder_id = null por FK).
-  const { error } = await client.from("nutrition_folders").delete().eq("id", folderId);
+  const { error } = await client
+    .from("nutrition_folders")
+    .delete()
+    .eq("id", folderId);
   if (error) return fail(error.message);
   return ok(undefined);
 }
@@ -109,11 +112,16 @@ export async function getNutritionOverview(
       .select("id, name, folder_id, client_id, is_current")
       .eq("owner_id", userId)
       .order("created_at", { ascending: false }),
-    client.from("coach_students").select(CLIENT_NAME_SELECT).eq("coach_id", userId),
+    client
+      .from("coach_students")
+      .select(CLIENT_NAME_SELECT)
+      .eq("coach_id", userId),
     // RLS: solo los de coaches con acceso activo.
     client
       .from("nutrition_plans")
-      .select("id, name, is_current, owner:profiles!nutrition_plans_owner_id_fkey(first_name, last_name)")
+      .select(
+        "id, name, is_current, owner:profiles!nutrition_plans_owner_id_fkey(first_name, last_name)",
+      )
       .neq("owner_id", userId)
       .order("is_current", { ascending: false })
       .order("created_at", { ascending: false }),
@@ -121,7 +129,10 @@ export async function getNutritionOverview(
 
   const own = ownRes.data ?? [];
   const clients = new Map(
-    ((clientsRes.data ?? []) as unknown as ClientNameRow[]).map((c) => [c.id, c]),
+    ((clientsRes.data ?? []) as unknown as ClientNameRow[]).map((c) => [
+      c.id,
+      c,
+    ]),
   );
   const groups = new Map<string, ClientPlanGroup>();
   for (const p of own) {
@@ -147,7 +158,9 @@ export async function getNutritionOverview(
       .filter((p) => !p.client_id)
       .map((p) => ({ id: p.id, name: p.name, folder_id: p.folder_id })),
     clients: [...groups.values()].sort(
-      (a, b) => Number(a.archived) - Number(b.archived) || a.name.localeCompare(b.name, "es"),
+      (a, b) =>
+        Number(a.archived) - Number(b.archived) ||
+        a.name.localeCompare(b.name, "es"),
     ),
     fromCoaches: (
       (fromCoachesRes.data ?? []) as unknown as {
@@ -156,7 +169,12 @@ export async function getNutritionOverview(
         is_current: boolean;
         owner: Person | null;
       }[]
-    ).map((p) => ({ id: p.id, name: p.name, coachName: fullName(p.owner), isCurrent: p.is_current })),
+    ).map((p) => ({
+      id: p.id,
+      name: p.name,
+      coachName: fullName(p.owner),
+      isCurrent: p.is_current,
+    })),
   };
 }
 
@@ -171,7 +189,11 @@ export async function getClientPlans(
     .eq("client_id", clientId)
     .order("is_current", { ascending: false })
     .order("created_at", { ascending: false });
-  return (data ?? []).map((p) => ({ id: p.id, name: p.name, isCurrent: p.is_current }));
+  return (data ?? []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    isCurrent: p.is_current,
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -216,11 +238,15 @@ export async function getPlanDetail(
 ): Promise<PlanDetail | null> {
   const { data: row } = await client
     .from("nutrition_plans")
-    .select("*, owner:profiles!nutrition_plans_owner_id_fkey(first_name, last_name)")
+    .select(
+      "*, owner:profiles!nutrition_plans_owner_id_fkey(first_name, last_name)",
+    )
     .eq("id", planId)
     .maybeSingle();
   if (!row) return null;
-  const { owner, ...plan } = row as unknown as NutritionPlan & { owner: Person | null };
+  const { owner, ...plan } = row as unknown as NutritionPlan & {
+    owner: Person | null;
+  };
 
   const [c, { data: mealsData }] = await Promise.all([
     getClientOf(client, plan.client_id),
@@ -362,14 +388,23 @@ export async function copyPlan(
 }
 
 /** Marca el plan como vigente para su cliente. */
-export async function setCurrentPlan(client: BrabusClient, planId: string): Promise<ActionResult> {
+export async function setCurrentPlan(
+  client: BrabusClient,
+  planId: string,
+): Promise<ActionResult> {
   const { error } = await client.rpc("set_current_plan", { p_plan_id: planId });
   if (error) return fail(error.message);
   return ok(undefined);
 }
 
-export async function deletePlan(client: BrabusClient, planId: string): Promise<ActionResult> {
-  const { error } = await client.from("nutrition_plans").delete().eq("id", planId);
+export async function deletePlan(
+  client: BrabusClient,
+  planId: string,
+): Promise<ActionResult> {
+  const { error } = await client
+    .from("nutrition_plans")
+    .delete()
+    .eq("id", planId);
   if (error) return fail(error.message);
   return ok(undefined);
 }

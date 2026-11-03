@@ -35,7 +35,9 @@ export async function getRoutineSessions(
 ): Promise<SessionSummary[]> {
   const { data } = await client
     .from("workout_sessions")
-    .select("id, finished_at, started_at, day:routine_days(name), exercise_logs(count)")
+    .select(
+      "id, finished_at, started_at, day:routine_days(name), exercise_logs(count)",
+    )
     .eq("routine_id", params.routineId)
     .eq("user_id", params.userId)
     .eq("status", "finished")
@@ -59,6 +61,7 @@ export type SessionLogDetail = {
   exerciseName: string;
   setsReps: string;
   note: string | null;
+  variant: string | null;
   sets: SavedSet[];
 };
 
@@ -69,6 +72,8 @@ export type SessionDetail = {
   routineId: string;
   routineName: string;
   dayName: string;
+  /** Duración con el cronómetro (null si no se usó). */
+  durationMs: number | null;
   logs: SessionLogDetail[];
 };
 
@@ -83,10 +88,21 @@ type SessionDetailRow = {
   exercise_logs: {
     id: string;
     note: string | null;
+    variant: string | null;
     exercise: { name: string; sets_reps: string; position: number } | null;
     set_logs: SavedSet[];
   }[];
 };
+
+/** Duración de una sesión; null si no se usó el cronómetro (inicio = fin). */
+export function sessionDuration(
+  startedAt: string,
+  finishedAt: string | null,
+): number | null {
+  if (!finishedAt) return null;
+  const ms = new Date(finishedAt).getTime() - new Date(startedAt).getTime();
+  return ms >= 1000 ? ms : null;
+}
 
 /** Sesión con sus ejercicios y series. Null si no existe o no hay acceso (RLS). */
 export async function getSessionDetail(
@@ -96,7 +112,7 @@ export async function getSessionDetail(
   const { data } = await client
     .from("workout_sessions")
     .select(
-      "id, user_id, routine_id, finished_at, started_at, routine:routines(name), day:routine_days(name), exercise_logs(id, note, exercise:exercises(name, sets_reps, position), set_logs(set_number, weight, reps))",
+      "id, user_id, routine_id, finished_at, started_at, routine:routines(name), day:routine_days(name), exercise_logs(id, note, variant, exercise:exercises(name, sets_reps, position), set_logs(set_number, weight, reps))",
     )
     .eq("id", sessionId)
     .eq("status", "finished")
@@ -111,6 +127,7 @@ export async function getSessionDetail(
     routineId: s.routine_id,
     routineName: s.routine?.name ?? "Rutina",
     dayName: s.day?.name ?? "Día",
+    durationMs: sessionDuration(s.started_at, s.finished_at),
     logs: [...s.exercise_logs]
       .sort((a, b) => (a.exercise?.position ?? 0) - (b.exercise?.position ?? 0))
       .map((l) => ({
@@ -118,6 +135,7 @@ export async function getSessionDetail(
         exerciseName: l.exercise?.name ?? "Ejercicio",
         setsReps: l.exercise?.sets_reps ?? "",
         note: l.note,
+        variant: l.variant,
         sets: [...l.set_logs].sort((a, b) => a.set_number - b.set_number),
       })),
   };
@@ -137,8 +155,13 @@ export async function updateSession(
     p_logs: logs,
   });
   if (error) {
-    if (error.code === "PGRST202" || /update_session_logs/.test(error.message)) {
-      return fail("Falta actualizar la base de datos (migración 0007) para poder editar.");
+    if (
+      error.code === "PGRST202" ||
+      /update_session_logs/.test(error.message)
+    ) {
+      return fail(
+        "Falta actualizar la base de datos (migración 0007) para poder editar.",
+      );
     }
     return fail(error.message);
   }

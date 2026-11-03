@@ -120,7 +120,9 @@ export function studentDashboard(
     .slice(0, -1)
     .filter((w) => first !== null && w.start >= weekStart(first));
   const average =
-    complete.length > 0 ? complete.reduce((n, w) => n + w.days, 0) / complete.length : null;
+    complete.length > 0
+      ? complete.reduce((n, w) => n + w.days, 0) / complete.length
+      : null;
 
   let streak = 0;
   if (goal) {
@@ -203,7 +205,20 @@ export function clientGrowth(
   return out;
 }
 
-const MONTH_SHORT = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+const MONTH_SHORT = [
+  "ene",
+  "feb",
+  "mar",
+  "abr",
+  "may",
+  "jun",
+  "jul",
+  "ago",
+  "sep",
+  "oct",
+  "nov",
+  "dic",
+];
 /** "oct" (para el eje del gráfico). */
 export const shortMonth = (d: Date) => MONTH_SHORT[d.getMonth()];
 
@@ -213,14 +228,24 @@ export const shortMonth = (d: Date) => MONTH_SHORT[d.getMonth()];
  */
 export function monthLabels(weeks: { start: Date }[]): string[] {
   const labels = weeks.map((w, i) =>
-    i === 0 || w.start.getMonth() !== weeks[i - 1].start.getMonth() ? shortMonth(w.start) : "",
+    i === 0 || w.start.getMonth() !== weeks[i - 1].start.getMonth()
+      ? shortMonth(w.start)
+      : "",
   );
   return labels.map((l, i) => (l && labels[i + 1] ? "" : l));
 }
 
 export const WEEKDAY_INITIALS = ["L", "M", "M", "J", "V", "S", "D"];
 
-const WEEKDAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const WEEKDAYS = [
+  "Domingo",
+  "Lunes",
+  "Martes",
+  "Miércoles",
+  "Jueves",
+  "Viernes",
+  "Sábado",
+];
 const MONTHS = [
   "enero",
   "febrero",

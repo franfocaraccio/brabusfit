@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { formatSessionDate, summarizeHistory } from "@brabus/shared";
+import {
+  formatDuration,
+  formatSessionDate,
+  summarizeHistory,
+} from "@brabus/shared";
 import { getClientIdForStudent, getSessionDetail } from "@brabus/supabase";
 
 import { SessionEditor } from "@/components/history/session-editor";
@@ -23,7 +27,9 @@ export default async function SesionPage({
 
   // Solo quien entrenó edita; el coach (dueño de la rutina) la ve en solo lectura.
   const isOwner = session.userId === userId;
-  const clientId = isOwner ? null : await getClientIdForStudent(supabase, userId, session.userId);
+  const clientId = isOwner
+    ? null
+    : await getClientIdForStudent(supabase, userId, session.userId);
   const back = isOwner
     ? { href: `/rutinas/${session.routineId}/historial`, label: "Historial" }
     : clientId
@@ -33,12 +39,20 @@ export default async function SesionPage({
   return (
     <div className="space-y-6">
       <div>
-        <Link href={back.href} className="text-muted-foreground hover:text-foreground text-sm">
+        <Link
+          href={back.href}
+          className="text-muted-foreground hover:text-foreground text-sm"
+        >
           ← {back.label}
         </Link>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight">{session.dayName}</h1>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight">
+          {session.dayName}
+        </h1>
         <p className="text-muted-foreground text-sm">
           {session.routineName} · {formatSessionDate(session.date)}
+          {session.durationMs !== null
+            ? ` · ⏱ ${formatDuration(session.durationMs)}`
+            : ""}
         </p>
       </div>
 
@@ -50,7 +64,11 @@ export default async function SesionPage({
             <Card key={l.id} className="gap-1 p-4">
               <p className="font-semibold">{l.exerciseName}</p>
               <p className="text-muted-foreground text-sm">
-                {summarizeHistory({ sets: l.sets, note: l.note }) || "Sin series"}
+                {summarizeHistory({
+                  sets: l.sets,
+                  note: l.note,
+                  variant: l.variant,
+                }) || "Sin series"}
               </p>
             </Card>
           ))}

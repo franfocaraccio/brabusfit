@@ -21,6 +21,8 @@ export type WorkoutDraft = {
   completed: string[];
   rows: Record<string, DraftRow[]>;
   notes: Record<string, string>;
+  /** Variante anotada por ejercicio (borradores viejos no la tienen). */
+  variants?: Record<string, string | null>;
 };
 
 /** Lo mínimo de Storage que necesitamos (localStorage web o expo-sqlite). */
@@ -46,7 +48,11 @@ export function loadDraft(
     if (!raw) return null;
     const draft = JSON.parse(raw) as WorkoutDraft;
     const age = now.getTime() - new Date(draft.savedAt).getTime();
-    if (draft.v !== 1 || !(age >= 0 && age < DRAFT_TTL_MS) || draft.completed.length === 0) {
+    if (
+      draft.v !== 1 ||
+      !(age >= 0 && age < DRAFT_TTL_MS) ||
+      draft.completed.length === 0
+    ) {
       storage.removeItem(key);
       return null;
     }
@@ -73,14 +79,21 @@ export function saveDraft(
       storage.removeItem(key);
       return;
     }
-    const draft: WorkoutDraft = { v: 1, savedAt: new Date().toISOString(), ...data };
+    const draft: WorkoutDraft = {
+      v: 1,
+      savedAt: new Date().toISOString(),
+      ...data,
+    };
     storage.setItem(key, JSON.stringify(draft));
   } catch {
     // Si el almacenamiento falla, el respaldo simplemente no está.
   }
 }
 
-export function clearDraft(storage: DraftStorage | undefined, key: string): void {
+export function clearDraft(
+  storage: DraftStorage | undefined,
+  key: string,
+): void {
   try {
     storage?.removeItem(key);
   } catch {
@@ -97,4 +110,43 @@ export function describeDraft(draft: WorkoutDraft): string {
   const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
   const n = draft.completed.length;
   return `Del ${day} a las ${time} · ${n} ${n === 1 ? "ejercicio guardado" : "ejercicios guardados"}.`;
+}
+
+// ---------------------------------------------------------------------------
+// Cronómetro del entrenamiento: cuándo tocó "Empezar". Se guarda aparte del
+// borrador para que siga contando aunque todavía no haya ejercicios marcados.
+// ---------------------------------------------------------------------------
+
+export function timerKey(userId: string, dayId: string): string {
+  return `brabus:workout-start:${userId}:${dayId}`;
+}
+
+/** Inicio guardado (ms) si es de las últimas 24 h; si no, lo borra. */
+export function loadTimerStart(
+  storage: DraftStorage | undefined,
+  key: string,
+  now: number = Date.now(),
+): number | null {
+  if (!storage) return null;
+  try {
+    const start = Number(storage.getItem(key));
+    if (start > 0 && now - start >= 0 && now - start < DRAFT_TTL_MS)
+      return start;
+    storage.removeItem(key);
+  } catch {
+    // sin storage: el cronómetro arranca de cero
+  }
+  return null;
+}
+
+export function saveTimerStart(
+  storage: DraftStorage | undefined,
+  key: string,
+  start: number,
+): void {
+  try {
+    storage?.setItem(key, String(start));
+  } catch {
+    // ignorar
+  }
 }

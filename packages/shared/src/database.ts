@@ -19,6 +19,8 @@ export type ExerciseInput = {
   /** Solo para compatibilidad: sin catalog_id, la base busca por nombre. */
   name?: string;
   sets_reps: string;
+  /** Descanso entre series en segundos (null = sin descanso). */
+  rest_seconds?: number | null;
 };
 export type RoutineDayInput = {
   id?: string;
@@ -34,12 +36,7 @@ export type AppAccess = "none" | LinkStatus;
 
 export type ClientSex = "femenino" | "masculino" | "otro";
 export type ClientGoal =
-  | "bajar_peso"
-  | "ganar_masa"
-  | "tonificar"
-  | "rendimiento"
-  | "salud"
-  | "otro";
+  "bajar_peso" | "ganar_masa" | "tonificar" | "rendimiento" | "salud" | "otro";
 export type ClientLevel = "principiante" | "intermedio" | "avanzado";
 
 /** Validación en vivo al invitar un cliente a la app. */
@@ -179,6 +176,8 @@ export type Database = {
           catalog_id: string;
           variant: string | null;
           sets_reps: string;
+          /** Descanso entre series que fija el coach (null = sin descanso). */
+          rest_seconds: number | null;
           position: number;
           created_at: string;
         };
@@ -212,13 +211,22 @@ export type Database = {
           owner_id?: string | null;
           created_at?: string;
         };
-        Update: Partial<Database["public"]["Tables"]["exercise_catalog"]["Insert"]>;
+        Update: Partial<
+          Database["public"]["Tables"]["exercise_catalog"]["Insert"]
+        >;
         Relationships: [];
       };
       nutrition_folders: {
         Row: { id: string; owner_id: string; name: string; created_at: string };
-        Insert: { id?: string; owner_id: string; name: string; created_at?: string };
-        Update: Partial<Database["public"]["Tables"]["nutrition_folders"]["Insert"]>;
+        Insert: {
+          id?: string;
+          owner_id: string;
+          name: string;
+          created_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["nutrition_folders"]["Insert"]
+        >;
         Relationships: [];
       };
       nutrition_plans: {
@@ -246,7 +254,13 @@ export type Database = {
         Relationships: [];
       };
       nutrition_meals: {
-        Row: { id: string; plan_id: string; name: string; time_label: string | null; position: number };
+        Row: {
+          id: string;
+          plan_id: string;
+          name: string;
+          time_label: string | null;
+          position: number;
+        };
         Insert: { plan_id: string; name: string };
         Update: Record<string, never>;
         Relationships: [];
@@ -336,6 +350,8 @@ export type Database = {
           exercise_id: string;
           completed: boolean;
           note: string | null;
+          /** Con qué lo hizo el alumno (Barra, Máquina, Polea, Smith). */
+          variant: string | null;
           created_at: string;
         };
         Insert: {
@@ -344,6 +360,7 @@ export type Database = {
           exercise_id: string;
           completed?: boolean;
           note?: string | null;
+          variant?: string | null;
           created_at?: string;
         };
         Update: Partial<
@@ -409,11 +426,19 @@ export type Database = {
         Returns: string;
       };
       validate_invite_client: {
-        Args: { p_client_id: string; p_mode: "email" | "username"; p_value: string };
+        Args: {
+          p_client_id: string;
+          p_mode: "email" | "username";
+          p_value: string;
+        };
         Returns: InviteStatus;
       };
       invite_client: {
-        Args: { p_client_id: string; p_mode: "email" | "username"; p_value: string };
+        Args: {
+          p_client_id: string;
+          p_mode: "email" | "username";
+          p_value: string;
+        };
         Returns: { existed: boolean; email: string };
       };
       remove_client_access: {
@@ -447,7 +472,12 @@ export type Database = {
       };
       get_my_coaches: {
         Args: Record<string, never>;
-        Returns: { link_id: string; coach_id: string; status: LinkStatus; created_at: string }[];
+        Returns: {
+          link_id: string;
+          coach_id: string;
+          status: LinkStatus;
+          created_at: string;
+        }[];
       };
       respond_invitation: {
         Args: { p_link_id: string; p_accept: boolean };

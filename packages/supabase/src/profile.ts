@@ -110,7 +110,8 @@ export async function completeProfile(
     .eq("id", userId);
 
   if (error) {
-    if (error.code === "23505") return fail("Ese nombre de usuario ya está en uso.");
+    if (error.code === "23505")
+      return fail("Ese nombre de usuario ya está en uso.");
     return fail(error.message);
   }
   return ok(undefined);

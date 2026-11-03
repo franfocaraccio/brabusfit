@@ -15,7 +15,12 @@ import { getUserId, type BrabusClient } from "./client";
 type HistorySessionRow = {
   finished_at: string | null;
   started_at: string;
-  exercise_logs: { exercise_id: string; note: string | null; set_logs: SavedSet[] }[];
+  exercise_logs: {
+    exercise_id: string;
+    note: string | null;
+    variant: string | null;
+    set_logs: SavedSet[];
+  }[];
 };
 
 /**
@@ -43,13 +48,13 @@ export async function getTrainingDay(
     await Promise.all([
       client
         .from("exercises")
-        .select("id, name, sets_reps, position")
+        .select("id, name, sets_reps, rest_seconds, position")
         .eq("day_id", dayId)
         .order("position"),
       client
         .from("workout_sessions")
         .select(
-          "finished_at, started_at, exercise_logs(exercise_id, note, set_logs(set_number, weight, reps))",
+          "finished_at, started_at, exercise_logs(exercise_id, note, variant, set_logs(set_number, weight, reps))",
         )
         .eq("user_id", userId)
         .eq("day_id", dayId)
@@ -72,7 +77,7 @@ export async function getTrainingDay(
       if (sets.length === 0 && !note) continue;
       const list = historyByExercise.get(log.exercise_id) ?? [];
       if (list.length >= HISTORY_MAX) continue;
-      list.push({ date, sets, note });
+      list.push({ date, sets, note, variant: log.variant ?? null });
       historyByExercise.set(log.exercise_id, list);
     }
   }
@@ -83,6 +88,7 @@ export async function getTrainingDay(
       id: ex.id,
       name: ex.name,
       setsReps: ex.sets_reps,
+      restSeconds: ex.rest_seconds ?? null,
       history: historyByExercise.get(ex.id) ?? [],
     })),
   };
@@ -98,6 +104,8 @@ export async function saveWorkout(
   routineId: string,
   dayId: string,
   logs: ExerciseLogInput[],
+  /** Cuándo tocó "Empezar" (ISO); sin cronómetro, la sesión dura 0. */
+  startedAt?: string | null,
 ): Promise<ActionResult> {
   const userId = await getUserId(client);
   if (!userId) return fail("No autenticado.");
@@ -118,7 +126,7 @@ export async function saveWorkout(
       user_id: userId,
       routine_id: routineId,
       day_id: dayId,
-      started_at: now,
+      started_at: startedAt && startedAt < now ? startedAt : now,
       finished_at: now,
       status: "finished",
     })
@@ -138,7 +146,11 @@ export async function saveWorkout(
         session_id: session.id,
         exercise_id: l.exerciseId,
         completed: true,
-        note: l.note && l.note.trim() ? l.note.trim().slice(0, NOTE_MAX_LENGTH) : null,
+        note:
+          l.note && l.note.trim()
+            ? l.note.trim().slice(0, NOTE_MAX_LENGTH)
+            : null,
+        variant: l.variant,
       })),
     )
     .select("id, exercise_id");

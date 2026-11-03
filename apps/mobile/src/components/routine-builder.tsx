@@ -12,7 +12,12 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import type { CatalogEntry, RoutineDayInput } from "@brabus/shared";
+import {
+  formatRest,
+  REST_OPTIONS,
+  type CatalogEntry,
+  type RoutineDayInput,
+} from "@brabus/shared";
 import {
   createRoutine,
   updateRoutine,
@@ -34,6 +39,8 @@ type ExerciseDraft = {
   catalog: CatalogEntry | null;
   variant: string;
   sets_reps: string;
+  /** Descanso entre series (segundos) o null = sin descanso. */
+  rest: number | null;
 };
 type DayDraft = {
   key: string;
@@ -53,6 +60,7 @@ const emptyExercise = (): ExerciseDraft => ({
   catalog: null,
   variant: "",
   sets_reps: "",
+  rest: null,
 });
 const emptyDay = (): DayDraft => ({
   key: newKey(),
@@ -109,6 +117,12 @@ export function RoutineBuilder({
       : TEMPLATE,
   );
   const [targetSheet, setTargetSheet] = useState(false);
+  // Ejercicio al que se le elige el descanso.
+  const [restFor, setRestFor] = useState<{
+    dayKey: string;
+    exKey: string;
+    value: number | null;
+  } | null>(null);
   const forClient = isEdit ? Boolean(initial?.clientName) : target !== TEMPLATE;
   const usesFolder = isCoach && !forClient;
   const targetLabel =
@@ -127,6 +141,7 @@ export function RoutineBuilder({
             catalog: e.catalog,
             variant: e.variant ?? "",
             sets_reps: e.sets_reps,
+            rest: e.rest_seconds,
           })),
         }))
       : [emptyDay()],
@@ -223,6 +238,7 @@ export function RoutineBuilder({
         catalog_id: ex.catalog?.id,
         variant: ex.variant.trim() || null,
         sets_reps: ex.sets_reps.trim(),
+        rest_seconds: ex.rest,
       })),
     }));
     const payload = {
@@ -414,6 +430,34 @@ export function RoutineBuilder({
                       />
                     </View>
                   </View>
+                  <Pressable
+                    onPress={() =>
+                      setRestFor({
+                        dayKey: day.key,
+                        exKey: ex.key,
+                        value: ex.rest,
+                      })
+                    }
+                    style={styles.restPill}
+                    accessibilityRole="button"
+                    accessibilityLabel="Descanso entre series"
+                  >
+                    <Ionicons
+                      name="timer-outline"
+                      size={15}
+                      color={colors.mutedForeground}
+                    />
+                    <Text style={styles.restText}>
+                      {ex.rest === null
+                        ? "Sin descanso"
+                        : `Descanso ${formatRest(ex.rest)}`}
+                    </Text>
+                    <Ionicons
+                      name="chevron-down"
+                      size={14}
+                      color={colors.mutedForeground}
+                    />
+                  </Pressable>
                 </View>
                 <View style={styles.exerciseActions}>
                   <IconButton
@@ -498,6 +542,38 @@ export function RoutineBuilder({
       </Sheet>
 
       <Sheet
+        visible={restFor !== null}
+        onClose={() => setRestFor(null)}
+        title="Descanso entre series"
+        description="El alumno ve una cuenta regresiva al completar cada serie y la puede ajustar."
+      >
+        <ScrollView style={{ maxHeight: 420 }}>
+          <OptionList
+            value={
+              restFor?.value === null || restFor === null
+                ? "none"
+                : String(restFor.value)
+            }
+            options={[
+              { value: "none", label: "Sin descanso" },
+              ...REST_OPTIONS.map((sec) => ({
+                value: String(sec),
+                label: formatRest(sec),
+              })),
+            ]}
+            onSelect={(v) => {
+              if (restFor) {
+                updateExercise(restFor.dayKey, restFor.exKey, {
+                  rest: v === "none" ? null : Number(v),
+                });
+              }
+              setRestFor(null);
+            }}
+          />
+        </ScrollView>
+      </Sheet>
+
+      <Sheet
         visible={folderSheet}
         onClose={() => setFolderSheet(false)}
         title="Carpeta"
@@ -573,6 +649,23 @@ const useStyles = makeStyles((colors) => ({
     fontFamily: fonts.regular,
     fontSize: 13,
     color: colors.mutedForeground,
+  },
+  restPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.input,
+    backgroundColor: colors.field,
+  },
+  restText: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.foreground,
   },
   select: {
     flexDirection: "row",

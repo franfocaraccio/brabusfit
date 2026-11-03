@@ -52,7 +52,9 @@ export default async function ClienteDetailPage({
   if (!detail) notFound();
   const { name, data, sessions, routines, appAccess } = detail;
   const hasApp = appAccess === "active" && detail.studentId;
-  const progress = hasApp ? await getProgressSessions(supabase, detail.studentId!) : [];
+  const progress = hasApp
+    ? await getProgressSessions(supabase, detail.studentId!)
+    : [];
 
   const age = ageFrom(data.birth_date);
   const facts: [string, string | null][] = [
@@ -60,11 +62,21 @@ export default async function ClienteDetailPage({
     ["Email", data.email || null],
     [
       "Nacimiento",
-      data.birth_date ? `${formatDisplayDate(data.birth_date)}${age !== null ? ` (${age} años)` : ""}` : null,
+      data.birth_date
+        ? `${formatDisplayDate(data.birth_date)}${age !== null ? ` (${age} años)` : ""}`
+        : null,
     ],
     ["Sexo", sexLabel(data.sex || null)],
-    ["Estatura", data.height_cm ? `${data.height_cm.replace(".", ",")} cm` : null],
-    ["Peso inicial", data.initial_weight_kg ? `${data.initial_weight_kg.replace(".", ",")} kg` : null],
+    [
+      "Estatura",
+      data.height_cm ? `${data.height_cm.replace(".", ",")} cm` : null,
+    ],
+    [
+      "Peso inicial",
+      data.initial_weight_kg
+        ? `${data.initial_weight_kg.replace(".", ",")} kg`
+        : null,
+    ],
     ["Objetivo", goalLabel(data.goal || null)],
     ["Nivel", levelLabel(data.level || null)],
     ["Cliente desde", formatDate(detail.createdAt)],
@@ -82,7 +94,9 @@ export default async function ClienteDetailPage({
         {facts.map(([label, value]) => (
           <div key={label}>
             <p className="text-muted-foreground text-xs">{label}</p>
-            <p className={cn("text-sm", !value && "text-muted-foreground")}>{value ?? "—"}</p>
+            <p className={cn("text-sm", !value && "text-muted-foreground")}>
+              {value ?? "—"}
+            </p>
           </div>
         ))}
       </Card>
@@ -127,17 +141,24 @@ export default async function ClienteDetailPage({
               <div className="space-y-2">
                 {logs.map((l, i) => (
                   <div key={i} className="text-sm">
-                    <span className="font-medium">{l.exercise?.name ?? "Ejercicio"}</span>
+                    <span className="font-medium">
+                      {l.exercise?.name ?? "Ejercicio"}
+                    </span>
                     <span className="text-muted-foreground ml-2 text-xs">
                       {summarizeHistory({
-                        sets: [...l.set_logs].sort((a, b) => a.set_number - b.set_number),
+                        sets: [...l.set_logs].sort(
+                          (a, b) => a.set_number - b.set_number,
+                        ),
                         note: l.note,
+                        variant: l.variant,
                       })}
                     </span>
                   </div>
                 ))}
                 {logs.length === 0 && (
-                  <p className="text-muted-foreground text-xs">Sin series registradas.</p>
+                  <p className="text-muted-foreground text-xs">
+                    Sin series registradas.
+                  </p>
                 )}
               </div>
             </Card>
@@ -150,7 +171,10 @@ export default async function ClienteDetailPage({
   return (
     <div className="space-y-6">
       <div className="space-y-3">
-        <Link href="/clientes" className="text-muted-foreground hover:text-foreground text-sm">
+        <Link
+          href="/clientes"
+          className="text-muted-foreground hover:text-foreground text-sm"
+        >
           ← Clientes
         </Link>
         <div className="flex items-start justify-between gap-2">
@@ -165,12 +189,17 @@ export default async function ClienteDetailPage({
               ) : null}
             </h1>
             {detail.username ? (
-              <p className="text-muted-foreground text-sm">@{detail.username}</p>
+              <p className="text-muted-foreground text-sm">
+                @{detail.username}
+              </p>
             ) : null}
           </div>
           <Link
             href={`/clientes/${clientId}/editar`}
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "gap-1.5",
+            )}
           >
             <Pencil className="size-4" /> Editar ficha
           </Link>
@@ -188,17 +217,18 @@ export default async function ClienteDetailPage({
       {detail.status === "invited" && (
         <Card className="border-amber-500/40 bg-amber-500/10 p-4">
           <p className="text-sm">
-            <span className="font-semibold">Invitación pendiente.</span> Ya tiene cuenta: va a ver
-            lo que le armes cuando acepte. Su progreso aparece después de aceptar.
+            <span className="font-semibold">Invitación pendiente.</span> Ya
+            tiene cuenta: va a ver lo que le armes cuando acepte. Su progreso
+            aparece después de aceptar.
           </p>
         </Card>
       )}
       {detail.status === "unregistered" && appAccess === "pending" && (
         <Card className="border-sky-500/40 bg-sky-500/10 p-4">
           <p className="text-sm">
-            <span className="font-semibold">Usuario no registrado.</span> Lo invitaste con{" "}
-            {data.email}, pero todavía no creó su cuenta. Cuando se registre con ese email le va a
-            aparecer la invitación.
+            <span className="font-semibold">Usuario no registrado.</span> Lo
+            invitaste con {data.email}, pero todavía no creó su cuenta. Cuando
+            se registre con ese email le va a aparecer la invitación.
           </p>
         </Card>
       )}
@@ -220,7 +250,9 @@ export default async function ClienteDetailPage({
                   />
                 </div>
                 {routines.length === 0 ? (
-                  noApp("Todavía no le armaste rutinas. Creale una desde cero o a partir de una plantilla.")
+                  noApp(
+                    "Todavía no le armaste rutinas. Creale una desde cero o a partir de una plantilla.",
+                  )
                 ) : (
                   <div className="space-y-2.5">
                     {routines.map((r) => (
@@ -253,7 +285,9 @@ export default async function ClienteDetailPage({
                   />
                 </div>
                 {plans.length === 0 ? (
-                  noApp("Todavía no le armaste planes de nutrición. Crealo desde cero o a partir de una plantilla.")
+                  noApp(
+                    "Todavía no le armaste planes de nutrición. Crealo desde cero o a partir de una plantilla.",
+                  )
                 ) : (
                   <div className="space-y-2.5">
                     {plans.map((p) => (

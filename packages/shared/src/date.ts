@@ -36,6 +36,7 @@ export function formatDisplayDate(iso: string | null | undefined): string {
 /** Mensaje de error para un campo de fecha opcional (vacío = válido). */
 export function displayDateError(value: string): string | null {
   if (value.trim() === "") return null;
-  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(value.trim())) return "Usá el formato DD/MM/AAAA.";
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(value.trim()))
+    return "Usá el formato DD/MM/AAAA.";
   return parseDisplayDate(value) ? null : "Esa fecha no existe.";
 }

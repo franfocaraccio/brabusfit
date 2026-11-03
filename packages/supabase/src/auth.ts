@@ -1,4 +1,10 @@
-import { fail, ok, parseDecimal, usernameError, type ActionResult } from "@brabus/shared";
+import {
+  fail,
+  ok,
+  parseDecimal,
+  usernameError,
+  type ActionResult,
+} from "@brabus/shared";
 
 import type { BrabusClient } from "./client";
 import type { EditableProfile } from "./profile";

@@ -3,7 +3,8 @@
  * texto, negrita y ancho de columnas. El zip va sin comprimir (formato válido).
  */
 
-export type XlsxCell = { value: string | number; style?: "bold" | "title" } | string | number;
+export type XlsxCell =
+  { value: string | number; style?: "bold" | "title" } | string | number;
 export type XlsxSheet = { name: string; widths?: number[]; rows: XlsxCell[][] };
 
 const esc = (s: string) =>
@@ -18,7 +19,8 @@ const esc = (s: string) =>
 
 const colName = (i: number) => {
   let s = "";
-  for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s;
+  for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26))
+    s = String.fromCharCode(65 + ((n - 1) % 26)) + s;
   return s;
 };
 
@@ -32,7 +34,8 @@ function sheetXml(sheet: XlsxSheet): string {
     .map((row, r) => {
       const cells = row
         .map((cell, c) => {
-          const { value, style } = typeof cell === "object" ? cell : { value: cell, style: undefined };
+          const { value, style } =
+            typeof cell === "object" ? cell : { value: cell, style: undefined };
           const ref = `${colName(c)}${r + 1}`;
           const s = style ? ` s="${STYLE_ID[style]}"` : "";
           if (value === "") return "";
@@ -51,7 +54,9 @@ function sheetXml(sheet: XlsxSheet): string {
 function sheetNames(names: string[]): string[] {
   const used = new Set<string>();
   return names.map((raw, i) => {
-    const base = (raw.replace(/[[\]:*?/\\]/g, " ").trim() || `Hoja ${i + 1}`).slice(0, 31);
+    const base = (
+      raw.replace(/[[\]:*?/\\]/g, " ").trim() || `Hoja ${i + 1}`
+    ).slice(0, 31);
     let name = base;
     for (let n = 2; used.has(name.toLowerCase()); n++) {
       const suffix = ` (${n})`;
@@ -82,7 +87,10 @@ export function buildXlsx(sheets: XlsxSheet[]): Uint8Array {
     [
       "xl/workbook.xml",
       `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${names
-        .map((n, i) => `<sheet name="${esc(n)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`)
+        .map(
+          (n, i) =>
+            `<sheet name="${esc(n)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`,
+        )
         .join("")}</sheets></workbook>`,
     ],
     [
@@ -100,7 +108,10 @@ export function buildXlsx(sheets: XlsxSheet[]): Uint8Array {
       "xl/styles.xml",
       `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="14"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="3"><xf fontId="0"/><xf fontId="1" applyFont="1"/><xf fontId="2" applyFont="1"/></cellXfs></styleSheet>`,
     ],
-    ...sheets.map((s, i): [string, string] => [`xl/worksheets/sheet${i + 1}.xml`, sheetXml(s)]),
+    ...sheets.map((s, i): [string, string] => [
+      `xl/worksheets/sheet${i + 1}.xml`,
+      sheetXml(s),
+    ]),
   ];
   return zipStore(files.map(([path, text]) => [path, utf8(text)]));
 }
@@ -122,7 +133,8 @@ function crc32(data: Uint8Array): number {
     }
   }
   let crc = 0xffffffff;
-  for (let i = 0; i < data.length; i++) crc = crcTable[(crc ^ data[i]) & 0xff] ^ (crc >>> 8);
+  for (let i = 0; i < data.length; i++)
+    crc = crcTable[(crc ^ data[i]) & 0xff] ^ (crc >>> 8);
   return (crc ^ 0xffffffff) >>> 0;
 }
 

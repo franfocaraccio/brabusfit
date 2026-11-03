@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
+  formatDuration,
   formatSessionDate,
   NOTE_MAX_LENGTH,
   parseSetRows,
@@ -92,6 +93,9 @@ export default function SesionScreen() {
       <Title>{detail.dayName}</Title>
       <Muted>
         {detail.routineName} · {formatSessionDate(detail.date)}
+        {detail.durationMs !== null
+          ? ` · ⏱ ${formatDuration(detail.durationMs)}`
+          : ""}
       </Muted>
     </View>
   );
@@ -104,7 +108,11 @@ export default function SesionScreen() {
           <Card key={l.id} style={styles.card}>
             <Text style={styles.exName}>{l.exerciseName}</Text>
             <Muted>
-              {summarizeHistory({ sets: l.sets, note: l.note }) || "Sin series"}
+              {summarizeHistory({
+                sets: l.sets,
+                note: l.note,
+                variant: l.variant,
+              }) || "Sin series"}
             </Muted>
           </Card>
         ))}

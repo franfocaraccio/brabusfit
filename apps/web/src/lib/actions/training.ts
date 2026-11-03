@@ -15,12 +15,21 @@ export async function saveWorkout(
   routineId: string,
   dayId: string,
   logs: ExerciseLogInput[],
+  /** Cuándo tocó "Empezar" (ISO), para la duración. */
+  startedAt?: string | null,
 ): Promise<ActionResult> {
-  const result = await db.saveWorkout(await createClient(), routineId, dayId, logs);
+  const result = await db.saveWorkout(
+    await createClient(),
+    routineId,
+    dayId,
+    logs,
+    startedAt,
+  );
   if (result.ok) {
     revalidatePath(`/rutinas/${routineId}/dia/${dayId}`);
     revalidatePath(`/rutinas/${routineId}/historial`);
     revalidatePath("/progreso");
+    revalidatePath("/dashboard");
   }
   return result;
 }

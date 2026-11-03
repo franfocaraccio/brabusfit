@@ -54,7 +54,12 @@ export function searchCatalog(
 }
 
 /** ¿Ya existe un ejercicio con ese nombre (para no ofrecer "Crear")? */
-export function findCatalogByName(entries: CatalogEntry[], name: string): CatalogEntry | null {
+export function findCatalogByName(
+  entries: CatalogEntry[],
+  name: string,
+): CatalogEntry | null {
   const key = exerciseKey(name);
-  return key ? (entries.find((e) => exerciseKey(e.name) === key) ?? null) : null;
+  return key
+    ? (entries.find((e) => exerciseKey(e.name) === key) ?? null)
+    : null;
 }
