@@ -195,7 +195,7 @@ Next modules:
 - **Progression alerts.**
 - **Native builds:** EAS Build, with push notifications and native Google sign-in.
 
-Architecture decisions and the full list are in [docs/ROADMAP.md](docs/ROADMAP.md) (in Spanish).
+The full list is in [GitHub Issues](https://github.com/franfocaraccio/brabusfit/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement); [docs/ROADMAP.md](docs/ROADMAP.md) groups it by area and keeps the architecture decisions.
 
 ## License
 
