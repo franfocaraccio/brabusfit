@@ -5,6 +5,8 @@
 **Training and nutrition plans for coaches and their clients, on web and mobile, from one codebase.**
 
 [![CI](https://github.com/franfocaraccio/brabusfit/actions/workflows/ci.yml/badge.svg)](https://github.com/franfocaraccio/brabusfit/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/franfocaraccio/brabusfit/badges/coverage.json)](https://github.com/franfocaraccio/brabusfit/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/franfocaraccio/brabusfit/actions/workflows/codeql.yml/badge.svg)](https://github.com/franfocaraccio/brabusfit/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-16-000?logo=nextdotjs)
@@ -119,12 +121,17 @@ More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) has the ER diagram, th
 | Unit (`packages/shared`) | Pure logic: workout reducer, routine and plan editors, progress stats, nutrition totals, drafts, export | `npm test` |
 | Component (`apps/web`) | Characterization tests of the day trainer, routine builder and plan builder | `npm test` |
 | Database (`packages/supabase/test`) | RLS isolation between coaches and students, anonymous access, unlink handover, data-layer integration | `npm run test:db` |
+| End-to-end (`apps/web/e2e`) | Playwright: a coach creates a template and assigns it, the student trains it and saves the session, the coach sees it in the client file | `npm run e2e` |
 
-[CI](.github/workflows/ci.yml) runs three jobs on every PR:
+[CI](.github/workflows/ci.yml) runs these jobs on every PR:
 
-1. **Checks:** lint, typecheck, unit tests and the web build.
+1. **Checks:** lint, typecheck, unit tests with coverage and the web build.
 2. **Database:** starts a fresh Supabase, applies every migration from scratch, checks the generated types and runs the RLS and integration tests.
-3. **Mobile:** `expo-doctor` and typecheck.
+3. **E2E:** builds the web against a fresh local Supabase and runs the Playwright flow.
+4. **Mobile:** `expo-doctor` and typecheck.
+5. **Coverage:** combines the line coverage of the unit, component and database suites into the job summary. On `main` it also publishes the badge.
+
+On top of CI, [CodeQL](.github/workflows/codeql.yml) scans the code on every PR and weekly. [Dependabot](.github/dependabot.yml) opens grouped weekly updates; Expo, React and React Native are left out because they move together with the Expo SDK.
 
 ## Quick start
 
@@ -142,6 +149,7 @@ Seed users (password `brabus-test-123`): `coach@brabus.test` and `alumno@brabus.
 ```bash
 npm test               # unit and component tests
 npm run test:db        # RLS + integration tests (needs db:start)
+npm run e2e            # Playwright E2E (needs db:start; starts the web on :3001)
 npx turbo run typecheck lint
 ```
 

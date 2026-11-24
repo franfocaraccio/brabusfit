@@ -44,7 +44,8 @@ npx turbo run build --filter=@brabus/web
 ```
 
 Si tocaste la base o `packages/supabase`, además `npm run test:db` con el
-Supabase local levantado (`npm run db:start`).
+Supabase local levantado (`npm run db:start`). Si cambiaste flujos de la web
+(rutinas, entrenamiento, clientes), además `npm run e2e`.
 
 Para mobile, además: `npx expo-doctor` y `npx expo export` desde `apps/mobile`.
 

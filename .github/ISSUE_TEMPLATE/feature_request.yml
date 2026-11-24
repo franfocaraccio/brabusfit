@@ -1,0 +1,27 @@
+name: Feature request
+description: Suggest an improvement or a new module
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Who needs this (coach or student) and what they can't do today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: How it could work. Remember that every feature ships on web and mobile.
+    validations:
+      required: true
+  - type: textarea
+    id: data
+    attributes:
+      label: Data and security
+      description: New tables or columns, who can read or write them (RLS), files in Storage, etc.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

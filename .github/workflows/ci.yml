@@ -19,6 +19,7 @@ env:
   TZ: America/Argentina/Buenos_Aires
   TURBO_TELEMETRY_DISABLED: 1
   NEXT_TELEMETRY_DISABLED: 1
+  SUPABASE_EXCLUDE: studio,postgres-meta,edge-runtime,logflare,vector,supavisor,imgproxy,mailpit,realtime,storage-api
 
 jobs:
   checks:
@@ -49,8 +50,17 @@ jobs:
       - name: Lint and typecheck
         run: npx turbo run lint typecheck
 
-      - name: Unit tests
-        run: npx turbo run test
+      - name: Unit tests (with coverage)
+        run: npx turbo run test:coverage
+
+      - name: Upload coverage summaries
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-unit
+          path: |
+            packages/shared/coverage/coverage-summary.json
+            apps/web/coverage/coverage-summary.json
+          retention-days: 7
 
       - name: Build web
         run: npx turbo run build --filter=@brabus/web
@@ -77,9 +87,7 @@ jobs:
       # Si alguna migración falla, falla este paso. Solo levantamos lo que usan
       # los tests (Postgres, Auth, PostgREST y Kong).
       - name: Start Supabase and apply all migrations
-        run: >-
-          supabase start
-          -x studio,postgres-meta,edge-runtime,logflare,vector,supavisor,imgproxy,mailpit,realtime,storage-api
+        run: supabase start -x "$SUPABASE_EXCLUDE"
 
       # Los tipos de packages/shared/src/database.generated.ts tienen que
       # coincidir con lo que generan las migraciones.
@@ -91,12 +99,134 @@ jobs:
             exit 1
           }
 
-      - name: RLS and integration tests
-        run: npx turbo run test:db
+      - name: RLS and integration tests (with coverage)
+        run: npm run test:db --workspace=@brabus/supabase -- --coverage
+
+      - name: Upload coverage summary
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-db
+          path: packages/supabase/coverage-db/coverage-summary.json
+          retention-days: 7
 
       - name: Stop Supabase
         if: always()
         run: supabase stop --no-backup
+
+  e2e:
+    name: E2E (Playwright, web)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+        working-directory: .
+
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 3.3.0
+
+      - name: Start Supabase (migrations + seed)
+        run: supabase start -x "$SUPABASE_EXCLUDE"
+        working-directory: .
+
+      # La web se compila apuntando al Supabase local. Son las claves de
+      # desarrollo que imprime la CLI (no son secretos de producción).
+      - name: Point the web app at the local Supabase
+        working-directory: .
+        run: |
+          eval "$(supabase status -o env)"
+          echo "::add-mask::$SECRET_KEY"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$PUBLISHABLE_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SECRET_KEY"
+            echo "NEXT_PUBLIC_SITE_URL=http://localhost:3001"
+          } >> "$GITHUB_ENV"
+
+      - name: Build web
+        run: npm run build
+
+      - name: Playwright browsers cache
+        id: pw-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Chromium system dependencies
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Coach → student → coach flow
+        run: npx playwright test --trace off
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          retention-days: 7
+
+      - name: Stop Supabase
+        if: always()
+        working-directory: .
+        run: supabase stop --no-backup
+
+  coverage:
+    name: Coverage report
+    needs: [checks, database]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Solo en main se publica el badge (escribe en la rama "badges").
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: coverage-unit
+          path: cov-unit
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: coverage-db
+          path: cov-db
+
+      - name: Summary
+        run: |
+          mkdir -p cov/shared cov/web cov/supabase-db
+          cp cov-unit/packages/shared/coverage/coverage-summary.json cov/shared/
+          cp cov-unit/apps/web/coverage/coverage-summary.json cov/web/
+          cp cov-db/coverage-summary.json cov/supabase-db/
+          node scripts/coverage-report.mjs cov coverage.json
+
+      - name: Publish badge
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p "$RUNNER_TEMP/badges" && cp coverage.json "$RUNNER_TEMP/badges/"
+          cd "$RUNNER_TEMP/badges"
+          git init -q -b badges
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add coverage.json
+          git commit -q -m "Update coverage badge"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" badges
 
   mobile:
     name: Mobile (expo-doctor and typecheck)
