@@ -112,6 +112,7 @@ npm run db:stop
 ```bash
 npm test               # unitarios: packages/shared, packages/supabase y la web (Vitest)
 npm run test:db        # RLS e integración contra el Supabase local (requiere db:start)
+npm run e2e            # E2E con Playwright (requiere db:start; levanta la web en :3001)
 ```
 
 - **Unitarios:** lógica pura de `packages/shared` y tests de caracterización del
@@ -120,6 +121,13 @@ npm run test:db        # RLS e integración contra el Supabase local (requiere d
   la clave **pública** (igual que la app mobile) y prueba que RLS aísla a cada
   coach y alumno, que el anónimo no lee nada y que al desvincularse el alumno
   conserva sus rutinas. No dependen del seed: se pueden repetir sin `db:reset`.
+- **E2E (`apps/web/e2e`):** con Playwright y los usuarios del seed, el coach
+  crea una plantilla y la asigna, el alumno la entrena y guarda la sesión, y el
+  coach la ve en la ficha. Usa un nombre único por corrida (se puede repetir).
+  La primera vez, `npx playwright install chromium` desde `apps/web`; o, para
+  usar el Chrome instalado, `PW_CHANNEL=chrome npm run e2e`.
+- **Coverage:** `npx turbo run test:coverage` (y `npm run test:db --workspace=@brabus/supabase -- --coverage`).
+  En CI se juntan en el resumen del job y en `main` se publica el badge (rama `badges`).
 
 > Si `expo start` falla con `Cannot find module 'expo-router/...'`, borrá
 > `node_modules` (raíz y workspaces) y `package-lock.json` y volvé a correr

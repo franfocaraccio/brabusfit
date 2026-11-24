@@ -1,0 +1,45 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Sign in as a coach
+        2. Open …
+        3. …
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      multiple: true
+      options:
+        - Web
+        - Mobile (iOS)
+        - Mobile (Android)
+    validations:
+      required: true
+  - type: dropdown
+    id: role
+    attributes:
+      label: Role
+      options:
+        - Coach
+        - Student
+        - Both / not related to a role
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots, logs, environment
+      description: Browser or device, app version, console errors. Don't paste personal data or keys.

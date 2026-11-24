@@ -8,5 +8,11 @@ export default defineConfig({
   test: {
     include: ["src/**/*.test.ts"],
     env: { TZ: "America/Argentina/Buenos_Aires" },
+    coverage: {
+      provider: "v8",
+      include: ["src/**/*.ts"],
+      exclude: ["src/**/*.test.ts", "src/index.ts"],
+      reporter: ["text-summary", "json-summary"],
+    },
   },
 });
