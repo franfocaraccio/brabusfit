@@ -96,12 +96,26 @@ npm run db:stop
 ```
 
 - Las variables locales van en `apps/web/.env.localdb` y `apps/mobile/.env.localdb`
-  (gitignored). Si faltan, `npx supabase status -o env` muestra la URL y las
+  (gitignored). Si faltan, `npx supabase@3.3.0 status -o env` muestra la URL y las
   claves locales (`API_URL`, `PUBLISHABLE_KEY`, `SECRET_KEY`).
 - Usuarios de prueba (contraseña `brabus-test-123`): `coach@brabus.test`,
   `coach2@brabus.test`, `alumno@brabus.test`, `alumno2@brabus.test`. Ver `supabase/seed.sql`.
 - Studio local: http://127.0.0.1:54323 · emails locales: http://127.0.0.1:54324.
 - Una migración nueva se prueba con `npm run db:reset` antes de correrla en producción.
+
+### Tests
+
+```bash
+npm test               # unitarios: packages/shared, packages/supabase y la web (Vitest)
+npm run test:db        # RLS e integración contra el Supabase local (requiere db:start)
+```
+
+- **Unitarios:** lógica pura de `packages/shared` y tests de caracterización del
+  entrenador web (`apps/web/src/components/training/day-trainer.test.tsx`).
+- **Base (`packages/supabase/test`):** cada corrida registra usuarios nuevos con
+  la clave **pública** (igual que la app mobile) y prueba que RLS aísla a cada
+  coach y alumno, que el anónimo no lee nada y que al desvincularse el alumno
+  conserva sus rutinas. No dependen del seed: se pueden repetir sin `db:reset`.
 
 > Si `expo start` falla con `Cannot find module 'expo-router/...'`, borrá
 > `node_modules` (raíz y workspaces) y `package-lock.json` y volvé a correr

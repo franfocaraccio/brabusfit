@@ -29,9 +29,12 @@ Monorepo (npm workspaces + Turborepo). Cada app tiene sus propias notas:
 ## Verificación antes de commitear
 
 ```bash
-npx turbo run typecheck lint
+npx turbo run typecheck lint test
 npx turbo run build --filter=@brabus/web
 ```
+
+Si tocaste la base o `packages/supabase`, además `npm run test:db` con el
+Supabase local levantado (`npm run db:start`).
 
 Para mobile, además: `npx expo-doctor` y `npx expo export` desde `apps/mobile`.
 
