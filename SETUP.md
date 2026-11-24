@@ -181,9 +181,12 @@ npx supabase@3.3.0 migration list --remote
 npx supabase@3.3.0 db push --remote --dry-run
 ```
 
-Si el paso 2 muestra diferencias, **no** sigas con el `repair`: significa que
-producción no coincide con las migraciones (algún cambio hecho a mano o una
-migración sin correr) y hay que resolverlo primero.
+Si el paso 2 muestra diferencias, **no** sigas con el `repair` hasta entender
+cada una: puede ser una migración sin correr o un cambio hecho a mano. Los
+objetos creados a mano para herramientas externas (por ejemplo un rol de solo
+administración y sus `grant`) también aparecen; esos no vienen de las
+migraciones y no impiden el `repair`, pero conviene pasarlos a una migración
+para que la base se pueda reconstruir entera desde el repo.
 
 ### Mobile (EAS) — pendiente
 
