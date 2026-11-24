@@ -14,3 +14,4 @@ export * from "./routine";
 export * from "./training";
 export * from "./username";
 export * from "./xlsx";
+export * from "./workout";
