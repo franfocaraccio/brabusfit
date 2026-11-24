@@ -81,6 +81,16 @@ jobs:
           supabase start
           -x studio,postgres-meta,edge-runtime,logflare,vector,supavisor,imgproxy,mailpit,realtime,storage-api
 
+      # Los tipos de packages/shared/src/database.generated.ts tienen que
+      # coincidir con lo que generan las migraciones.
+      - name: Generated database types are up to date
+        run: |
+          npm run db:types
+          git diff --exit-code -- packages/shared/src/database.generated.ts || {
+            echo "::error::database.generated.ts no coincide con las migraciones. Corré 'npm run db:types' con el Supabase local levantado y commiteá el resultado."
+            exit 1
+          }
+
       - name: RLS and integration tests
         run: npx turbo run test:db
 

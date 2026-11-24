@@ -19,9 +19,11 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "test:db": "turbo run test:db"
+    "test:db": "turbo run test:db",
+    "db:types": "npx supabase@3.3.0 gen types typescript --schema public > packages/shared/src/database.generated.ts && prettier --write packages/shared/src/database.generated.ts"
   },
   "devDependencies": {
+    "prettier": "^3.10.1",
     "turbo": "^2.11.9",
     "vitest": "^5.1.0"
   },

@@ -16,9 +16,19 @@ Monorepo (npm workspaces + Turborepo). Cada app tiene sus propias notas:
   lo propio de su plataforma (UI, revalidación de caché, emails server-side).
 - La seguridad vive en la base (RLS + funciones SQL). La app mobile usa solo la
   clave **pública** de Supabase; la secret key nunca sale de `apps/web` (server).
-- Cambios de schema: nueva migración en `supabase/migrations/` + regenerar
-  `supabase/setup.sql` + actualizar `packages/shared/src/database.ts`. Las
-  migraciones se corren a mano en el SQL Editor de Supabase.
+- Cambios de schema:
+  1. Nueva migración en `supabase/migrations/` (siguiente número: `0016_…sql`).
+  2. Probarla en local: `npm run db:reset` y `npm run test:db`.
+  3. Regenerar los tipos con `npm run db:types` (Supabase local levantado) y
+     commitear `packages/shared/src/database.generated.ts`. Ese archivo no se
+     edita a mano; si una columna `text` con `check` o un argumento JSON de una
+     RPC necesita un tipo más fino, se afina en `packages/shared/src/database.ts`.
+     El CI falla si los tipos no coinciden con las migraciones.
+  4. Producción: después del merge a `main`, correr el workflow manual
+     "Database migrations (production)" (ver SETUP.md). Nunca se aplican
+     solas, ni a mano en el SQL Editor.
+- La CLI de Supabase está fijada en **3.3.0** (scripts de npm, tests, CI y
+  workflow de migraciones): al subirla, cambiarla en todos lados juntos.
 
 - **Paridad web ↔ mobile:** toda funcionalidad se implementa en las dos apps,
   salvo que se acuerde lo contrario. Después de cambiar la mobile, publicarla con

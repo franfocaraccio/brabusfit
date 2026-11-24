@@ -1,0 +1,58 @@
+name: Database migrations (production)
+
+# Aplica las migraciones de supabase/migrations a la base de PRODUCCIÓN.
+# Nunca corre solo: se dispara a mano desde Actions → "Database migrations
+# (production)" → Run workflow. Sin tildar "apply" solo muestra qué aplicaría.
+#
+# Requiere el environment "production" (Settings → Environments) con:
+#   secrets: SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD
+#   variable: SUPABASE_PROJECT_ID
+# Ver SETUP.md → "Migraciones a producción".
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Aplicar las migraciones (sin tildar: solo dry run)"
+        type: boolean
+        default: false
+
+# Nunca dos corridas a la vez contra la misma base, y no se cancela a mitad.
+concurrency:
+  group: db-migrate-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: ${{ inputs.apply && 'Apply' || 'Dry run' }}
+    # Solo desde main: lo que se aplica es lo que ya está revisado y mergeado.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_ID: ${{ vars.SUPABASE_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 3.3.0
+
+      - name: Link project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+
+      - name: Migration history (local vs remote)
+        run: supabase migration list --remote --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Dry run
+        run: supabase db push --remote --dry-run --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply migrations
+        if: inputs.apply
+        run: supabase db push --remote --yes --password "$SUPABASE_DB_PASSWORD"

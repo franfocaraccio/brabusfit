@@ -14,5 +14,8 @@
   },
   "devDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "type-fest": "^4.41.0"
   }
 }
