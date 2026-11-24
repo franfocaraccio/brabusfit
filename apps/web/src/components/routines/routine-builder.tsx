@@ -12,6 +12,7 @@ import {
   initialRoutineTarget,
   routineDaysReducer,
   routineIsForClient,
+  routineTargetHint,
   type CatalogEntry,
   type RoutineDayDraft,
 } from "@brabus/shared";
@@ -22,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { DayEditor } from "./day-editor";
-import { FolderField, TargetField } from "./routine-meta-fields";
+import { FolderField, TargetField } from "./target-folder-fields";
 
 const newKey = () => crypto.randomUUID();
 
@@ -127,7 +128,7 @@ export function RoutineBuilder({
           <TargetField
             target={target}
             clients={clients}
-            forClient={forClient}
+            hint={routineTargetHint(forClient)}
             onChange={setTarget}
           />
         )}
@@ -146,6 +147,7 @@ export function RoutineBuilder({
             folders={folders}
             folderId={folderId}
             newFolderName={newFolderName}
+            newFolderPlaceholder="Nombre de la carpeta (ej: Fuerza)"
             onFolderChange={setFolderId}
             onNewFolderNameChange={setNewFolderName}
           />

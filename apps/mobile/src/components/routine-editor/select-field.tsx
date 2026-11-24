@@ -14,7 +14,7 @@ export function SelectField({
   children,
 }: {
   label: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon?: keyof typeof Ionicons.glyphMap;
   /** Texto elegido; null muestra el placeholder. */
   value: string | null;
   placeholder?: string;
@@ -32,7 +32,9 @@ export function SelectField({
         style={styles.select}
         accessibilityRole="button"
       >
-        <Ionicons name={icon} size={18} color={colors.mutedForeground} />
+        {icon ? (
+          <Ionicons name={icon} size={18} color={colors.mutedForeground} />
+        ) : null}
         <Text
           style={[
             styles.selectText,

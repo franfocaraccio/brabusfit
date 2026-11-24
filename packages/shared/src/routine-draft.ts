@@ -181,10 +181,13 @@ export function resolveRoutineFolder({
   usesFolder,
   folderId,
   newFolderName,
+  missingFolderError = "Elegí o creá una carpeta para guardar la rutina.",
 }: {
   usesFolder: boolean;
   folderId: string | null;
   newFolderName: string;
+  /** Mensaje si no eligió carpeta (los planes dicen "la plantilla"). */
+  missingFolderError?: string;
 }):
   | { ok: true; folderId: string | null; newFolderName: string | null }
   | { ok: false; error: string } {
@@ -195,10 +198,7 @@ export function resolveRoutineFolder({
     return { ok: true, folderId: null, newFolderName: newFolderName.trim() };
   }
   if (folderId) return { ok: true, folderId, newFolderName: null };
-  return {
-    ok: false,
-    error: "Elegí o creá una carpeta para guardar la rutina.",
-  };
+  return { ok: false, error: missingFolderError };
 }
 
 /** Días en pantalla → días a guardar (textos sin espacios de más). */
