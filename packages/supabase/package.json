@@ -18,10 +18,10 @@
     "@brabus/shared": "*"
   },
   "peerDependencies": {
-    "@supabase/supabase-js": "^2.108.1"
+    "@supabase/supabase-js": "^2.119.2"
   },
   "devDependencies": {
-    "@supabase/supabase-js": "^2.108.1",
+    "@supabase/supabase-js": "^2.119.2",
     "typescript": "^5"
   }
 }

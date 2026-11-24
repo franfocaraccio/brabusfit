@@ -28,7 +28,7 @@ Monorepo con la app **web** (Next.js, en Vercel) y la app **mobile** (Expo, iOS
 ## 3. Auth: email + Google
 
 - **Email/Password**: activo por defecto. "Confirm email" está desactivado a
-  propósito hasta tener un dominio propio para enviar emails (ver ROADMAP).
+  propósito hasta tener un dominio propio para enviar emails (ver el issue #27).
 - **Google (SSO, solo web por ahora)**: en **Authentication → Providers →
   Google**, cargá el Client ID / Secret del OAuth Client de Google Cloud, con
   *Authorized redirect URI* `https://<TU-PROYECTO>.supabase.co/auth/v1/callback`.
