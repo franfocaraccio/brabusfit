@@ -14,7 +14,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
-    "typescript": "^5"
+    "typescript": "^7"
   },
   "dependencies": {
     "type-fest": "^6.0.3"
