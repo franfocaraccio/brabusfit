@@ -3,7 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Copy, Dumbbell, FilePlus2, Salad, Search, UserPlus } from "lucide-react";
+import {
+  Copy,
+  Dumbbell,
+  FilePlus2,
+  Salad,
+  Search,
+  UserPlus,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { CLIENT_STATUS_LABEL } from "@brabus/shared";
@@ -27,8 +34,24 @@ import { cn } from "@/lib/utils";
 type Kind = "routines" | "nutrition";
 
 const TEXT = {
-  routines: { base: "/rutinas", one: "rutina", many: "rutinas", New: "Nueva rutina", done: "Rutina", icon: Dumbbell, from: "Rutinas" },
-  nutrition: { base: "/nutricion", one: "plan", many: "planes", New: "Nuevo plan", done: "Plan", icon: Salad, from: "Nutrición" },
+  routines: {
+    base: "/rutinas",
+    one: "rutina",
+    many: "rutinas",
+    New: "Nueva rutina",
+    done: "Rutina",
+    icon: Dumbbell,
+    from: "Rutinas",
+  },
+  nutrition: {
+    base: "/nutricion",
+    one: "plan",
+    many: "planes",
+    New: "Nuevo plan",
+    done: "Plan",
+    icon: Salad,
+    from: "Nutrición",
+  },
 } as const;
 
 /** Copia la rutina (o el plan) y abre la copia nueva. */
@@ -37,11 +60,18 @@ function useCopy(kind: Kind) {
   const [pending, startTransition] = useTransition();
   const [busy, setBusy] = useState<string | null>(null);
 
-  const run = (key: string, routineId: string, linkId: string, success: string) => {
+  const run = (
+    key: string,
+    routineId: string,
+    linkId: string,
+    success: string,
+  ) => {
     setBusy(key);
     startTransition(async () => {
       const result =
-        kind === "nutrition" ? await copyPlan(routineId, linkId) : await copyRoutine(routineId, linkId);
+        kind === "nutrition"
+          ? await copyPlan(routineId, linkId)
+          : await copyRoutine(routineId, linkId);
       setBusy(null);
       if (!result.ok) {
         toast.error(result.error);
@@ -82,25 +112,40 @@ export function AssignRoutine({
         <DialogHeader>
           <DialogTitle>Asignar a un cliente</DialogTitle>
           <DialogDescription>
-            Se le crea una copia propia de esta plantilla. Después podés ajustarla solo para ese
-            cliente: los cambios no afectan a la plantilla ni a otros clientes.
+            Se le crea una copia propia de esta plantilla. Después podés
+            ajustarla solo para ese cliente: los cambios no afectan a la
+            plantilla ni a otros clientes.
           </DialogDescription>
         </DialogHeader>
 
         {clients.length === 0 ? (
-          <p className="text-muted-foreground text-sm">Todavía no tenés clientes.</p>
+          <p className="text-muted-foreground text-sm">
+            Todavía no tenés clientes.
+          </p>
         ) : (
           <div className="max-h-[50vh] divide-y overflow-y-auto rounded-lg border">
             {clients.map((st) => (
               <button
                 key={st.id}
                 type="button"
-                onClick={() => run(st.id, routineId, st.id, `${t.done} asignado a ${st.name}`.replace("Rutina asignado", "Rutina asignada"))}
+                onClick={() =>
+                  run(
+                    st.id,
+                    routineId,
+                    st.id,
+                    `${t.done} asignado a ${st.name}`.replace(
+                      "Rutina asignado",
+                      "Rutina asignada",
+                    ),
+                  )
+                }
                 disabled={pending}
                 className="hover:bg-muted/50 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors disabled:opacity-60"
               >
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">{st.name}</span>
+                  <span className="block truncate text-sm font-medium">
+                    {st.name}
+                  </span>
                   <span className="text-muted-foreground block truncate text-xs">
                     {CLIENT_STATUS_LABEL[st.status]}
                     {kind === "routines"
@@ -109,7 +154,9 @@ export function AssignRoutine({
                   </span>
                 </span>
                 {busy === st.id ? (
-                  <span className="text-muted-foreground text-xs">Creando…</span>
+                  <span className="text-muted-foreground text-xs">
+                    Creando…
+                  </span>
                 ) : null}
               </button>
             ))}
@@ -118,7 +165,10 @@ export function AssignRoutine({
 
         <Link
           href="/clientes/nuevo"
-          className={cn(buttonVariants({ variant: "outline" }), "w-full gap-1.5")}
+          className={cn(
+            buttonVariants({ variant: "outline" }),
+            "w-full gap-1.5",
+          )}
         >
           <UserPlus className="size-4" /> Nuevo cliente
         </Link>
@@ -153,7 +203,11 @@ export function NewClientRoutine({
       name: f.name,
       items: templates.filter((t) => t.folder_id === f.id),
     })),
-    { id: "__root__", name: "Sin carpeta", items: templates.filter((t) => !t.folder_id) },
+    {
+      id: "__root__",
+      name: "Sin carpeta",
+      items: templates.filter((t) => !t.folder_id),
+    },
   ]
     .map((g) => ({
       ...g,
@@ -179,14 +233,17 @@ export function NewClientRoutine({
             {t.New} para {clientName}
           </DialogTitle>
           <DialogDescription>
-            Armala desde cero o partí de una de tus plantillas (se crea una copia propia del
-            cliente).
+            Armala desde cero o partí de una de tus plantillas (se crea una
+            copia propia del cliente).
           </DialogDescription>
         </DialogHeader>
 
         <Link
           href={`${t.base}/crear?cliente=${clientId}`}
-          className={cn(buttonVariants({ variant: "outline" }), "w-full gap-1.5")}
+          className={cn(
+            buttonVariants({ variant: "outline" }),
+            "w-full gap-1.5",
+          )}
         >
           <FilePlus2 className="size-4" /> Desde cero
         </Link>
@@ -197,7 +254,9 @@ export function NewClientRoutine({
           </p>
         ) : (
           <div className="space-y-2">
-            <p className="text-muted-foreground text-xs font-medium">Desde una plantilla</p>
+            <p className="text-muted-foreground text-xs font-medium">
+              Desde una plantilla
+            </p>
             <div className="relative">
               <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               <Input
@@ -209,18 +268,30 @@ export function NewClientRoutine({
             </div>
             <div className="max-h-[45vh] space-y-3 overflow-y-auto">
               {groups.length === 0 ? (
-                <p className="text-muted-foreground px-1 text-sm">No se encontraron resultados.</p>
+                <p className="text-muted-foreground px-1 text-sm">
+                  No se encontraron resultados.
+                </p>
               ) : (
                 groups.map((g) => (
                   <div key={g.id} className="space-y-1">
-                    <p className="text-muted-foreground px-1 text-xs">{g.name}</p>
+                    <p className="text-muted-foreground px-1 text-xs">
+                      {g.name}
+                    </p>
                     <div className="divide-y rounded-lg border">
                       {g.items.map((tpl) => (
                         <button
                           key={tpl.id}
                           type="button"
                           onClick={() =>
-                            run(tpl.id, tpl.id, clientId, `${t.done} creado para ${clientName}`.replace("Rutina creado", "Rutina creada"))
+                            run(
+                              tpl.id,
+                              tpl.id,
+                              clientId,
+                              `${t.done} creado para ${clientName}`.replace(
+                                "Rutina creado",
+                                "Rutina creada",
+                              ),
+                            )
                           }
                           disabled={pending}
                           className="hover:bg-muted/50 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors disabled:opacity-60"
@@ -230,7 +301,9 @@ export function NewClientRoutine({
                             {tpl.name}
                           </span>
                           {busy === tpl.id ? (
-                            <span className="text-muted-foreground text-xs">Creando…</span>
+                            <span className="text-muted-foreground text-xs">
+                              Creando…
+                            </span>
                           ) : (
                             <Copy className="text-muted-foreground size-4" />
                           )}

@@ -1,11 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useReducer, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   Text,
   View,
@@ -13,10 +12,17 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
-  formatRest,
-  REST_OPTIONS,
+  buildRoutinePayload,
+  emptyRoutineDay,
+  initialRoutineTarget,
+  NEW_FOLDER,
+  ROUTINE_TEMPLATE,
+  ROUTINE_TEMPLATE_LABEL,
+  routineDaysReducer,
+  routineDaysToDrafts,
+  routineIsForClient,
+  routineTargetHint,
   type CatalogEntry,
-  type RoutineDayInput,
 } from "@brabus/shared";
 import {
   createRoutine,
@@ -26,56 +32,20 @@ import {
   type ClientSummary,
 } from "@brabus/supabase";
 
-import { ExercisePicker } from "@/components/exercise-picker";
 import { ErrorText } from "@/components/forms";
-import { OptionList, Sheet } from "@/components/sheet";
-import { Button, Card, TextField } from "@/components/ui";
+import { DayCard } from "@/components/routine-editor/day-card";
+import {
+  FolderSheet,
+  RestSheet,
+  TargetSheet,
+} from "@/components/routine-editor/routine-sheets";
+import { SelectField } from "@/components/routine-editor/select-field";
+import { Button, TextField } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
-import { fonts, makeStyles, radius, useColors } from "@/lib/theme";
+import { fonts, makeStyles, useColors } from "@/lib/theme";
 
-type ExerciseDraft = {
-  key: string;
-  id?: string;
-  catalog: CatalogEntry | null;
-  variant: string;
-  sets_reps: string;
-  /** Descanso entre series (segundos) o null = sin descanso. */
-  rest: number | null;
-};
-type DayDraft = {
-  key: string;
-  id?: string;
-  name: string;
-  exercises: ExerciseDraft[];
-};
-
-const NEW_FOLDER = "__new__";
-/** Destino "plantilla" (en vez de un cliente). */
-const TEMPLATE = "__template__";
 let keySeq = 0;
 const newKey = () => `k${Date.now().toString(36)}${(keySeq++).toString(36)}`;
-
-const emptyExercise = (): ExerciseDraft => ({
-  key: newKey(),
-  catalog: null,
-  variant: "",
-  sets_reps: "",
-  rest: null,
-});
-const emptyDay = (): DayDraft => ({
-  key: newKey(),
-  name: "",
-  exercises: [emptyExercise()],
-});
-
-/** Mueve el elemento `index` una posición (-1 arriba, +1 abajo). */
-function move<T>(list: T[], index: number, delta: -1 | 1): T[] {
-  const to = index + delta;
-  if (to < 0 || to >= list.length) return list;
-  const next = [...list];
-  [next[index], next[to]] = [next[to], next[index]];
-  return next;
-}
 
 /**
  * Crear / editar rutina (mismo comportamiento que RoutineBuilder de la web):
@@ -111,10 +81,8 @@ export function RoutineBuilder({
   );
   const [newFolderName, setNewFolderName] = useState("");
   const [folderSheet, setFolderSheet] = useState(false);
-  const [target, setTarget] = useState<string>(
-    initialClientId && clients.some((c) => c.id === initialClientId)
-      ? initialClientId
-      : TEMPLATE,
+  const [target, setTarget] = useState<string>(() =>
+    initialRoutineTarget(initialClientId, clients),
   );
   const [targetSheet, setTargetSheet] = useState(false);
   // Ejercicio al que se le elige el descanso.
@@ -123,28 +91,14 @@ export function RoutineBuilder({
     exKey: string;
     value: number | null;
   } | null>(null);
-  const forClient = isEdit ? Boolean(initial?.clientName) : target !== TEMPLATE;
+  const forClient = routineIsForClient(isEdit, initial?.clientName, target);
   const usesFolder = isCoach && !forClient;
   const targetLabel =
-    target === TEMPLATE
-      ? "Plantilla (en una carpeta)"
+    target === ROUTINE_TEMPLATE
+      ? ROUTINE_TEMPLATE_LABEL
       : (clients.find((c) => c.id === target)?.name ?? "Cliente");
-  const [days, setDays] = useState<DayDraft[]>(
-    initial
-      ? initial.days.map((d) => ({
-          key: d.id,
-          id: d.id,
-          name: d.name,
-          exercises: d.exercises.map((e) => ({
-            key: e.id,
-            id: e.id,
-            catalog: e.catalog,
-            variant: e.variant ?? "",
-            sets_reps: e.sets_reps,
-            rest: e.rest_seconds,
-          })),
-        }))
-      : [emptyDay()],
+  const [days, dispatch] = useReducer(routineDaysReducer, initial, (r) =>
+    r ? routineDaysToDrafts(r.days) : [emptyRoutineDay(newKey)],
   );
   // Catálogo local: suma los ejercicios propios que se crean en el momento.
   const [catalogList, setCatalogList] = useState<CatalogEntry[]>(catalog);
@@ -156,103 +110,27 @@ export function RoutineBuilder({
       ? "Crear carpeta nueva"
       : (folders.find((f) => f.id === folderId)?.name ?? null);
 
-  // --- mutadores ---------------------------------------------------------------
-  const updateDay = (key: string, patch: Partial<DayDraft>) =>
-    setDays((d) =>
-      d.map((day) => (day.key === key ? { ...day, ...patch } : day)),
-    );
-  const removeDay = (key: string) =>
-    setDays((d) => d.filter((day) => day.key !== key));
-  const moveDay = (index: number, delta: -1 | 1) =>
-    setDays((d) => move(d, index, delta));
-  const moveExercise = (dayKey: string, index: number, delta: -1 | 1) =>
-    setDays((d) =>
-      d.map((day) =>
-        day.key === dayKey
-          ? { ...day, exercises: move(day.exercises, index, delta) }
-          : day,
-      ),
-    );
-  const addExercise = (dayKey: string) =>
-    setDays((d) =>
-      d.map((day) =>
-        day.key === dayKey
-          ? { ...day, exercises: [...day.exercises, emptyExercise()] }
-          : day,
-      ),
-    );
-  const updateExercise = (
-    dayKey: string,
-    exKey: string,
-    patch: Partial<ExerciseDraft>,
-  ) =>
-    setDays((d) =>
-      d.map((day) =>
-        day.key === dayKey
-          ? {
-              ...day,
-              exercises: day.exercises.map((ex) =>
-                ex.key === exKey ? { ...ex, ...patch } : ex,
-              ),
-            }
-          : day,
-      ),
-    );
-  const removeExercise = (dayKey: string, exKey: string) =>
-    setDays((d) =>
-      d.map((day) =>
-        day.key === dayKey
-          ? {
-              ...day,
-              exercises: day.exercises.filter((ex) => ex.key !== exKey),
-            }
-          : day,
-      ),
-    );
-
-  // --- guardar -----------------------------------------------------------------
   const submit = async () => {
     setError(null);
-    let folderIdPayload: string | null = null;
-    let newFolderNamePayload: string | null = null;
-    if (usesFolder) {
-      if (folderId === NEW_FOLDER) {
-        if (!newFolderName.trim()) {
-          setError("Poné un nombre para la carpeta nueva.");
-          return;
-        }
-        newFolderNamePayload = newFolderName.trim();
-      } else if (folderId) {
-        folderIdPayload = folderId;
-      } else {
-        setError("Elegí o creá una carpeta para guardar la rutina.");
-        return;
-      }
+    const built = buildRoutinePayload({
+      name,
+      days,
+      isEdit,
+      forClient,
+      target,
+      usesFolder,
+      folderId,
+      newFolderName,
+    });
+    if (!built.ok) {
+      setError(built.error);
+      return;
     }
-
-    const payloadDays: RoutineDayInput[] = days.map((day) => ({
-      id: day.id,
-      name: day.name.trim(),
-      exercises: day.exercises.map((ex) => ({
-        id: ex.id,
-        catalog_id: ex.catalog?.id,
-        variant: ex.variant.trim() || null,
-        sets_reps: ex.sets_reps.trim(),
-        rest_seconds: ex.rest,
-      })),
-    }));
-    const payload = {
-      name: name.trim(),
-      folderId: folderIdPayload,
-      newFolderName: newFolderNamePayload,
-      clientId: !isEdit && forClient ? target : null,
-      days: payloadDays,
-    };
 
     setSaving(true);
     const result = isEdit
-      ? await updateRoutine(supabase, initial!.id, payload)
-      : await createRoutine(supabase, payload);
+      ? await updateRoutine(supabase, initial!.id, built.payload)
+      : await createRoutine(supabase, built.payload);
     setSaving(false);
 
     if (!result.ok) {
@@ -285,33 +163,14 @@ export function RoutineBuilder({
         />
 
         {isCoach && !isEdit ? (
-          <View style={{ gap: 6 }}>
-            <Text style={styles.label}>¿Para quién es?</Text>
-            <Pressable
-              onPress={() => setTargetSheet(true)}
-              style={styles.select}
-              accessibilityRole="button"
-            >
-              <Ionicons
-                name={forClient ? "person-outline" : "albums-outline"}
-                size={18}
-                color={colors.mutedForeground}
-              />
-              <Text style={styles.selectText} numberOfLines={1}>
-                {targetLabel}
-              </Text>
-              <Ionicons
-                name="chevron-down"
-                size={18}
-                color={colors.mutedForeground}
-              />
-            </Pressable>
-            <Text style={styles.hint}>
-              {forClient
-                ? "Es solo de este cliente: cambiarla no afecta a nadie más."
-                : "Las plantillas no las ve nadie: sirven para armarles rutinas a tus clientes."}
-            </Text>
-          </View>
+          <SelectField
+            label="¿Para quién es?"
+            icon={forClient ? "person-outline" : "albums-outline"}
+            value={targetLabel}
+            onPress={() => setTargetSheet(true)}
+          >
+            <Text style={styles.hint}>{routineTargetHint(forClient)}</Text>
+          </SelectField>
         ) : null}
 
         {isCoach && isEdit && initial?.clientName ? (
@@ -326,33 +185,13 @@ export function RoutineBuilder({
         ) : null}
 
         {usesFolder ? (
-          <View style={{ gap: 6 }}>
-            <Text style={styles.label}>Carpeta</Text>
-            <Pressable
-              onPress={() => setFolderSheet(true)}
-              style={styles.select}
-              accessibilityRole="button"
-            >
-              <Ionicons
-                name="folder-outline"
-                size={18}
-                color={colors.mutedForeground}
-              />
-              <Text
-                style={[
-                  styles.selectText,
-                  !folderLabel && { color: colors.mutedForeground },
-                ]}
-                numberOfLines={1}
-              >
-                {folderLabel ?? "Elegí una carpeta"}
-              </Text>
-              <Ionicons
-                name="chevron-down"
-                size={18}
-                color={colors.mutedForeground}
-              />
-            </Pressable>
+          <SelectField
+            label="Carpeta"
+            icon="folder-outline"
+            value={folderLabel}
+            placeholder="Elegí una carpeta"
+            onPress={() => setFolderSheet(true)}
+          >
             {folderId === NEW_FOLDER ? (
               <TextField
                 value={newFolderName}
@@ -361,143 +200,33 @@ export function RoutineBuilder({
                 autoFocus
               />
             ) : null}
-          </View>
+          </SelectField>
         ) : null}
 
         {days.map((day, dayIdx) => (
-          <Card key={day.key} style={styles.dayCard}>
-            <View style={styles.dayHeader}>
-              <View style={{ flex: 1 }}>
-                <TextField
-                  label={`Día ${dayIdx + 1}`}
-                  value={day.name}
-                  onChangeText={(v) => updateDay(day.key, { name: v })}
-                  placeholder="Día 1 - Piernas"
-                />
-              </View>
-              <IconButton
-                icon="chevron-up"
-                label="Subir día"
-                onPress={() => moveDay(dayIdx, -1)}
-                disabled={dayIdx === 0}
-              />
-              <IconButton
-                icon="chevron-down"
-                label="Bajar día"
-                onPress={() => moveDay(dayIdx, 1)}
-                disabled={dayIdx === days.length - 1}
-              />
-              <IconButton
-                icon="trash-outline"
-                label="Eliminar día"
-                onPress={() => removeDay(day.key)}
-                disabled={days.length === 1}
-              />
-            </View>
-
-            {day.exercises.map((ex, exIdx) => (
-              <View key={ex.key} style={styles.exercise}>
-                <View style={{ flex: 1, gap: 8 }}>
-                  <ExercisePicker
-                    value={ex.catalog}
-                    catalog={catalogList}
-                    onChange={(entry) =>
-                      updateExercise(day.key, ex.key, { catalog: entry })
-                    }
-                    onCreated={(entry) =>
-                      setCatalogList((list) => [...list, entry])
-                    }
-                  />
-                  <View style={{ flexDirection: "row", gap: 8 }}>
-                    <View style={{ flex: 1 }}>
-                      <TextField
-                        value={ex.sets_reps}
-                        onChangeText={(v) =>
-                          updateExercise(day.key, ex.key, { sets_reps: v })
-                        }
-                        placeholder="4 x (10 a 12)"
-                        accessibilityLabel="Series y repeticiones"
-                      />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <TextField
-                        value={ex.variant}
-                        onChangeText={(v) =>
-                          updateExercise(day.key, ex.key, { variant: v })
-                        }
-                        placeholder="Variante"
-                        accessibilityLabel="Variante"
-                      />
-                    </View>
-                  </View>
-                  <Pressable
-                    onPress={() =>
-                      setRestFor({
-                        dayKey: day.key,
-                        exKey: ex.key,
-                        value: ex.rest,
-                      })
-                    }
-                    style={styles.restPill}
-                    accessibilityRole="button"
-                    accessibilityLabel="Descanso entre series"
-                  >
-                    <Ionicons
-                      name="timer-outline"
-                      size={15}
-                      color={colors.mutedForeground}
-                    />
-                    <Text style={styles.restText}>
-                      {ex.rest === null
-                        ? "Sin descanso"
-                        : `Descanso ${formatRest(ex.rest)}`}
-                    </Text>
-                    <Ionicons
-                      name="chevron-down"
-                      size={14}
-                      color={colors.mutedForeground}
-                    />
-                  </Pressable>
-                </View>
-                <View style={styles.exerciseActions}>
-                  <IconButton
-                    compact
-                    icon="chevron-up"
-                    label="Subir ejercicio"
-                    onPress={() => moveExercise(day.key, exIdx, -1)}
-                    disabled={exIdx === 0}
-                  />
-                  <IconButton
-                    compact
-                    icon="trash-outline"
-                    label="Eliminar ejercicio"
-                    onPress={() => removeExercise(day.key, ex.key)}
-                    disabled={day.exercises.length === 1}
-                  />
-                  <IconButton
-                    compact
-                    icon="chevron-down"
-                    label="Bajar ejercicio"
-                    onPress={() => moveExercise(day.key, exIdx, 1)}
-                    disabled={exIdx === day.exercises.length - 1}
-                  />
-                </View>
-              </View>
-            ))}
-
-            <Button
-              title="Agregar ejercicio"
-              variant="outline"
-              onPress={() => addExercise(day.key)}
-              icon={<Ionicons name="add" size={18} color={colors.foreground} />}
-            />
-          </Card>
+          <DayCard
+            key={day.key}
+            day={day}
+            index={dayIdx}
+            total={days.length}
+            catalog={catalogList}
+            dispatch={dispatch}
+            newKey={newKey}
+            onCatalogCreated={(entry) =>
+              setCatalogList((list) => [...list, entry])
+            }
+            onPickRest={(exKey, value) =>
+              setRestFor({ dayKey: day.key, exKey, value })
+            }
+          />
         ))}
 
         <Button
           title="Agregar día"
           variant="secondary"
-          onPress={() => setDays((d) => [...d, emptyDay()])}
+          onPress={() =>
+            dispatch({ type: "addDay", day: emptyRoutineDay(newKey) })
+          }
           icon={<Ionicons name="add" size={18} color={colors.foreground} />}
         />
       </ScrollView>
@@ -513,194 +242,55 @@ export function RoutineBuilder({
         />
       </View>
 
-      <Sheet
+      <TargetSheet
         visible={targetSheet}
+        target={target}
+        clients={clients}
         onClose={() => setTargetSheet(false)}
-        title="¿Para quién es?"
-      >
-        <ScrollView style={{ maxHeight: 420 }}>
-          <OptionList
-            value={target}
-            options={[
-              {
-                value: TEMPLATE,
-                label: "Plantilla (en una carpeta)",
-                icon: "albums-outline" as const,
-              },
-              ...clients.map((c) => ({
-                value: c.id,
-                label: c.name,
-                icon: "person-outline" as const,
-              })),
-            ]}
-            onSelect={(v) => {
-              setTarget(v);
-              setTargetSheet(false);
-            }}
-          />
-        </ScrollView>
-      </Sheet>
+        onSelect={(v) => {
+          setTarget(v);
+          setTargetSheet(false);
+        }}
+      />
 
-      <Sheet
+      <RestSheet
         visible={restFor !== null}
+        value={restFor?.value ?? null}
         onClose={() => setRestFor(null)}
-        title="Descanso entre series"
-        description="El alumno ve una cuenta regresiva al completar cada serie y la puede ajustar."
-      >
-        <ScrollView style={{ maxHeight: 420 }}>
-          <OptionList
-            value={
-              restFor?.value === null || restFor === null
-                ? "none"
-                : String(restFor.value)
-            }
-            options={[
-              { value: "none", label: "Sin descanso" },
-              ...REST_OPTIONS.map((sec) => ({
-                value: String(sec),
-                label: formatRest(sec),
-              })),
-            ]}
-            onSelect={(v) => {
-              if (restFor) {
-                updateExercise(restFor.dayKey, restFor.exKey, {
-                  rest: v === "none" ? null : Number(v),
-                });
-              }
-              setRestFor(null);
-            }}
-          />
-        </ScrollView>
-      </Sheet>
+        onSelect={(rest) => {
+          if (restFor) {
+            dispatch({
+              type: "updateExercise",
+              dayKey: restFor.dayKey,
+              exKey: restFor.exKey,
+              patch: { rest },
+            });
+          }
+          setRestFor(null);
+        }}
+      />
 
-      <Sheet
+      <FolderSheet
         visible={folderSheet}
+        folderId={folderId}
+        folders={folders}
         onClose={() => setFolderSheet(false)}
-        title="Carpeta"
-      >
-        <OptionList
-          value={folderId}
-          options={[
-            ...folders.map((f) => ({
-              value: f.id,
-              label: f.name,
-              icon: "folder-outline" as const,
-            })),
-            {
-              value: NEW_FOLDER,
-              label: "Crear carpeta nueva",
-              icon: "add" as const,
-            },
-          ]}
-          onSelect={(v) => {
-            setFolderId(v);
-            setFolderSheet(false);
-          }}
-        />
-      </Sheet>
+        onSelect={(v) => {
+          setFolderId(v);
+          setFolderSheet(false);
+        }}
+      />
     </KeyboardAvoidingView>
   );
 }
 
-function IconButton({
-  icon,
-  label,
-  onPress,
-  disabled,
-  compact,
-}: {
-  /** Más bajo (columna de acciones de un ejercicio). */
-  compact?: boolean;
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-}) {
-  const colors = useColors();
-  const styles = useStyles();
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityLabel={label}
-      accessibilityRole="button"
-      hitSlop={8}
-      style={[
-        styles.iconButton,
-        compact && { height: 32 },
-        disabled && { opacity: 0.35 },
-      ]}
-    >
-      <Ionicons name={icon} size={20} color={colors.mutedForeground} />
-    </Pressable>
-  );
-}
-
 const useStyles = makeStyles((colors) => ({
-  exerciseActions: {
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 6,
-  },
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: 16, paddingBottom: 32, gap: 16 },
-  label: { fontFamily: fonts.medium, fontSize: 14, color: colors.foreground },
   hint: {
     fontFamily: fonts.regular,
     fontSize: 13,
     color: colors.mutedForeground,
-  },
-  restPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    alignSelf: "flex-start",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.input,
-    backgroundColor: colors.field,
-  },
-  restText: {
-    fontFamily: fonts.medium,
-    fontSize: 13,
-    color: colors.foreground,
-  },
-  select: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    minHeight: 48,
-    paddingHorizontal: 14,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.input,
-    backgroundColor: colors.field,
-  },
-  selectText: {
-    flex: 1,
-    fontFamily: fonts.regular,
-    fontSize: 16,
-    color: colors.foreground,
-  },
-  dayCard: { padding: 14, gap: 12 },
-  dayHeader: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
-  exercise: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    padding: 10,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.subtle,
-  },
-  iconButton: {
-    width: 44,
-    height: 48,
-    alignItems: "center",
-    justifyContent: "center",
   },
   footer: {
     paddingHorizontal: 16,

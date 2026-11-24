@@ -1,73 +1,30 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { useReducer, useState, useTransition } from "react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { createRoutine, updateRoutine } from "@/lib/actions/routines";
 import {
-  formatRest,
-  REST_OPTIONS,
+  buildRoutinePayload,
+  emptyRoutineDay,
+  initialRoutineTarget,
+  routineDaysReducer,
+  routineIsForClient,
   type CatalogEntry,
-  type RoutineDayInput,
+  type RoutineDayDraft,
 } from "@brabus/shared";
 import type { ClientSummary, FolderLite } from "@brabus/supabase";
-import { ExercisePicker } from "@/components/routines/exercise-picker";
 import { SortableList } from "@/components/routines/sortable";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
-type ExerciseDraft = {
-  key: string;
-  id?: string;
-  catalog: CatalogEntry | null;
-  variant: string;
-  sets_reps: string;
-  /** Descanso entre series (segundos) o null = sin descanso. */
-  rest: number | null;
-};
-type DayDraft = {
-  key: string;
-  id?: string;
-  name: string;
-  exercises: ExerciseDraft[];
-};
+import { DayEditor } from "./day-editor";
+import { FolderField, TargetField } from "./routine-meta-fields";
 
-const NEW_FOLDER = "__new__";
-/** Opción "sin descanso" del selector. */
-const NO_REST = "none";
-const restItems: Record<string, string> = {
-  [NO_REST]: "Sin descanso",
-  ...Object.fromEntries(
-    REST_OPTIONS.map((s) => [String(s), `Descanso ${formatRest(s)}`]),
-  ),
-};
-/** Destino "plantilla" (en vez de un cliente). */
-const TEMPLATE = "__template__";
 const newKey = () => crypto.randomUUID();
-
-function emptyExercise(): ExerciseDraft {
-  return {
-    key: newKey(),
-    catalog: null,
-    variant: "",
-    sets_reps: "",
-    rest: null,
-  };
-}
-function emptyDay(): DayDraft {
-  return { key: newKey(), name: "", exercises: [emptyExercise()] };
-}
 
 export type RoutineBuilderInitial = {
   id: string;
@@ -75,7 +32,7 @@ export type RoutineBuilderInitial = {
   folderId: string | null;
   /** Rutina de un cliente: no usa carpeta. */
   clientName: string | null;
-  days: DayDraft[];
+  days: RoutineDayDraft[];
 };
 
 export function RoutineBuilder({
@@ -106,126 +63,42 @@ export function RoutineBuilder({
   );
   const [newFolderName, setNewFolderName] = useState("");
   // Coach al crear: plantilla (con carpeta) o rutina para un cliente.
-  const [target, setTarget] = useState<string>(
-    initialClientId && clients.some((c) => c.id === initialClientId)
-      ? initialClientId
-      : TEMPLATE,
+  const [target, setTarget] = useState<string>(() =>
+    initialRoutineTarget(initialClientId, clients),
   );
-  const [days, setDays] = useState<DayDraft[]>(initial?.days ?? [emptyDay()]);
+  const [days, dispatch] = useReducer(
+    routineDaysReducer,
+    initial?.days,
+    (d) => d ?? [emptyRoutineDay(newKey)],
+  );
   // Catálogo local: suma los ejercicios propios que se crean en el momento.
   const [catalogList, setCatalogList] = useState<CatalogEntry[]>(catalog);
 
   const isEdit = Boolean(initial);
-  const forClient = isEdit ? Boolean(initial?.clientName) : target !== TEMPLATE;
+  const forClient = routineIsForClient(isEdit, initial?.clientName, target);
   const usesFolder = isCoach && !forClient;
 
-  const targetItems: Record<string, string> = {
-    [TEMPLATE]: "Plantilla (en una carpeta)",
-    ...Object.fromEntries(clients.map((c) => [c.id, c.name])),
-  };
-
-  // Carpetas existentes + opción para crear una nueva en el momento.
-  const folderItems: Record<string, string> = {
-    ...Object.fromEntries(folders.map((f) => [f.id, f.name])),
-    [NEW_FOLDER]: "➕ Crear carpeta nueva",
-  };
-
-  // --- mutadores de estado ---------------------------------------------------
-  const updateDay = (key: string, patch: Partial<DayDraft>) =>
-    setDays((d) =>
-      d.map((day) => (day.key === key ? { ...day, ...patch } : day)),
-    );
-
-  const addDay = () => setDays((d) => [...d, emptyDay()]);
-  const removeDay = (key: string) =>
-    setDays((d) => d.filter((day) => day.key !== key));
-
-  const addExercise = (dayKey: string) =>
-    setDays((d) =>
-      d.map((day) =>
-        day.key === dayKey
-          ? { ...day, exercises: [...day.exercises, emptyExercise()] }
-          : day,
-      ),
-    );
-
-  const updateExercise = (
-    dayKey: string,
-    exKey: string,
-    patch: Partial<ExerciseDraft>,
-  ) =>
-    setDays((d) =>
-      d.map((day) =>
-        day.key === dayKey
-          ? {
-              ...day,
-              exercises: day.exercises.map((ex) =>
-                ex.key === exKey ? { ...ex, ...patch } : ex,
-              ),
-            }
-          : day,
-      ),
-    );
-
-  const reorderExercises = (dayKey: string, exercises: ExerciseDraft[]) =>
-    updateDay(dayKey, { exercises });
-
-  const removeExercise = (dayKey: string, exKey: string) =>
-    setDays((d) =>
-      d.map((day) =>
-        day.key === dayKey
-          ? {
-              ...day,
-              exercises: day.exercises.filter((ex) => ex.key !== exKey),
-            }
-          : day,
-      ),
-    );
-
-  // --- guardar ---------------------------------------------------------------
   const handleSubmit = () => {
-    // Resolución de carpeta según rol (validación inmediata para coaches).
-    let folderIdPayload: string | null = null;
-    let newFolderNamePayload: string | null = null;
-    if (usesFolder) {
-      if (folderId === NEW_FOLDER) {
-        if (!newFolderName.trim()) {
-          toast.error("Poné un nombre para la carpeta nueva.");
-          return;
-        }
-        newFolderNamePayload = newFolderName.trim();
-      } else if (folderId) {
-        folderIdPayload = folderId;
-      } else {
-        toast.error("Elegí o creá una carpeta para guardar la rutina.");
-        return;
-      }
+    const built = buildRoutinePayload({
+      name,
+      days,
+      isEdit,
+      forClient,
+      target,
+      usesFolder,
+      folderId,
+      newFolderName,
+    });
+    // Validación inmediata de la carpeta (coaches).
+    if (!built.ok) {
+      toast.error(built.error);
+      return;
     }
-
-    const payloadDays: RoutineDayInput[] = days.map((day) => ({
-      id: day.id,
-      name: day.name.trim(),
-      exercises: day.exercises.map((ex) => ({
-        id: ex.id,
-        catalog_id: ex.catalog?.id,
-        variant: ex.variant.trim() || null,
-        sets_reps: ex.sets_reps.trim(),
-        rest_seconds: ex.rest,
-      })),
-    }));
-
-    const payload = {
-      name: name.trim(),
-      folderId: folderIdPayload,
-      newFolderName: newFolderNamePayload,
-      clientId: !isEdit && forClient ? target : null,
-      days: payloadDays,
-    };
 
     startTransition(async () => {
       const result = isEdit
-        ? await updateRoutine(initial!.id, payload)
-        : await createRoutine(payload);
+        ? await updateRoutine(initial!.id, built.payload)
+        : await createRoutine(built.payload);
 
       if (!result.ok) {
         toast.error(result.error);
@@ -251,33 +124,12 @@ export function RoutineBuilder({
         </div>
 
         {isCoach && !isEdit && (
-          <div className="space-y-2">
-            <Label>¿Para quién es?</Label>
-            <Select
-              value={target}
-              onValueChange={(v) => setTarget(v ?? TEMPLATE)}
-              items={targetItems}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={TEMPLATE}>
-                  Plantilla (en una carpeta)
-                </SelectItem>
-                {clients.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-muted-foreground text-xs">
-              {forClient
-                ? "Es solo de este cliente: cambiarla no afecta a nadie más."
-                : "Las plantillas no las ve nadie: sirven para armarles rutinas a tus clientes."}
-            </p>
-          </div>
+          <TargetField
+            target={target}
+            clients={clients}
+            forClient={forClient}
+            onChange={setTarget}
+          />
         )}
 
         {isCoach && isEdit && initial?.clientName && (
@@ -290,163 +142,35 @@ export function RoutineBuilder({
         )}
 
         {usesFolder && (
-          <div className="space-y-2">
-            <Label>Carpeta</Label>
-            <Select
-              value={folderId}
-              onValueChange={(v) => setFolderId(v)}
-              items={folderItems}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Elegí una carpeta" />
-              </SelectTrigger>
-              <SelectContent>
-                {folders.map((f) => (
-                  <SelectItem key={f.id} value={f.id}>
-                    {f.name}
-                  </SelectItem>
-                ))}
-                <SelectItem value={NEW_FOLDER}>
-                  ➕ Crear carpeta nueva
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            {folderId === NEW_FOLDER && (
-              <Input
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                placeholder="Nombre de la carpeta (ej: Fuerza)"
-                autoFocus
-              />
-            )}
-          </div>
+          <FolderField
+            folders={folders}
+            folderId={folderId}
+            newFolderName={newFolderName}
+            onFolderChange={setFolderId}
+            onNewFolderNameChange={setNewFolderName}
+          />
         )}
       </div>
 
       <div className="space-y-4">
-        <SortableList items={days} onReorder={setDays} className="space-y-4">
+        <SortableList
+          items={days}
+          onReorder={(d) => dispatch({ type: "setDays", days: d })}
+          className="space-y-4"
+        >
           {(day, dayIdx, dayHandle) => (
-            <Card>
-              <CardContent className="space-y-4 pt-6">
-                <div className="flex items-end gap-2">
-                  <div className="mb-1.5">{dayHandle}</div>
-                  <div className="flex-1 space-y-2">
-                    <Label htmlFor={`day-${day.key}`}>Día {dayIdx + 1}</Label>
-                    <Input
-                      id={`day-${day.key}`}
-                      value={day.name}
-                      onChange={(e) =>
-                        updateDay(day.key, { name: e.target.value })
-                      }
-                      placeholder="Día 1 - Piernas"
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Eliminar día"
-                    onClick={() => removeDay(day.key)}
-                    disabled={days.length === 1}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
-
-                <SortableList
-                  items={day.exercises}
-                  onReorder={(exercises) =>
-                    reorderExercises(day.key, exercises)
-                  }
-                  className="space-y-3"
-                >
-                  {(ex, _exIdx, exHandle) => (
-                    <div className="bg-muted/30 flex items-start gap-2 rounded-md border p-3">
-                      <div className="mt-1.5 shrink-0">{exHandle}</div>
-                      <div className="grid min-w-0 flex-1 gap-2">
-                        <ExercisePicker
-                          value={ex.catalog}
-                          catalog={catalogList}
-                          onChange={(entry) =>
-                            updateExercise(day.key, ex.key, { catalog: entry })
-                          }
-                          onCreated={(entry) =>
-                            setCatalogList((list) => [...list, entry])
-                          }
-                        />
-                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                          <Input
-                            value={ex.sets_reps}
-                            onChange={(e) =>
-                              updateExercise(day.key, ex.key, {
-                                sets_reps: e.target.value,
-                              })
-                            }
-                            placeholder="4 x (10 a 12)"
-                            aria-label="Series y repeticiones"
-                          />
-                          <Input
-                            value={ex.variant}
-                            onChange={(e) =>
-                              updateExercise(day.key, ex.key, {
-                                variant: e.target.value,
-                              })
-                            }
-                            placeholder="Variante (opcional)"
-                            aria-label="Variante"
-                          />
-                          <Select
-                            value={ex.rest === null ? NO_REST : String(ex.rest)}
-                            onValueChange={(v) =>
-                              updateExercise(day.key, ex.key, {
-                                rest: !v || v === NO_REST ? null : Number(v),
-                              })
-                            }
-                            items={restItems}
-                          >
-                            <SelectTrigger
-                              className="col-span-2 w-full sm:col-span-1"
-                              aria-label="Descanso entre series"
-                            >
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Object.entries(restItems).map(
-                                ([value, label]) => (
-                                  <SelectItem key={value} value={value}>
-                                    {label}
-                                  </SelectItem>
-                                ),
-                              )}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Eliminar ejercicio"
-                        onClick={() => removeExercise(day.key, ex.key)}
-                        disabled={day.exercises.length === 1}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
-                  )}
-                </SortableList>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => addExercise(day.key)}
-                >
-                  <Plus className="size-4" /> Agregar ejercicio
-                </Button>
-              </CardContent>
-            </Card>
+            <DayEditor
+              day={day}
+              index={dayIdx}
+              handle={dayHandle}
+              canRemove={days.length > 1}
+              catalog={catalogList}
+              dispatch={dispatch}
+              newKey={newKey}
+              onCatalogCreated={(entry) =>
+                setCatalogList((list) => [...list, entry])
+              }
+            />
           )}
         </SortableList>
 
@@ -454,7 +178,9 @@ export function RoutineBuilder({
           type="button"
           variant="secondary"
           className="w-full"
-          onClick={addDay}
+          onClick={() =>
+            dispatch({ type: "addDay", day: emptyRoutineDay(newKey) })
+          }
         >
           <Plus className="size-4" /> Agregar día
         </Button>
