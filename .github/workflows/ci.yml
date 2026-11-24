@@ -79,7 +79,7 @@ jobs:
 
       - run: npm ci
 
-      - uses: supabase/setup-cli@v3
+      - uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13 # v3.2.0
         with:
           version: 3.3.0
 
@@ -115,7 +115,8 @@ jobs:
 
   e2e:
     name: E2E (Playwright, web)
-    runs-on: ubuntu-latest
+    # Playwright 1.57 no trae Chromium para Ubuntu 26.04 (ubuntu-latest).
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     defaults:
       run:
@@ -131,7 +132,7 @@ jobs:
       - run: npm ci
         working-directory: .
 
-      - uses: supabase/setup-cli@v3
+      - uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13 # v3.2.0
         with:
           version: 3.3.0
 
