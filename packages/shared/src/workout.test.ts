@@ -17,6 +17,7 @@ import {
   restSecondsLeft,
   rowsSignature,
   startRest,
+  parseReps,
   unfinishedMessage,
   workoutDraftData,
   workoutReducer,
@@ -308,6 +309,17 @@ describe("guardar", () => {
   });
 });
 
+describe("parseReps", () => {
+  it("devuelve enteros (la columna es int) o null", () => {
+    expect(parseReps("8")).toBe(8);
+    expect(parseReps(" 12 ")).toBe(12);
+    expect(parseReps("8.5")).toBe(8);
+    expect(parseReps("")).toBeNull();
+    expect(parseReps("abc")).toBeNull();
+    expect(parseReps("-3")).toBeNull();
+  });
+});
+
 describe("completeExercise", () => {
   it("informa la progresión de volumen", () => {
     const s = workoutReducer(fresh(), {
@@ -384,6 +396,9 @@ describe("textos", () => {
     );
     expect(unfinishedMessage(5, 2)).toBe(
       "Te quedan 3 ejercicios sin guardar. Se registran solo los 2 que guardaste. ¿Querés guardar la sesión igualmente?",
+    );
+    expect(unfinishedMessage(2, 1)).toBe(
+      "Te queda 1 ejercicio sin guardar. Se registra solo el que guardaste. ¿Querés guardar la sesión igualmente?",
     );
   });
 

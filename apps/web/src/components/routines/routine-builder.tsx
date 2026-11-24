@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useReducer, useState, useTransition } from "react";
+import { useId, useReducer, useState, useTransition } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -67,10 +67,17 @@ export function RoutineBuilder({
   const [target, setTarget] = useState<string>(() =>
     initialRoutineTarget(initialClientId, clients),
   );
+  // Las keys del primer día salen de useId: son iguales en el render del
+  // servidor y en el del cliente (con randomUUID, el id/htmlFor del campo
+  // "Día 1" no coincidía al hidratar).
+  const baseId = useId();
   const [days, dispatch] = useReducer(
     routineDaysReducer,
     initial?.days,
-    (d) => d ?? [emptyRoutineDay(newKey)],
+    (d) => {
+      let n = 0;
+      return d ?? [emptyRoutineDay(() => `${baseId}-${n++}`)];
+    },
   );
   // Catálogo local: suma los ejercicios propios que se crean en el momento.
   const [catalogList, setCatalogList] = useState<CatalogEntry[]>(catalog);

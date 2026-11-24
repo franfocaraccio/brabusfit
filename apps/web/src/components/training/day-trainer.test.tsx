@@ -167,6 +167,15 @@ describe("completar rápido (círculo)", () => {
 });
 
 describe("guardar la sesión", () => {
+  it("las reps solo aceptan enteros", () => {
+    renderTrainer();
+    openExercise("Dominadas");
+    fireEvent.change(repsInputs()[0], { target: { value: "8.5x" } });
+    expect(repsInputs()[0].value).toBe("85");
+    fireEvent.change(repsInputs()[0], { target: { value: "12" } });
+    expect(repsInputs()[0].value).toBe("12");
+  });
+
   it("al completar todo ofrece guardar y manda las series parseadas", async () => {
     renderTrainer();
     openExercise("Dominadas");
@@ -218,7 +227,7 @@ describe("guardar la sesión", () => {
     fireEvent.click(screen.getByRole("button", { name: "Guardar sesión" }));
     expect(
       within(dialog()).getByText(
-        "Te quedan 1 ejercicios sin guardar. Se registran solo los 1 que guardaste. ¿Querés guardar la sesión igualmente?",
+        "Te queda 1 ejercicio sin guardar. Se registra solo el que guardaste. ¿Querés guardar la sesión igualmente?",
       ),
     ).toBeTruthy();
 

@@ -238,6 +238,15 @@ export function workoutDraftData(
   };
 }
 
+/**
+ * Repeticiones como entero (la columna es int): "8" → 8, "8.5" → 8,
+ * vacío o inválido → null.
+ */
+export function parseReps(value: string): number | null {
+  const n = Number.parseInt(value.trim(), 10);
+  return Number.isNaN(n) || n < 0 ? null : n;
+}
+
 /** Registros a guardar: un log por ejercicio completado, con todas sus series. */
 export function buildWorkoutLogs(
   exercises: TrainingExercise[],
@@ -253,7 +262,7 @@ export function buildWorkoutLogs(
       sets: state.rows[ex.id].map((r, i) => ({
         set_number: i + 1,
         weight: parseDecimal(r.weight),
-        reps: r.reps.trim() === "" ? null : Number(r.reps),
+        reps: parseReps(r.reps),
       })),
     }));
 }
@@ -337,5 +346,15 @@ export const finishedMessage = (elapsed: number | null) =>
     ? `Tiempo total de entrenamiento: ${formatDuration(elapsed)}.`
     : "Completaste todos los ejercicios del día.";
 
-export const unfinishedMessage = (total: number, done: number) =>
-  `Te quedan ${total - done} ejercicios sin guardar. Se registran solo los ${done} que guardaste. ¿Querés guardar la sesión igualmente?`;
+export function unfinishedMessage(total: number, done: number): string {
+  const left = total - done;
+  const pending =
+    left === 1
+      ? "Te queda 1 ejercicio sin guardar."
+      : `Te quedan ${left} ejercicios sin guardar.`;
+  const saved =
+    done === 1
+      ? "Se registra solo el que guardaste."
+      : `Se registran solo los ${done} que guardaste.`;
+  return `${pending} ${saved} ¿Querés guardar la sesión igualmente?`;
+}

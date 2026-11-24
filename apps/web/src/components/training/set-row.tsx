@@ -46,12 +46,13 @@ export function SetRow({
         )}
       </div>
       <Input
-        type="number"
         inputMode="numeric"
-        min="0"
         placeholder="Reps"
         value={row.reps}
-        onChange={(e) => onChange({ reps: e.target.value })}
+        // Solo enteros (igual que en mobile): la columna de reps es int.
+        onChange={(e) =>
+          onChange({ reps: e.target.value.replace(/[^0-9]/g, "") })
+        }
         className="flex-1"
       />
       {withRest ? (
