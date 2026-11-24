@@ -20,11 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 /** Nueva carpeta de plantillas (de rutinas o de nutrición). */
-export function NewFolderButton({
-  kind = "routines",
-}: {
-  kind?: "routines" | "nutrition";
-}) {
+export function NewFolderButton({ kind = "routines" }: { kind?: "routines" | "nutrition" }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -33,9 +29,7 @@ export function NewFolderButton({
   const submit = () => {
     startTransition(async () => {
       const result =
-        kind === "nutrition"
-          ? await createNutritionFolder(name)
-          : await createFolder(name);
+        kind === "nutrition" ? await createNutritionFolder(name) : await createFolder(name);
       if (!result.ok) {
         toast.error(result.error);
         return;

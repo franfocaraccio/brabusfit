@@ -77,10 +77,7 @@ export function ExercisePicker({
       return;
     }
     startTransition(async () => {
-      const result = await createCatalogEntry({
-        name: query,
-        muscleGroup: newGroup,
-      });
+      const result = await createCatalogEntry({ name: query, muscleGroup: newGroup });
       if (!result.ok) {
         setError(result.error);
         return;
@@ -101,47 +98,29 @@ export function ExercisePicker({
           !value && "text-muted-foreground",
         )}
       >
-        <span className="min-w-0 flex-1 truncate">
-          {value ? value.name : "Elegí un ejercicio"}
-        </span>
+        <span className="min-w-0 flex-1 truncate">{value ? value.name : "Elegí un ejercicio"}</span>
         <ChevronDown className="text-muted-foreground size-4 shrink-0" />
       </button>
 
       <Dialog open={open} onOpenChange={(o) => (o ? openPicker() : close())}>
         <DialogContent className="gap-3">
           <DialogHeader>
-            <DialogTitle>
-              {creating ? "Nuevo ejercicio" : "Elegí un ejercicio"}
-            </DialogTitle>
+            <DialogTitle>{creating ? "Nuevo ejercicio" : "Elegí un ejercicio"}</DialogTitle>
           </DialogHeader>
 
           {creating ? (
             <div className="space-y-3">
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                autoFocus
-              />
+              <Input value={query} onChange={(e) => setQuery(e.target.value)} autoFocus />
               <p className="text-muted-foreground text-xs">
                 Grupo muscular. Este ejercicio solo lo vas a ver vos.
               </p>
               <GroupChips value={newGroup} onChange={setNewGroup} />
-              {error ? (
-                <p className="text-destructive text-sm">{error}</p>
-              ) : null}
+              {error ? <p className="text-destructive text-sm">{error}</p> : null}
               <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={() => setCreating(false)}
-                  disabled={pending}
-                >
+                <Button variant="ghost" onClick={() => setCreating(false)} disabled={pending}>
                   Volver
                 </Button>
-                <Button
-                  className="flex-1"
-                  onClick={create}
-                  disabled={pending || !query.trim()}
-                >
+                <Button className="flex-1" onClick={create} disabled={pending || !query.trim()}>
                   {pending ? "Creando…" : "Crear y elegir"}
                 </Button>
               </div>
@@ -229,11 +208,7 @@ function GroupChips({
   return (
     <div className="flex flex-wrap gap-1.5">
       {allowAll && (
-        <button
-          type="button"
-          className={chip(value === null)}
-          onClick={() => onChange(null)}
-        >
+        <button type="button" className={chip(value === null)} onClick={() => onChange(null)}>
           Todos
         </button>
       )}

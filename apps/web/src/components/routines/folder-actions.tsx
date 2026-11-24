@@ -34,9 +34,7 @@ export function FolderActions({
   const remove = () => {
     startTransition(async () => {
       const result =
-        kind === "nutrition"
-          ? await deleteNutritionFolder(folderId)
-          : await deleteFolder(folderId);
+        kind === "nutrition" ? await deleteNutritionFolder(folderId) : await deleteFolder(folderId);
       if (!result.ok) {
         toast.error(result.error);
         return;
@@ -51,7 +49,11 @@ export function FolderActions({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button variant="ghost" size="icon-sm" aria-label="Eliminar carpeta">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Eliminar carpeta"
+          >
             <Trash2 className="size-4" />
           </Button>
         }
@@ -60,9 +62,8 @@ export function FolderActions({
         <DialogHeader>
           <DialogTitle>Eliminar carpeta</DialogTitle>
           <DialogDescription>
-            Se eliminará la carpeta «{folderName}».{" "}
-            {kind === "nutrition" ? "Los planes" : "Las rutinas"} que contiene
-            no se borran: pasan a la raíz.
+            Se eliminará la carpeta «{folderName}». {kind === "nutrition" ? "Los planes" : "Las rutinas"} que contiene no
+            se borran: pasan a la raíz.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
