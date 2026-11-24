@@ -17,6 +17,6 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "type-fest": "^4.41.0"
+    "type-fest": "^6.0.3"
   }
 }
