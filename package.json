@@ -24,9 +24,9 @@
     "e2e": "npm run e2e --workspace=@brabus/web"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^5.1.0",
+    "@vitest/coverage-v8": "^5.1.1",
     "prettier": "^3.10.1",
-    "turbo": "^2.11.9",
+    "turbo": "^2.11.13",
     "vitest": "^5.1.0"
   },
   "packageManager": "npm@11.11.0"
