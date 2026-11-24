@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { routineDaysToDrafts } from "@brabus/shared";
 import { getCatalog, getFolders, getRoutineForEdit } from "@brabus/supabase";
 
 import {
@@ -32,19 +33,7 @@ export default async function EditarRutinaPage({
     name: routine.name,
     folderId: routine.folderId,
     clientName: routine.clientName,
-    days: routine.days.map((d) => ({
-      key: d.id,
-      id: d.id,
-      name: d.name,
-      exercises: d.exercises.map((e) => ({
-        key: e.id,
-        id: e.id,
-        catalog: e.catalog,
-        variant: e.variant ?? "",
-        sets_reps: e.sets_reps,
-        rest: e.rest_seconds,
-      })),
-    })),
+    days: routineDaysToDrafts(routine.days),
   };
 
   return (

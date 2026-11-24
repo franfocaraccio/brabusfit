@@ -15,3 +15,4 @@ export * from "./training";
 export * from "./username";
 export * from "./xlsx";
 export * from "./workout";
+export * from "./routine-draft";
