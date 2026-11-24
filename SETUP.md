@@ -13,9 +13,13 @@ Monorepo con la app **web** (Next.js, en Vercel) y la app **mobile** (Expo, iOS
 ## 2. Crear el proyecto Supabase
 
 1. Creá un proyecto nuevo en Supabase.
-2. En **SQL Editor**, pegá y ejecutá [`supabase/setup.sql`](supabase/setup.sql)
-   (todas las migraciones juntas). Si ya tenías la base, corré solo las
-   migraciones nuevas de [`supabase/migrations/`](supabase/migrations).
+2. Aplicá las migraciones de [`supabase/migrations/`](supabase/migrations) con
+   la CLI (o con el workflow de GitHub, ver "Migraciones a producción"):
+   ```bash
+   npx supabase@3.3.0 login
+   npx supabase@3.3.0 link --project-ref <ref-del-proyecto>
+   npx supabase@3.3.0 db push --remote
+   ```
 3. En **Settings → API Keys**, copiá:
    - Project URL (sin `/rest/v1/`)
    - **Publishable key** (`sb_publishable_…`) — pública
@@ -96,12 +100,12 @@ npm run db:stop
 ```
 
 - Las variables locales van en `apps/web/.env.localdb` y `apps/mobile/.env.localdb`
-  (gitignored). Si faltan, `npx supabase status -o env` muestra la URL y las
+  (gitignored). Si faltan, `npx supabase@3.3.0 status -o env` muestra la URL y las
   claves locales (`API_URL`, `PUBLISHABLE_KEY`, `SECRET_KEY`).
 - Usuarios de prueba (contraseña `brabus-test-123`): `coach@brabus.test`,
   `coach2@brabus.test`, `alumno@brabus.test`, `alumno2@brabus.test`. Ver `supabase/seed.sql`.
 - Studio local: http://127.0.0.1:54323 · emails locales: http://127.0.0.1:54324.
-- Una migración nueva se prueba con `npm run db:reset` antes de correrla en producción.
+- Una migración nueva se prueba con `npm run db:reset` y `npm run test:db`, y después se regeneran los tipos con `npm run db:types` (ver AGENTS.md).
 
 ### Tests
 
@@ -130,6 +134,56 @@ npm run test:db        # RLS e integración contra el Supabase local (requiere d
 - Variables de entorno: las mismas de `apps/web/.env.local`
   (`NEXT_PUBLIC_SITE_URL` = dominio de producción).
 - Push a `main` → deploy automático a producción; otras ramas → Preview.
+
+### Migraciones a producción (GitHub Actions)
+
+Las migraciones **nunca** se aplican solas en cada push: se aplican a mano con
+el workflow [`db-migrate.yml`](.github/workflows/db-migrate.yml), y solo desde
+`main` (lo ya revisado y mergeado).
+
+**Configuración (una vez):** en GitHub → Settings → Environments → **New
+environment** `production`:
+- *Deployment branches*: solo `main`. Opcional: *Required reviewers* (vos) para
+  aprobar cada corrida.
+- **Secrets:** `SUPABASE_ACCESS_TOKEN` (supabase.com → Account → Access Tokens) y
+  `SUPABASE_DB_PASSWORD` (la contraseña de la base del proyecto).
+- **Variable:** `SUPABASE_PROJECT_ID` (el *ref* del proyecto, lo que va antes
+  de `.supabase.co`).
+
+**Uso:** Actions → *Database migrations (production)* → *Run workflow* desde
+`main`. Sin tildar **apply** hace un *dry run*: muestra el historial local vs.
+remoto y qué migraciones aplicaría. Con **apply** las aplica (`db push`).
+
+**Primera vez: marcar las migraciones ya aplicadas.** Las migraciones
+0001–0015 se corrieron a mano en el SQL Editor, así que la tabla de historial
+de producción (`supabase_migrations.schema_migrations`) no las tiene: un
+`db push` intentaría correrlas de nuevo. Antes del primer `db push`, desde tu
+máquina:
+
+```bash
+npx supabase@3.3.0 login
+npx supabase@3.3.0 link --project-ref <ref-del-proyecto>
+
+# 1) Ver el estado: las 15 aparecen en "Local" y vacías en "Remote".
+npx supabase@3.3.0 migration list --remote
+
+# 2) Confirmar que producción ya tiene el esquema de las 15 migraciones:
+#    compara una base armada con supabase/migrations contra producción.
+#    Si no imprime diferencias del esquema public, es seguro seguir.
+npx supabase@3.3.0 db diff --remote --schema public
+
+# 3) Registrarlas como aplicadas (solo escribe en la tabla de historial, no
+#    corre ningún SQL de las migraciones).
+npx supabase@3.3.0 migration repair --remote --status applied 0001 0002 0003 0004 0005 0006 0007 0008 0009 0010 0011 0012 0013 0014 0015
+
+# 4) Verificar: Local y Remote coinciden, y no queda nada por aplicar.
+npx supabase@3.3.0 migration list --remote
+npx supabase@3.3.0 db push --remote --dry-run
+```
+
+Si el paso 2 muestra diferencias, **no** sigas con el `repair`: significa que
+producción no coincide con las migraciones (algún cambio hecho a mano o una
+migración sin correr) y hay que resolverlo primero.
 
 ### Mobile (EAS) — pendiente
 

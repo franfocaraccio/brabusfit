@@ -20,7 +20,7 @@ export default function setup(project: TestProject) {
   if (!url || !publishableKey) {
     let status: Record<string, string>;
     try {
-      const out = execSync("npx supabase status -o json", {
+      const out = execSync("npx supabase@3.3.0 status -o json", {
         cwd: new URL("../../..", import.meta.url),
         stdio: ["ignore", "pipe", "ignore"],
       }).toString();
