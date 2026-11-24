@@ -103,6 +103,20 @@ npm run db:stop
 - Studio local: http://127.0.0.1:54323 · emails locales: http://127.0.0.1:54324.
 - Una migración nueva se prueba con `npm run db:reset` antes de correrla en producción.
 
+### Tests
+
+```bash
+npm test               # unitarios: packages/shared, packages/supabase y la web (Vitest)
+npm run test:db        # RLS e integración contra el Supabase local (requiere db:start)
+```
+
+- **Unitarios:** lógica pura de `packages/shared` y tests de caracterización del
+  entrenador web (`apps/web/src/components/training/day-trainer.test.tsx`).
+- **Base (`packages/supabase/test`):** cada corrida registra usuarios nuevos con
+  la clave **pública** (igual que la app mobile) y prueba que RLS aísla a cada
+  coach y alumno, que el anónimo no lee nada y que al desvincularse el alumno
+  conserva sus rutinas. No dependen del seed: se pueden repetir sin `db:reset`.
+
 > Si `expo start` falla con `Cannot find module 'expo-router/...'`, borrá
 > `node_modules` (raíz y workspaces) y `package-lock.json` y volvé a correr
 > `npm install` desde la raíz: npm a veces anida paquetes al instalar en tandas.
