@@ -2,7 +2,6 @@ import {
   NEW_FOLDER,
   ROUTINE_TEMPLATE,
   ROUTINE_TEMPLATE_LABEL,
-  routineTargetHint,
 } from "@brabus/shared";
 import type { ClientSummary, FolderLite } from "@brabus/supabase";
 
@@ -16,16 +15,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-/** "¿Para quién es?" (coach, al crear): plantilla o un cliente. */
+/**
+ * "¿Para quién es?" (coach, al crear una rutina o un plan): plantilla o un
+ * cliente, con la aclaración debajo.
+ */
 export function TargetField({
   target,
   clients,
-  forClient,
+  hint,
   onChange,
 }: {
   target: string;
   clients: ClientSummary[];
-  forClient: boolean;
+  hint: string;
   onChange: (target: string) => void;
 }) {
   const items: Record<string, string> = {
@@ -54,9 +56,7 @@ export function TargetField({
           ))}
         </SelectContent>
       </Select>
-      <p className="text-muted-foreground text-xs">
-        {routineTargetHint(forClient)}
-      </p>
+      <p className="text-muted-foreground text-xs">{hint}</p>
     </div>
   );
 }
@@ -66,12 +66,15 @@ export function FolderField({
   folders,
   folderId,
   newFolderName,
+  newFolderPlaceholder,
   onFolderChange,
   onNewFolderNameChange,
 }: {
   folders: FolderLite[];
   folderId: string | null;
   newFolderName: string;
+  /** Ejemplo del campo de carpeta nueva. */
+  newFolderPlaceholder: string;
   onFolderChange: (folderId: string | null) => void;
   onNewFolderNameChange: (name: string) => void;
 }) {
@@ -104,7 +107,7 @@ export function FolderField({
         <Input
           value={newFolderName}
           onChange={(e) => onNewFolderNameChange(e.target.value)}
-          placeholder="Nombre de la carpeta (ej: Fuerza)"
+          placeholder={newFolderPlaceholder}
           autoFocus
         />
       )}

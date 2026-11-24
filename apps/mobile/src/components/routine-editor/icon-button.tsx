@@ -3,16 +3,19 @@ import { Pressable } from "react-native";
 
 import { makeStyles, useColors } from "@/lib/theme";
 
-/** Botón de ícono (subir, bajar, eliminar) del editor de rutinas. */
+/** Botón de ícono (subir, bajar, eliminar) de los editores de rutinas y planes. */
 export function IconButton({
   icon,
   label,
   onPress,
   disabled,
   compact,
+  narrow,
 }: {
   /** Más bajo (columna de acciones de un ejercicio). */
   compact?: boolean;
+  /** Más angosto (encabezado de una comida). */
+  narrow?: boolean;
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
@@ -30,6 +33,7 @@ export function IconButton({
       style={[
         styles.iconButton,
         compact && { height: 32 },
+        narrow && { width: 36 },
         disabled && { opacity: 0.35 },
       ]}
     >
