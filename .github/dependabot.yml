@@ -26,6 +26,13 @@ updates:
       - dependency-name: eslint-config-expo
       # Fijado en todos lados a la vez (ver AGENTS.md).
       - dependency-name: supabase
+      # ESLint 10 todavía no es compatible con eslint-plugin-react (lo trae
+      # eslint-config-next): se sube cuando Next lo soporte.
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]
+      # Los tipos de Node siguen a la versión de Node con la que corre cada app.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       dev-dependencies:
         dependency-type: development
