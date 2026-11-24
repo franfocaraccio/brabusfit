@@ -196,6 +196,32 @@ administración y sus `grant`) también aparecen; esos no vienen de las
 migraciones y no impiden el `repair`, pero conviene pasarlos a una migración
 para que la base se pueda reconstruir entera desde el repo.
 
+### Usuarios de demo (producción)
+
+[`scripts/seed-demo.ts`](scripts/seed-demo.ts) crea un coach y un alumno de demo con datos inventados:
+- clientes, plantillas y rutinas
+- un plan de nutrición
+- 10 semanas de entrenamientos
+
+Es **idempotente**: si ya existen, los borra con todo lo suyo y los vuelve a crear, así que también sirve para limpiar lo que cambien los visitantes. Usa la capa de datos de la app con la sesión de cada usuario demo, así que pasa por RLS. La clave secreta se usa solo para crear y borrar los usuarios y para fechar las sesiones en el pasado.
+
+Desde la raíz, con las claves del proyecto como variables de entorno (no se commitean):
+
+```bash
+# bash
+SUPABASE_URL=https://<ref>.supabase.co SUPABASE_PUBLISHABLE_KEY=sb_publishable_... SUPABASE_SECRET_KEY=sb_secret_... npm run seed:demo
+```
+
+```powershell
+$env:SUPABASE_URL = "https://<ref>.supabase.co"
+$env:SUPABASE_PUBLISHABLE_KEY = "sb_publishable_..."
+$env:SUPABASE_SECRET_KEY = "sb_secret_..."
+npm run seed:demo
+```
+
+- Cuentas: `coach.demo@brabusfit.test` y `alumno.demo@brabusfit.test`. La contraseña es la del README (`brabusfit-demo`); se puede cambiar con `DEMO_PASSWORD` (en ese caso, actualizá el README).
+- Antes de correrlo contra producción, probalo contra el Supabase local: `npx supabase@3.3.0 status -o env` muestra `API_URL`, `PUBLISHABLE_KEY` y `SECRET_KEY`.
+
 ### Mobile (EAS) — pendiente
 
 Builds para las tiendas con **EAS Build** (en la nube, no requiere Mac) y

@@ -56,7 +56,14 @@ Brabus Fit replaces the spreadsheet + WhatsApp workflow many personal trainers u
 All screenshots use the invented data from [`supabase/seed.sql`](supabase/seed.sql).
 
 ### Try it
-- **Web:** [brabusfit.vercel.app](https://brabusfit.vercel.app).
+- **Web:** [brabusfit.vercel.app](https://brabusfit.vercel.app). Use one of the demo accounts below; their data is invented and gets reset every so often.
+
+  | Role | Email | Password |
+  |---|---|---|
+  | Coach | `coach.demo@brabusfit.test` | `brabusfit-demo` |
+  | Student | `alumno.demo@brabusfit.test` | `brabusfit-demo` |
+
+  The coach has three clients, templates in folders, client routines and a nutrition plan. The student is one of those clients and has ten weeks of logged workouts. The accounts are created by [`scripts/seed-demo.ts`](scripts/seed-demo.ts), which goes through the app's own data layer.
 - **Mobile:** the app is published with EAS Update and opens in **Expo Go**. Access to the published build is by invitation to the Expo organization (scan [`docs/expo-go-qr.png`](docs/expo-go-qr.png) once invited); anyone can run it locally, see [Quick start](#quick-start).
 
 ## Architecture
