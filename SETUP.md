@@ -96,7 +96,7 @@ npm run db:stop
 ```
 
 - Las variables locales van en `apps/web/.env.localdb` y `apps/mobile/.env.localdb`
-  (gitignored). Si faltan, `npx supabase status -o env` muestra la URL y las
+  (gitignored). Si faltan, `npx supabase@3.3.0 status -o env` muestra la URL y las
   claves locales (`API_URL`, `PUBLISHABLE_KEY`, `SECRET_KEY`).
 - Usuarios de prueba (contraseña `brabus-test-123`): `coach@brabus.test`,
   `coach2@brabus.test`, `alumno@brabus.test`, `alumno2@brabus.test`. Ver `supabase/seed.sql`.
